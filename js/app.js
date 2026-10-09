@@ -67,29 +67,84 @@ const themes = {
     result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     matchday: { bg: "#10171b", row: "#141a20", timeBg: "#f0d84a", accent: "#f0d84a", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#17191d", brand: "#ffffff" } }
 };
-const premierLeagueClubs = [
-    { name: "AFC Bournemouth", file: "AFC_Bournemouth_(2013).svg.webp" },
-    { name: "Arsenal", file: "Arsenal_FC.svg.webp" },
-    { name: "Aston Villa", file: "Aston_Villa_FC_new_crest.svg" },
-    { name: "Brighton & Hove Albion", file: "Brighton_and_Hove_Albion_FC_crest.svg.webp" },
-    { name: "Brentford", file: "Brentford_FC_crest.svg" },
-    { name: "Cardiff City", file: "Cardiff_City_crest.svg.webp" },
-    { name: "Chelsea", file: "Chelsea_FC.svg.webp" },
-    { name: "Coventry City", file: "Coventry_City_FC_crest.svg" },
-    { name: "Crystal Palace", file: "Crystal_Palace_FC_logo_(2022).svg" },
-    { name: "Everton", file: "Everton_FC_logo.svg.webp" },
-    { name: "Fulham", file: "Fulham_FC_(shield).svg" },
-    { name: "Hull City", file: "Hull_City_A.F.C._logo.svg" },
-    { name: "Ipswich Town", file: "Ipswich_Town.svg" },
-    { name: "Leeds United", file: "Leeds_United_F.C._logo.svg" },
-    { name: "Liverpool", file: "Liverpool-FC-logo-PNG-transparent-1024x1871.png" },
-    { name: "Manchester City", file: "Manchester_City_FC_badge.svg.webp" },
-    { name: "Manchester United", file: "Manchester_United_FC_crest.svg" },
-    { name: "Newcastle United", file: "Newcastle_United_Logo.png" },
-    { name: "Nottingham Forest", file: "Nottingham_Forest_F.C._logo.svg.webp" },
-    { name: "Sunderland", file: "Logo_Sunderland.svg.webp" },
-    { name: "Tottenham Hotspur", file: "tottenham-hotspur-logo-icon-only-footylogos.png" }
-];
+const leagueLogoFiles = {
+    "premier-league": [
+        ["AFC Bournemouth", "AFC_Bournemouth_(2013).svg.webp"],
+        ["Arsenal", "Arsenal_FC.svg.webp"],
+        ["Aston Villa", "Aston_Villa_FC_new_crest.svg"],
+        ["Brighton & Hove Albion", "Brighton_and_Hove_Albion_FC_crest.svg.webp"],
+        ["Brentford", "Brentford_FC_crest.svg"],
+        ["Cardiff City", "Cardiff_City_crest.svg.webp"],
+        ["Chelsea", "Chelsea_FC.svg.webp"],
+        ["Coventry City", "Coventry_City_FC_crest.svg"],
+        ["Crystal Palace", "Crystal_Palace_FC_logo_(2022).svg"],
+        ["Everton", "Everton_FC_logo.svg.webp"],
+        ["Fulham", "Fulham_FC_(shield).svg"],
+        ["Hull City", "Hull_City_A.F.C._logo.svg"],
+        ["Ipswich Town", "Ipswich_Town.svg"],
+        ["Leeds United", "Leeds_United_F.C._logo.svg"],
+        ["Liverpool", "Liverpool-FC-logo-PNG-transparent-1024x1871.png"],
+        ["Manchester City", "Manchester_City_FC_badge.svg.webp"],
+        ["Manchester United", "Manchester_United_FC_crest.svg"],
+        ["Newcastle United", "Newcastle_United_Logo.png"],
+        ["Nottingham Forest", "Nottingham_Forest_F.C._logo.svg.webp"],
+        ["Sunderland", "Logo_Sunderland.svg.webp"],
+        ["Tottenham Hotspur", "tottenham-hotspur-logo-icon-only-footylogos.png"]
+    ],
+    laliga: [
+        "athletic-club", "atletico-madrid", "barcelona", "celta", "deportivo-la-coruna",
+        "deportivo", "elche", "espanyol", "getafe", "levante", "malaga", "osasuna",
+        "racing", "rayo-vallecano", "real-betis", "real-madrid", "real-sociedad",
+        "sevilla", "valencia", "villarreal"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "serie-a": [
+        "atalanta", "bologna", "cagliari", "como-1907", "fiorentina", "frosinone",
+        "genoa", "inter", "juventus", "lazio", "lecce", "milan", "monza", "napoli",
+        "parma", "roma", "sassuolo", "torino", "udinese", "venezia"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "ligue-1": [
+        "angers", "as-monaco", "auxerre", "brest", "le-havre-ac", "le-mans", "lille",
+        "lorient", "lyon", "marseille", "nice", "paris-fc", "paris-saint-germain",
+        "rc-lens", "rc-strasbourg-alsace", "rennes", "toulouse", "troyes"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    bundesliga: [
+        "augsburg", "bayer-leverkusen", "bayern-munchen", "borussia-dortmund",
+        "borussia-monchengladbach", "eintracht-frankfurt", "freiburg", "hamburger-sv",
+        "hoffenheim", "koln", "mainz-05", "paderborn", "rb-leipzig", "schalke-04",
+        "sv-elversberg", "union-berlin", "vfb-stuttgart", "werder-bremen"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "world-cup": [
+        "algeria", "argentina", "australia", "austria", "belgium", "bosnia-and-herzegovina",
+        "brazil", "cabo-verde", "canada", "colombia", "congo-dr", "cote-d-ivoire",
+        "croatia", "curacao", "czech-republic", "dutch", "ecuador", "egypt", "england",
+        "france", "germany", "ghana", "haiti", "iran", "iraq", "japan", "jordan",
+        "mexico", "morocco", "new-zealand", "norway", "panama", "paraguay",
+        "portuguese-football-federation", "qatar", "saudi-arabia", "scotland", "senegal",
+        "south-africa", "south-korea", "spain", "sweden", "switzerland", "tunisia",
+        "turkey", "uruguay", "usa", "uzbekistan"
+    ].map(name => [name, name === "portuguese-football-federation" ?
+        `${name}.football-logos.cc.png` : `${name}-national-team.football-logos.cc.png`])
+};
+const leagueLogoFolders = {
+    "premier-league": "epl",
+    laliga: "laliga",
+    "serie-a": "a-seria",
+    "ligue-1": "liga1",
+    bundesliga: "bundesliga",
+    "world-cup": "WorldCup"
+};
+function getClubDisplayName(name) {
+    if (name === "dutch") return "Netherlands";
+    if (name === "usa") return "United States";
+    if (name === "congo-dr") return "Congo DR";
+    if (name === "cote-d-ivoire") return "Côte d’Ivoire";
+    if (name === "portuguese-football-federation") return "Portugal";
+    if (name === "bosnia-and-herzegovina") return "Bosnia and Herzegovina";
+    return name.split("-").map(part => part ? part[0].toUpperCase() + part.slice(1) : part).join(" ")
+        .replace(/\bAs\b/, "AS")
+        .replace(/\bFc\b/gi, "FC")
+        .replace(/\bAc\b/gi, "AC");
+}
         const canvas = document.getElementById("poster");
         const ctx = canvas.getContext("2d");
         const textEntrySelector = "input:not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='range']), textarea, [contenteditable='true']";
@@ -318,20 +373,26 @@ const premierLeagueClubs = [
         function renderClubLogoChoices() {
             clubLogoGrid.replaceChildren();
             const query = clubSearchInput.value.trim().toLocaleLowerCase();
-            if (selectedLeague !== "premier-league") {
-                clubPickerNote.textContent = "Bu liga uchun logolar hozircha qo‘shilmagan. Qurilmangizdan rasm tanlashingiz mumkin.";
-                return;
-            }
-            const filteredClubs = premierLeagueClubs.filter(club => club.name.toLocaleLowerCase().includes(query));
+            const clubs = leagueLogoFiles[selectedLeague] || [];
+            const folder = leagueLogoFolders[selectedLeague];
+            const filteredClubs = clubs
+                .map(([name, file]) => ({ name: selectedLeague === "premier-league" ? name : getClubDisplayName(name), file }))
+                .filter(club => club.name.toLocaleLowerCase().includes(query));
             filteredClubs.forEach(club => {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.className = "club-logo-choice";
                 button.setAttribute("aria-label", `${club.name} logosini tanlash`);
                 const image = document.createElement("img");
-                image.src = new URL(`./images/epl/${encodeURIComponent(club.file)}`, document.baseURI).href;
+                image.src = new URL(`./images/${folder}/${encodeURIComponent(club.file)}`, document.baseURI).href;
                 image.alt = "";
                 image.loading = "lazy";
+                image.addEventListener("error", () => {
+                    button.remove();
+                    if (!clubLogoGrid.childElementCount) {
+                        clubPickerNote.textContent = "Bu bo‘limdagi logolarni yuklab bo‘lmadi. Qurilmangizdan rasm tanlab ko‘ring.";
+                    }
+                }, { once: true });
                 const name = document.createElement("span");
                 name.textContent = club.name;
                 button.append(image, name);
@@ -348,7 +409,8 @@ const premierLeagueClubs = [
                 });
                 clubLogoGrid.append(button);
             });
-            clubPickerNote.textContent = filteredClubs.length ? "" : "Qidiruv bo‘yicha klub topilmadi.";
+            clubPickerNote.textContent = filteredClubs.length ? "" :
+                clubs.length ? "Qidiruv bo‘yicha klub topilmadi." : "Bu bo‘limda logo fayllari mavjud emas. Qurilmangizdan rasm tanlashingiz mumkin.";
         }
 
         function openClubLogoPicker(row, key, label) {
