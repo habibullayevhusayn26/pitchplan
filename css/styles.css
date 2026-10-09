@@ -17,9 +17,28 @@
             background: radial-gradient(ellipse at 55% -20%, #1c3156 0, transparent 48%), var(--page);
             color: var(--text);
             font: 15px/1.5 Inter, "Segoe UI", Arial, sans-serif;
+            -webkit-user-select: none;
+            user-select: none;
         }
         button, input { font: inherit; }
-        button { color: inherit; }
+        input, textarea { -webkit-user-select: text; user-select: text; }
+        button {
+            color: inherit;
+            transition: transform .22s cubic-bezier(.2,.75,.25,1), border-color .22s ease, box-shadow .22s ease, background-color .22s ease, background-image .22s ease, color .22s ease, backdrop-filter .22s ease;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            border-color: rgba(157,190,255,.72);
+            background-color: rgba(138,174,230,.28);
+            backdrop-filter: blur(14px) saturate(155%);
+            -webkit-backdrop-filter: blur(14px) saturate(155%);
+            box-shadow: 0 10px 28px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.2);
+        }
+        button:active { transform: translateY(0) scale(.985); }
+        button:focus-visible {
+            outline: 2px solid rgba(133,177,255,.95);
+            outline-offset: 3px;
+        }
         .topbar {
             min-height: 72px;
             padding: 0 5vw;
@@ -43,6 +62,7 @@
         .home-view .intro { margin-bottom: 34px; }
         .template-gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 20px; }
         .template-card {
+            position: relative;
             display: block; width: 100%; min-width: 0; padding: 12px; overflow: hidden;
             border: 1px solid var(--line); border-radius: 16px; background: rgba(17,27,43,.94);
             color: var(--text); text-align: left; cursor: pointer; box-shadow: 0 14px 40px rgba(0,0,0,.2);
@@ -99,6 +119,12 @@
         }
         .field input[type="file"]::file-selector-button {
             margin-right: 8px; padding: 5px 8px; border: 0; border-radius: 6px; background: #283a55; color: #eaf1ff; cursor: pointer;
+            transition: transform .22s ease, background-color .22s ease, box-shadow .22s ease;
+        }
+        .field input[type="file"]::file-selector-button:hover {
+            transform: translateY(-1px);
+            background-color: rgba(110,151,224,.48);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 4px 12px rgba(0,0,0,.18);
         }
         .field input[type="range"].range-input { height: 22px; padding: 0; accent-color: #52d719; }
         .field label span { float: right; color: #9baec8; font-weight: 500; }
@@ -117,12 +143,29 @@
         .match-row {
             display: grid; grid-template-columns: minmax(0, 1fr) 70px minmax(0, 1fr) 28px;
             gap: 7px; align-items: center; min-width: 0; padding: 8px; border: 1px solid #2b394e; border-radius: 11px; background: #0d1725;
+            transition: background-color .22s ease, border-color .22s ease, box-shadow .22s ease, backdrop-filter .22s ease;
+        }
+        .match-row:hover {
+            border-color: rgba(157,190,255,.52);
+            background-color: rgba(42,61,91,.68);
+            backdrop-filter: blur(12px) saturate(145%);
+            -webkit-backdrop-filter: blur(12px) saturate(145%);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
         }
         .match-team-control { display: flex; align-items: center; gap: 6px; min-width: 0; }
         .match-team-control .logo-upload { flex: 0 0 32px; }
         .logo-upload {
             width: 36px; height: 36px; border-radius: 9px; display: grid; place-items: center; overflow: hidden;
             background: #23344c; color: #dce8ff; cursor: pointer; font-weight: 800; font-size: 11px; border: 1px dashed #526785;
+            transition: transform .22s ease, background-color .22s ease, border-color .22s ease, box-shadow .22s ease, backdrop-filter .22s ease;
+        }
+        .logo-upload:hover, .logo-upload:focus-within {
+            transform: translateY(-2px);
+            background-color: rgba(130,170,230,.34);
+            border-color: rgba(190,215,255,.85);
+            backdrop-filter: blur(14px) saturate(155%);
+            -webkit-backdrop-filter: blur(14px) saturate(155%);
+            box-shadow: 0 6px 18px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.2);
         }
         .logo-upload img { width: 100%; height: 100%; object-fit: cover; }
         .logo-upload input { display: none; }
@@ -138,9 +181,8 @@
         .btn {
             min-height: 42px; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
             padding: 0 15px; border-radius: 10px; border: 1px solid #35445c; background: #19263a;
-            color: var(--text); font-weight: 700; cursor: pointer; transition: .18s ease;
+            color: var(--text); font-weight: 700; cursor: pointer;
         }
-        .btn:hover { filter: brightness(1.12); }
         .btn-add { flex: 1; border-style: dashed; color: #c5d3e8; background: transparent; }
         .btn-export { border-color: transparent; background: linear-gradient(120deg, #4b73fa, #18bfd9); box-shadow: 0 7px 20px rgba(41,113,226,.23); }
         .hint { margin: 15px 0 0; color: #8192aa; font-size: 12px; }
@@ -184,6 +226,10 @@
             .expanded-canvas-stage #poster { height: min(100%, calc(100dvh - 74px)); }
         }
         .toast { min-height: 20px; margin: 12px 0 0; color: #9fefcf; font-size: 13px; }
+        @media (prefers-reduced-motion: reduce) {
+            button, .template-card, .logo-upload, .match-row, .field input[type="file"]::file-selector-button { transition-duration: .01ms; }
+            button:hover, button:active, .template-card:hover, .template-card:focus-visible { transform: none; }
+        }
         @media (max-width: 980px) {
             main { padding-inline: 18px; }
             .workspace { grid-template-columns: 1fr; }

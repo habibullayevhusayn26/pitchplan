@@ -47,16 +47,39 @@ const examples = {
         rows: [
             ["MAN UNITED", "3 - 2", "IPSWICH"]
         ]
+    },
+    matchday: {
+        title: "MATCHDAY",
+        date: "20 OKTYABR · 16:00",
+        caption: "PITCHPLAN",
+        logoPlacement: "PitchPlan logosi MATCHDAY posteri yuqori qismida ko‘rinadi.",
+        venue: "ETIHAD STADIUM · MANCHESTER",
+        competition: "PREMIER LEAGUE · 13-TUR",
+        rows: [
+            ["MANCHESTER CITY", "16:00", "ARSENAL"]
+        ]
     }
 };
 const themes = {
     jf: { bg: "#ffffff", row: "#ffffff", timeBg: "#52d719", accent: "#52d719", textColors: { title: "#171717", date: "#52cf18", team: "#171717", time: "#101510", brand: "#171717" } },
     sf: { bg: "#740000", row: "#f7f2ed", timeBg: "#b50b05", accent: "#e8b7b7", textColors: { title: "#ffffff", date: "#ffd6d6", team: "#262329", time: "#ffffff", brand: "#ffffff" } },
     pro: { bg: "#f3f6fa", row: "#ffffff", timeBg: "#e3f3f1", accent: "#248b83", textColors: { title: "#172b3d", date: "#64798d", team: "#23384a", time: "#18786f", brand: "#18786f" } },
-    result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } }
+    result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
+    matchday: { bg: "#10171b", row: "#141a20", timeBg: "#f0d84a", accent: "#f0d84a", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#17191d", brand: "#ffffff" } }
 };
         const canvas = document.getElementById("poster");
         const ctx = canvas.getContext("2d");
+        const textEntrySelector = "input:not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='range']), textarea, [contenteditable='true']";
+        function isTextEntry(target) {
+            return target instanceof Element && target.closest(textEntrySelector) !== null;
+        }
+        document.addEventListener("copy", event => {
+            if (isTextEntry(event.target) || isTextEntry(document.activeElement)) return;
+            event.preventDefault();
+        });
+        document.addEventListener("contextmenu", event => {
+            if (!isTextEntry(event.target)) event.preventDefault();
+        });
         const canvasOriginalParent = canvas.parentElement;
         const expandedPreview = document.getElementById("expanded-preview");
         const expandedCanvasStage = document.getElementById("expanded-canvas-stage");
@@ -79,6 +102,8 @@ const themes = {
         const leagueLogoPreview = document.getElementById("league-logo-preview");
         const brandCaptionInput = document.getElementById("brand-caption");
         const goalScorersInput = document.getElementById("goal-scorers");
+        const matchdayVenueInput = document.getElementById("matchday-venue");
+        const matchdayCompetitionInput = document.getElementById("matchday-competition");
         const brandLogoSizeInput = document.getElementById("brand-logo-size");
         const brandLogoSizeValue = document.getElementById("brand-logo-size-value");
         const textColorInputs = {
@@ -116,10 +141,12 @@ const themes = {
 
         function setTemplate(name) {
             const previousTemplate = currentTemplate;
-            if (name === "result" && previousTemplate !== "result") {
+            const photoTemplate = name === "result" || name === "matchday";
+            const previousPhotoTemplate = previousTemplate === "result" || previousTemplate === "matchday";
+            if (photoTemplate && !previousPhotoTemplate) {
                 nonResultBackgroundOpacity = backgroundOpacityInput.value;
             }
-            if (name !== "result" && previousTemplate === "result") {
+            if (!photoTemplate && previousPhotoTemplate) {
                 backgroundOpacityInput.value = nonResultBackgroundOpacity;
                 opacityValue.textContent = `${nonResultBackgroundOpacity}%`;
             }
@@ -127,15 +154,15 @@ const themes = {
             const example = examples[name];
             if (!example) return;
             canvas.width = 1000;
-            canvas.height = name === "result" ? 1000 : 1200;
-            canvas.style.aspectRatio = name === "result" ? "1 / 1" : "5 / 6";
-            document.getElementById("preview-dimensions").textContent = name === "result" ?
+            canvas.height = photoTemplate ? 1000 : 1200;
+            canvas.style.aspectRatio = photoTemplate ? "1 / 1" : "5 / 6";
+            document.getElementById("preview-dimensions").textContent = photoTemplate ?
                 "PNG · 1000 × 1000 px · 1:1" : "PNG · 1000 × 1200 px · 5:6";
             const templatePreview = document.querySelector(`[data-template="${name}"] .template-preview`);
             if (templatePreview) {
                 templatePreview.width = 500;
-                templatePreview.height = name === "result" ? 500 : 600;
-                templatePreview.style.aspectRatio = name === "result" ? "1 / 1" : "5 / 6";
+                templatePreview.height = photoTemplate ? 500 : 600;
+                templatePreview.style.aspectRatio = photoTemplate ? "1 / 1" : "5 / 6";
             }
             titleInput.value = example.title;
             dateInput.value = example.date;
@@ -143,17 +170,30 @@ const themes = {
             rows = example.rows.map(([home, time, away]) => ({ home, time, away, homeLogo: defaultTeamLogo, awayLogo: defaultTeamLogo }));
             brandCaptionInput.value = example.caption;
             const resultTemplate = name === "result";
-            document.getElementById("result-controls").hidden = name !== "result";
-            document.getElementById("matches-hint").textContent = name === "result" ? "Klub nomi, hisob va logo" : "Jamoa nomi, vaqt va logo";
-            document.getElementById("add-row").hidden = resultTemplate;
-            ["row-color-field", "time-background-field", "brand-color-field", "brand-caption-field", "brand-logo-size-field", "editor-hint"].forEach(id => {
-                document.getElementById(id).hidden = resultTemplate;
+            const matchdayTemplate = name === "matchday";
+            document.getElementById("result-controls").hidden = !resultTemplate;
+            document.getElementById("matchday-venue-field").hidden = !matchdayTemplate;
+            document.getElementById("matchday-competition-field").hidden = !matchdayTemplate;
+            matchdayVenueInput.value = example.venue || "";
+            matchdayCompetitionInput.value = example.competition || "";
+            document.getElementById("matches-hint").textContent = resultTemplate ? "Klub nomi, hisob va logo" :
+                matchdayTemplate ? "Ikki klub logosi, nomi va boshlanish vaqti" : "Jamoa nomi, vaqt va logo";
+            document.getElementById("add-row").hidden = photoTemplate;
+            ["row-color-field", "time-background-field"].forEach(id => {
+                document.getElementById(id).hidden = photoTemplate;
             });
+            document.getElementById("time-color-field").hidden = resultTemplate || matchdayTemplate;
+            document.getElementById("brand-color-field").hidden = resultTemplate;
+            document.getElementById("brand-caption-field").hidden = resultTemplate || matchdayTemplate;
+            document.getElementById("brand-logo-size-field").hidden = resultTemplate || matchdayTemplate;
+            document.getElementById("editor-hint").hidden = photoTemplate;
             document.getElementById("title-field").hidden = resultTemplate;
             document.getElementById("date-field").hidden = resultTemplate;
-            document.getElementById("time-color-label").textContent = resultTemplate ? "Hisob rangi" : "O‘yin vaqti";
+            document.getElementById("time-color-label").textContent = resultTemplate ? "Hisob rangi" :
+                matchdayTemplate ? "Uchrashuv kartasi" : "O‘yin vaqti";
             document.getElementById("brand-logo-hint").textContent = resultTemplate ?
-                "PitchPlan logosi suratdagi 433 belgisi o‘rnida chiqadi." : example.logoPlacement;
+                "PitchPlan logosi suratdagi 433 belgisi o‘rnida chiqadi." :
+                matchdayTemplate ? "PitchPlan logosi posterning yuqori qismida chiqadi." : example.logoPlacement;
             goalScorersInput.value = resultTemplate ?
                 "22'  S. Morsy\n26'  M. de Ligt\n44'  P. Dorgu\n47'  H. Maguire\n|\nJ. Philogene  4'\nJ. Philogene  45+2'" : "";
             leagueLogo = null;
@@ -163,7 +203,7 @@ const themes = {
             backgroundColorInput.value = themes[name].bg;
             rowColorInput.value = themes[name].row;
             timeBackgroundColorInput.value = themes[name].timeBg;
-            if (name === "result") {
+            if (photoTemplate) {
                 backgroundOpacityInput.value = "100";
                 opacityValue.textContent = "100%";
             }
@@ -346,6 +386,8 @@ const themes = {
             if (target.type === "date") return dateInput.value;
             if (target.type === "caption") return brandCaptionInput.value;
             if (target.type === "goals") return goalScorersInput.value;
+            if (target.type === "matchdayVenue") return matchdayVenueInput.value;
+            if (target.type === "matchdayCompetition") return matchdayCompetitionInput.value;
             if (target.type === "homeGoals" || target.type === "awayGoals") return getGoalColumns()[target.type === "homeGoals" ? "home" : "away"];
             const row = rows[target.rowIndex];
             if (!row) return "";
@@ -359,6 +401,8 @@ const themes = {
             else if (target.type === "date") dateInput.value = value;
             else if (target.type === "caption") brandCaptionInput.value = value;
             else if (target.type === "goals") goalScorersInput.value = value;
+            else if (target.type === "matchdayVenue") matchdayVenueInput.value = value;
+            else if (target.type === "matchdayCompetition") matchdayCompetitionInput.value = value;
             else if (target.type === "homeGoals" || target.type === "awayGoals") {
                 const goals = getGoalColumns();
                 goals[target.type === "homeGoals" ? "home" : "away"] = value;
@@ -385,6 +429,7 @@ const themes = {
                 target.type === "date" ? 30 :
                 target.type === "caption" ? 24 :
                 target.type === "goals" || target.type === "homeGoals" || target.type === "awayGoals" ? 240 :
+                target.type === "matchdayVenue" || target.type === "matchdayCompetition" ? 40 :
                 target.type === "time" ? 10 : 22;
             inlineEditor.rows = target.type === "goals" || target.type === "homeGoals" || target.type === "awayGoals" ? 5 : 1;
             inlineEditor.classList.toggle("is-multiline", inlineEditor.rows > 1);
@@ -470,6 +515,7 @@ const themes = {
             if (currentTemplate === "sf") drawSfPoster(theme, width, height);
             else if (currentTemplate === "pro") drawProPoster(theme, width, height);
             else if (currentTemplate === "result") drawResultPoster(theme, width, height);
+            else if (currentTemplate === "matchday") drawMatchdayPoster(theme, width, height);
             else drawJfPoster(theme, width, height);
             const thumbnail = document.querySelector(`[data-template="${currentTemplate}"] .template-preview`);
             if (thumbnail) {
@@ -915,6 +961,206 @@ const themes = {
             drawGoalColumn(awayGoals, panelX + panelWidth * .61, "left", "awayGoals");
         }
 
+        function drawMatchdayPoster(theme, width, height) {
+            const match = rows[0] || { home: "MANCHESTER CITY", time: "16:00", away: "ARSENAL" };
+            const scale = width / 1000;
+            const panelTop = 620 * scale;
+            const panelInset = 42 * scale;
+            const panelWidth = width - panelInset * 2;
+            const panelHeight = height - panelTop - 34 * scale;
+            const title = titleInput.value.trim().toUpperCase() || "MATCHDAY";
+
+            if (!backgroundImage) {
+                const background = ctx.createLinearGradient(0, 0, width, height);
+                background.addColorStop(0, "#10171c");
+                background.addColorStop(.48, "#27363a");
+                background.addColorStop(1, "#0b1117");
+                ctx.fillStyle = background;
+                ctx.fillRect(0, 0, width, height);
+                const light = ctx.createRadialGradient(width * .56, height * .24, 10, width * .56, height * .24, width * .6);
+                light.addColorStop(0, "rgba(230,235,224,.24)");
+                light.addColorStop(.48, "rgba(88,107,103,.1)");
+                light.addColorStop(1, "rgba(5,10,15,0)");
+                ctx.fillStyle = light;
+                ctx.fillRect(0, 0, width, height * .7);
+                ctx.fillStyle = "rgba(4,10,15,.35)";
+                ctx.beginPath();
+                ctx.moveTo(0, 320 * scale);
+                ctx.lineTo(width, 265 * scale);
+                ctx.lineTo(width, panelTop);
+                ctx.lineTo(0, panelTop);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,.08)";
+                ctx.lineWidth = 2 * scale;
+                for (let y = 330; y < panelTop; y += 36) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y * scale);
+                    ctx.lineTo(width, (y - 22) * scale);
+                    ctx.stroke();
+                }
+            }
+
+            const photoShade = ctx.createLinearGradient(0, 0, 0, height);
+            photoShade.addColorStop(0, "rgba(5,9,15,.3)");
+            photoShade.addColorStop(.46, "rgba(5,9,15,.12)");
+            photoShade.addColorStop(.66, "rgba(5,9,15,.55)");
+            photoShade.addColorStop(1, "rgba(5,9,15,.86)");
+            ctx.fillStyle = photoShade;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.globalAlpha = .88;
+            ctx.lineCap = "square";
+            const brush = ctx.createLinearGradient(0, 0, width, height * .55);
+            brush.addColorStop(0, "#9f101f");
+            brush.addColorStop(.52, "#ed1734");
+            brush.addColorStop(1, "#74101d");
+            ctx.strokeStyle = brush;
+            ctx.lineWidth = 72 * scale;
+            ctx.beginPath();
+            ctx.moveTo(-90 * scale, 472 * scale);
+            ctx.lineTo(430 * scale, 420 * scale);
+            ctx.lineTo(725 * scale, 470 * scale);
+            ctx.lineTo(1090 * scale, 388 * scale);
+            ctx.stroke();
+            ctx.globalAlpha = .62;
+            ctx.lineWidth = 20 * scale;
+            ctx.beginPath();
+            ctx.moveTo(-30 * scale, 530 * scale);
+            ctx.lineTo(350 * scale, 492 * scale);
+            ctx.lineTo(760 * scale, 526 * scale);
+            ctx.lineTo(1040 * scale, 466 * scale);
+            ctx.stroke();
+            ctx.restore();
+
+            const brandBox = { x: 34 * scale, y: 28 * scale, width: 112 * scale, height: 42 * scale };
+            if (brandLogo) drawImageContain(brandLogo, brandBox.x, brandBox.y, brandBox.width, brandBox.height);
+            else drawBrandLogo(brandBox.x + brandBox.width / 2, brandBox.y, brandBox.height);
+            addPosterHitRegion("brandLogo", brandBox.x, brandBox.y, brandBox.width, brandBox.height);
+
+            ctx.fillStyle = "rgba(8,13,19,.55)";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            ctx.font = `800 ${13 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText("PITCHPLAN  /  FOOTBALL", width - 48 * scale, 50 * scale);
+
+            ctx.save();
+            ctx.translate(width - 18 * scale, height * .41);
+            ctx.rotate(Math.PI / 2);
+            ctx.fillStyle = "rgba(255,255,255,.92)";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `800 ${12 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText("MATCHDAY  ·  MATCHDAY  ·  MATCHDAY  ·  MATCHDAY", 0, 0, height * .72);
+            ctx.restore();
+
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `900 ${fitText(title, width - 54 * scale, 142 * scale, 900, 58 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.lineWidth = 2 * scale;
+            ctx.strokeStyle = "rgba(255,255,255,.78)";
+            ctx.strokeText(title, width / 2, 486 * scale, width - 54 * scale);
+            ctx.fillStyle = "#ffffff";
+            ctx.fillText(title, width / 2, 486 * scale, width - 54 * scale);
+            ctx.fillStyle = theme.accent;
+            ctx.fillRect(74 * scale, 544 * scale, 106 * scale, 5 * scale);
+            ctx.fillStyle = "rgba(255,255,255,.88)";
+            ctx.textAlign = "left";
+            ctx.font = `800 ${14 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(matchdayCompetitionInput.value.trim().toUpperCase(), 74 * scale, 571 * scale, width * .72);
+            addPosterHitRegion("title", 36 * scale, 414 * scale, width - 72 * scale, 104 * scale);
+            addPosterHitRegion("matchdayCompetition", 70 * scale, 550 * scale, width - 140 * scale, 42 * scale);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(panelInset, panelTop, panelWidth, panelHeight, 30 * scale);
+            ctx.fillStyle = "rgba(7,12,18,.82)";
+            ctx.fill();
+            const border = ctx.createLinearGradient(panelInset, 0, width - panelInset, 0);
+            border.addColorStop(0, "#aa2534");
+            border.addColorStop(.5, "rgba(239,239,230,.64)");
+            border.addColorStop(1, "#465c71");
+            ctx.strokeStyle = border;
+            ctx.lineWidth = 2 * scale;
+            ctx.stroke();
+            ctx.restore();
+
+            const crestSize = 118 * scale;
+            const crestY = panelTop + 32 * scale;
+            const homeCenter = width * .24;
+            const awayCenter = width * .76;
+            const drawTeamCrest = (image, label, centerX, type) => {
+                ctx.save();
+                ctx.shadowColor = "rgba(0,0,0,.46)";
+                ctx.shadowBlur = 12 * scale;
+                ctx.fillStyle = "rgba(255,255,255,.98)";
+                ctx.beginPath();
+                ctx.arc(centerX, crestY + crestSize / 2, crestSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(centerX, crestY + crestSize / 2, crestSize / 2 - 7 * scale, 0, Math.PI * 2);
+                ctx.clip();
+                if (image) drawImageContain(image, centerX - crestSize / 2 + 8 * scale, crestY + 8 * scale, crestSize - 16 * scale, crestSize - 16 * scale);
+                else {
+                    ctx.fillStyle = "#1d2933";
+                    ctx.font = `900 ${30 * scale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(label.slice(0, 3).toUpperCase(), centerX, crestY + crestSize / 2);
+                }
+                ctx.restore();
+                addPosterHitRegion(type, centerX - crestSize / 2, crestY, crestSize, crestSize, 0);
+            };
+            drawTeamCrest(match.homeLogo, match.home, homeCenter, "homeLogo");
+            drawTeamCrest(match.awayLogo, match.away, awayCenter, "awayLogo");
+
+            ctx.fillStyle = "#f2d84c";
+            ctx.beginPath();
+            ctx.arc(width / 2, crestY + crestSize / 2, 38 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#171a20";
+            ctx.font = `900 ${20 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("VS", width / 2, crestY + crestSize / 2);
+
+            const nameY = panelTop + 176 * scale;
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `900 ${fitText(match.home.toUpperCase(), width * .38, 24 * scale, 900, 13 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(match.home.toUpperCase(), homeCenter, nameY, width * .38);
+            addPosterHitRegion("home", homeCenter - width * .19, nameY - 25 * scale, width * .38, 50 * scale, 0);
+            ctx.font = `900 ${fitText(match.away.toUpperCase(), width * .38, 24 * scale, 900, 13 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(match.away.toUpperCase(), awayCenter, nameY, width * .38);
+            addPosterHitRegion("away", awayCenter - width * .19, nameY - 25 * scale, width * .38, 50 * scale, 0);
+
+            ctx.strokeStyle = "rgba(255,255,255,.18)";
+            ctx.lineWidth = 1 * scale;
+            ctx.beginPath();
+            ctx.moveTo(panelInset + 28 * scale, panelTop + 201 * scale);
+            ctx.lineTo(width - panelInset - 28 * scale, panelTop + 201 * scale);
+            ctx.stroke();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = theme.accent;
+            ctx.font = `850 ${23 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(dateInput.value.trim().toUpperCase(), width / 2, panelTop + 233 * scale, panelWidth - 54 * scale);
+            addPosterHitRegion("date", panelInset + 24 * scale, panelTop + 208 * scale, panelWidth - 48 * scale, 48 * scale);
+
+            fillRoundRect(width / 2 - 77 * scale, panelTop + 260 * scale, 154 * scale, 44 * scale, 22 * scale, "#f2d84c");
+            ctx.fillStyle = "#171a20";
+            ctx.font = `900 ${23 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(match.time, width / 2, panelTop + 282 * scale);
+            addPosterHitRegion("time", width / 2 - 88 * scale, panelTop + 252 * scale, 176 * scale, 60 * scale, 0);
+
+            ctx.fillStyle = "rgba(255,255,255,.72)";
+            ctx.font = `750 ${12 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(matchdayVenueInput.value.trim().toUpperCase(), width / 2, height - 56 * scale, panelWidth - 56 * scale);
+            addPosterHitRegion("matchdayVenue", panelInset + 28 * scale, height - 82 * scale, panelWidth - 56 * scale, 44 * scale);
+        }
+
         function drawProPoster(theme, width, height) {
             const scale = Number(brandLogoSizeInput.value) / 100;
             const logoSize = 58 * scale;
@@ -1088,6 +1334,8 @@ const themes = {
                 date: dateInput.value,
                 caption: brandCaptionInput.value,
                 goals: goalScorersInput.value,
+                venue: matchdayVenueInput.value,
+                competition: matchdayCompetitionInput.value,
                 leagueLogo,
                 background: backgroundColorInput.value,
                 backgroundOpacity: backgroundOpacityInput.value,
@@ -1108,6 +1356,8 @@ const themes = {
             dateInput.value = state.date;
             brandCaptionInput.value = state.caption;
             goalScorersInput.value = state.goals;
+            matchdayVenueInput.value = state.venue;
+            matchdayCompetitionInput.value = state.competition;
             leagueLogo = state.leagueLogo;
             backgroundColorInput.value = state.background;
             backgroundOpacityInput.value = state.backgroundOpacity;
@@ -1177,6 +1427,8 @@ const themes = {
         dateInput.addEventListener("input", drawPoster);
         brandCaptionInput.addEventListener("input", drawPoster);
         goalScorersInput.addEventListener("input", drawPoster);
+        matchdayVenueInput.addEventListener("input", drawPoster);
+        matchdayCompetitionInput.addEventListener("input", drawPoster);
         Object.entries(textColorInputs).forEach(([key, input]) => {
             input.addEventListener("input", () => {
                 customTextColors.add(key);

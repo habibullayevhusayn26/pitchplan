@@ -6,7 +6,7 @@
     <meta name="description" content="PitchPlan bilan futbol uchrashuvlari jadvalini yarating, tahrirlang va rasm sifatida yuklab oling.">
     <title>PitchPlan — futbol jadvali dizayneri</title>
     <link rel="icon" type="image/png" href="./images/pitchplan.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
     <header class="topbar">
@@ -60,6 +60,16 @@
                     <span class="template-card-details">
                         <span class="template-card-title">MATCH RESULT</span>
                         <span class="template-card-description">Foto fonli yakuniy hisob, klublar va gol mualliflari</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+                <button type="button" class="template-card" data-template="matchday" aria-label="MATCHDAY POSTER shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="600" aria-label="MATCHDAY POSTER shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">MATCHDAY POSTER</span>
+                        <span class="template-card-description">Ikki klub o‘rtasidagi o‘yin uchun 1:1 MATCHDAY poster</span>
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
@@ -129,12 +139,20 @@
 78'  M. Cucurella</textarea>
                     </div>
                 </div>
+                <div class="field" id="matchday-venue-field" hidden>
+                    <label for="matchday-venue">Stadion / uchrashuv joyi</label>
+                    <input id="matchday-venue" type="text" maxlength="40" value="ETIHAD STADIUM · MANCHESTER">
+                </div>
+                <div class="field" id="matchday-competition-field" hidden>
+                    <label for="matchday-competition">Musobaqa / bosqich</label>
+                    <input id="matchday-competition" type="text" maxlength="40" value="PREMIER LEAGUE · 13-TUR">
+                </div>
                 <div class="section-label"><strong>Yozuv ranglari</strong><span>Matnlarni alohida sozlang</span></div>
                 <div class="field-grid color-fields">
                     <div class="field"><label for="title-color">Sarlavha</label><input id="title-color" type="color" value="#ffffff"></div>
                     <div class="field"><label for="date-color">Sana</label><input id="date-color" type="color" value="#11d4ee"></div>
                     <div class="field"><label for="team-color">Jamoa nomlari</label><input id="team-color" type="color" value="#ffffff"></div>
-                    <div class="field"><label id="time-color-label" for="time-color">O‘yin vaqti</label><input id="time-color" type="color" value="#3970c8"></div>
+                    <div class="field" id="time-color-field"><label id="time-color-label" for="time-color">O‘yin vaqti</label><input id="time-color" type="color" value="#3970c8"></div>
                     <div class="field" id="brand-color-field"><label for="brand-color">Logo / pastki yozuv</label><input id="brand-color" type="color" value="#ffffff"></div>
                 </div>
                 <div class="field" id="brand-caption-field">
