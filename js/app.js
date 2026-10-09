@@ -1,21 +1,68 @@
 const examples = {
     jf: {
-                title: "BUGUN BO'LIB O'TADIGAN ASOSIY UCHRASHUVLAR RO'YXATI",
-                date: "9-OKTABR",
-                rows: [
-                    ["PAXTAKOR", "19:00", "BUNYODKOR"],
-                    ["BUXORO", "19:00", "ANDIJON"],
-                    ["NASAF", "19:30", "DINAMO"],
-                    ["AL NASR", "23:00", "AL DIRIYA"],
-                    ["BORUSSIYA D", "23:30", "VERDER"]
-                ]
-            }
-        };
-        const themes = {
-            jf: { bg: "#ffffff", deep: "#f4f4f4", row: "#ffffff", accent: "#52d719", timeBg: "#52d719", time: "#101510", text: "#171717", pattern: "#ececec", textColors: { title: "#171717", date: "#52cf18", team: "#171717", time: "#101510", brand: "#171717" } }
-        };
+        title: "BUGUN BO'LIB O'TADIGAN ASOSIY UCHRASHUVLAR RO'YXATI",
+        date: "9-OKTABR",
+        caption: "PITCHPLAN",
+        logoPlacement: "Logo postering tepasida va pastida chiqadi.",
+        rows: [
+            ["PAXTAKOR", "19:00", "BUNYODKOR"],
+            ["BUXORO", "19:00", "ANDIJON"],
+            ["NASAF", "19:30", "DINAMO"],
+            ["AL NASR", "23:00", "AL DIRIYA"],
+            ["BORUSSIYA D", "23:30", "VERDER"]
+        ]
+    },
+    sf: {
+        title: "BUGUNGI UCHRASHUVLAR",
+        date: "9-OKTABR",
+        caption: "RED STAR FUTBOL",
+        logoPlacement: "Logo pastki qismda yozuv ustida joylashadi.",
+        rows: [
+            ["REAL MADRID", "18:00", "SEVILYA"],
+            ["CHELSI", "19:00", "ARSENAL"],
+            ["ROMA", "20:30", "INTER"],
+            ["BAYERN", "21:00", "DORTMUND"],
+            ["MILAN", "22:00", "NAPOLI"],
+            ["BARSELONA", "23:00", "ATLETIKO"]
+        ]
+    },
+    pro: {
+        title: "BUGUNGI UCHRASHUVLAR",
+        date: "9-OKTABR  ·  MATCHDAY",
+        caption: "PITCHPLAN PRO",
+        logoPlacement: "Logo sarlavha yonida, yuqori o‘ng burchakda joylashadi.",
+        rows: [
+            ["MANCHESTER CITY", "18:00", "ARSENAL"],
+            ["REAL MADRID", "19:30", "BARSELONA"],
+            ["LIVERPUL", "21:00", "CHELSI"],
+            ["BAYERN", "22:30", "DORTMUND"],
+            ["INTER", "23:00", "MILAN"]
+        ]
+    },
+    result: {
+        title: "",
+        date: "",
+        caption: "PITCHPLAN",
+        logoPlacement: "PitchPlan logosi rasmning yuqori chap burchagida joylashadi.",
+        rows: [
+            ["MAN UNITED", "3 - 2", "IPSWICH"]
+        ]
+    }
+};
+const themes = {
+    jf: { bg: "#ffffff", row: "#ffffff", timeBg: "#52d719", accent: "#52d719", textColors: { title: "#171717", date: "#52cf18", team: "#171717", time: "#101510", brand: "#171717" } },
+    sf: { bg: "#740000", row: "#f7f2ed", timeBg: "#b50b05", accent: "#e8b7b7", textColors: { title: "#ffffff", date: "#ffd6d6", team: "#262329", time: "#ffffff", brand: "#ffffff" } },
+    pro: { bg: "#f3f6fa", row: "#ffffff", timeBg: "#e3f3f1", accent: "#248b83", textColors: { title: "#172b3d", date: "#64798d", team: "#23384a", time: "#18786f", brand: "#18786f" } },
+    result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } }
+};
         const canvas = document.getElementById("poster");
         const ctx = canvas.getContext("2d");
+        const canvasOriginalParent = canvas.parentElement;
+        const expandedPreview = document.getElementById("expanded-preview");
+        const expandedCanvasStage = document.getElementById("expanded-canvas-stage");
+        const inlineEditor = document.getElementById("canvas-inline-editor");
+        const homeView = document.getElementById("home-view");
+        const editorView = document.getElementById("editor-view");
         const rowsEl = document.getElementById("match-list");
         const titleInput = document.getElementById("poster-title");
         const dateInput = document.getElementById("poster-date");
@@ -28,6 +75,10 @@ const examples = {
         const opacityValue = document.getElementById("opacity-value");
         const brandLogoInput = document.getElementById("brand-logo");
         const brandLogoPreview = document.getElementById("brand-logo-preview");
+        const leagueLogoInput = document.getElementById("league-logo");
+        const leagueLogoPreview = document.getElementById("league-logo-preview");
+        const brandCaptionInput = document.getElementById("brand-caption");
+        const goalScorersInput = document.getElementById("goal-scorers");
         const brandLogoSizeInput = document.getElementById("brand-logo-size");
         const brandLogoSizeValue = document.getElementById("brand-logo-size-value");
         const textColorInputs = {
@@ -41,18 +92,22 @@ const examples = {
         let rows = [];
         let backgroundImage = null;
         let brandLogo = null;
+        let leagueLogo = null;
+        let customBrandLogo = false;
         let customBackgroundColor = false;
+        let nonResultBackgroundOpacity = backgroundOpacityInput.value;
         const customTextColors = new Set();
+        let posterHitRegions = [];
+        let activeInlineTarget = null;
         const defaultBrandLogo = new Image();
         defaultBrandLogo.onload = () => {
-            brandLogo = defaultBrandLogo;
+            if (!customBrandLogo) brandLogo = defaultBrandLogo;
             rows.forEach(row => {
                 if (!row.homeLogo) row.homeLogo = defaultBrandLogo;
                 if (!row.awayLogo) row.awayLogo = defaultBrandLogo;
             });
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
-            renderInputs();
-            drawPoster();
+            renderTemplatePreviews();
         };
         defaultBrandLogo.onerror = () => {
             statusEl.textContent = "Standart PitchPlan logosi yuklanmadi. O‘z logongizni yuklashingiz mumkin.";
@@ -60,22 +115,61 @@ const examples = {
         defaultBrandLogo.src = "./images/pitchplan.png";
 
         function setTemplate(name) {
+            const previousTemplate = currentTemplate;
+            if (name === "result" && previousTemplate !== "result") {
+                nonResultBackgroundOpacity = backgroundOpacityInput.value;
+            }
+            if (name !== "result" && previousTemplate === "result") {
+                backgroundOpacityInput.value = nonResultBackgroundOpacity;
+                opacityValue.textContent = `${nonResultBackgroundOpacity}%`;
+            }
             currentTemplate = name;
             const example = examples[name];
             if (!example) return;
+            canvas.width = 1000;
+            canvas.height = name === "result" ? 1000 : 1200;
+            canvas.style.aspectRatio = name === "result" ? "1 / 1" : "5 / 6";
+            document.getElementById("preview-dimensions").textContent = name === "result" ?
+                "PNG · 1000 × 1000 px · 1:1" : "PNG · 1000 × 1200 px · 5:6";
+            const templatePreview = document.querySelector(`[data-template="${name}"] .template-preview`);
+            if (templatePreview) {
+                templatePreview.width = 500;
+                templatePreview.height = name === "result" ? 500 : 600;
+                templatePreview.style.aspectRatio = name === "result" ? "1 / 1" : "5 / 6";
+            }
             titleInput.value = example.title;
             dateInput.value = example.date;
             const defaultTeamLogo = defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
             rows = example.rows.map(([home, time, away]) => ({ home, time, away, homeLogo: defaultTeamLogo, awayLogo: defaultTeamLogo }));
-            if (!customBackgroundColor) backgroundColorInput.value = themes[name].bg;
-            rowColorInput.value = themes[name].row;
-            Object.entries(themes[name].textColors).forEach(([key, color]) => {
-                if (!customTextColors.has(key)) textColorInputs[key].value = color;
+            brandCaptionInput.value = example.caption;
+            const resultTemplate = name === "result";
+            document.getElementById("result-controls").hidden = name !== "result";
+            document.getElementById("matches-hint").textContent = name === "result" ? "Klub nomi, hisob va logo" : "Jamoa nomi, vaqt va logo";
+            document.getElementById("add-row").hidden = resultTemplate;
+            ["row-color-field", "time-background-field", "brand-color-field", "brand-caption-field", "brand-logo-size-field", "editor-hint"].forEach(id => {
+                document.getElementById(id).hidden = resultTemplate;
             });
-            document.querySelectorAll(".template").forEach(button => {
-                const selected = button.dataset.template === name;
-                button.classList.toggle("active", selected);
-                button.setAttribute("aria-pressed", String(selected));
+            document.getElementById("title-field").hidden = resultTemplate;
+            document.getElementById("date-field").hidden = resultTemplate;
+            document.getElementById("time-color-label").textContent = resultTemplate ? "Hisob rangi" : "O‘yin vaqti";
+            document.getElementById("brand-logo-hint").textContent = resultTemplate ?
+                "PitchPlan logosi suratdagi 433 belgisi o‘rnida chiqadi." : example.logoPlacement;
+            goalScorersInput.value = resultTemplate ?
+                "22'  S. Morsy\n26'  M. de Ligt\n44'  P. Dorgu\n47'  H. Maguire\n|\nJ. Philogene  4'\nJ. Philogene  45+2'" : "";
+            leagueLogo = null;
+            leagueLogoInput.value = "";
+            updateLogoPreview(leagueLogoPreview, null, "PL");
+            customBackgroundColor = false;
+            backgroundColorInput.value = themes[name].bg;
+            rowColorInput.value = themes[name].row;
+            timeBackgroundColorInput.value = themes[name].timeBg;
+            if (name === "result") {
+                backgroundOpacityInput.value = "100";
+                opacityValue.textContent = "100%";
+            }
+            customTextColors.clear();
+            Object.entries(themes[name].textColors).forEach(([key, color]) => {
+                textColorInputs[key].value = color;
             });
             renderInputs();
             drawPoster();
@@ -86,6 +180,7 @@ const examples = {
             rows.forEach((row, index) => {
                 const item = document.createElement("div");
                 item.className = "match-row";
+                const resultTemplate = currentTemplate === "result";
                 item.innerHTML = `
                     <div class="match-team-control home-team">
                         <label class="logo-upload home-logo" title="Uy jamoasi logosi">
@@ -94,7 +189,7 @@ const examples = {
                         </label>
                         <input type="text" maxlength="22" value="${escapeHtml(row.home)}" aria-label="${index + 1}-uy jamoasi">
                     </div>
-                    <input class="time-control" type="text" maxlength="10" value="${escapeHtml(row.time)}" aria-label="${index + 1}-uchrashuv vaqti">
+                    <input class="time-control" type="text" maxlength="10" value="${escapeHtml(row.time)}" aria-label="${index + 1}-${resultTemplate ? "match hisobi" : "uchrashuv vaqti"}">
                     <div class="match-team-control away-team">
                         <input type="text" maxlength="22" value="${escapeHtml(row.away)}" aria-label="${index + 1}-mehmon jamoa">
                         <label class="logo-upload away-logo" title="Mehmon jamoa logosi">
@@ -108,6 +203,7 @@ const examples = {
                 const awayInput = item.querySelector(".away-team input[type='text']");
                 const homeLogoLabel = item.querySelector(".home-logo");
                 const awayLogoLabel = item.querySelector(".away-logo");
+                item.querySelector(".remove-row").hidden = resultTemplate;
                 homeInput.addEventListener("input", event => { row.home = event.target.value; homeLogoLabel.querySelector(".logo-fallback").textContent = row.home.slice(0, 2).toUpperCase(); drawPoster(); });
                 timeInput.addEventListener("input", event => { row.time = event.target.value; drawPoster(); });
                 awayInput.addEventListener("input", event => { row.away = event.target.value; awayLogoLabel.querySelector(".logo-fallback").textContent = row.away.slice(0, 2).toUpperCase(); drawPoster(); });
@@ -232,10 +328,135 @@ const examples = {
             }
         }
 
+        function addPosterHitRegion(type, x, y, width, height, rowIndex = -1) {
+            posterHitRegions.push({ type, x, y, width, height, rowIndex });
+        }
+
+        function getGoalColumns() {
+            const lines = goalScorersInput.value.split(/\r?\n/);
+            const separatorIndex = lines.findIndex(line => line.trim() === "|");
+            return {
+                home: (separatorIndex < 0 ? lines : lines.slice(0, separatorIndex)).filter(line => line.trim()).join("\n"),
+                away: separatorIndex < 0 ? "" : lines.slice(separatorIndex + 1).filter(line => line.trim()).join("\n")
+            };
+        }
+
+        function getInlineTargetValue(target) {
+            if (target.type === "title") return titleInput.value;
+            if (target.type === "date") return dateInput.value;
+            if (target.type === "caption") return brandCaptionInput.value;
+            if (target.type === "goals") return goalScorersInput.value;
+            if (target.type === "homeGoals" || target.type === "awayGoals") return getGoalColumns()[target.type === "homeGoals" ? "home" : "away"];
+            const row = rows[target.rowIndex];
+            if (!row) return "";
+            if (target.type === "home") return row.home;
+            if (target.type === "away") return row.away;
+            return row.time;
+        }
+
+        function updateInlineTarget(target, value) {
+            if (target.type === "title") titleInput.value = value;
+            else if (target.type === "date") dateInput.value = value;
+            else if (target.type === "caption") brandCaptionInput.value = value;
+            else if (target.type === "goals") goalScorersInput.value = value;
+            else if (target.type === "homeGoals" || target.type === "awayGoals") {
+                const goals = getGoalColumns();
+                goals[target.type === "homeGoals" ? "home" : "away"] = value;
+                goalScorersInput.value = [goals.home, goals.away].filter(Boolean).join("\n|\n");
+            }
+            else {
+                const row = rows[target.rowIndex];
+                if (!row) return;
+                row[target.type] = value;
+                const rowElement = rowsEl.children[target.rowIndex];
+                if (rowElement) {
+                    const selector = target.type === "home" ? ".home-team input[type='text']" :
+                        target.type === "away" ? ".away-team input[type='text']" : ".time-control";
+                    rowElement.querySelector(selector).value = value;
+                }
+            }
+            drawPoster();
+        }
+
+        function showInlineEditor(target, clientX, clientY) {
+            activeInlineTarget = target;
+            inlineEditor.value = getInlineTargetValue(target);
+            inlineEditor.maxLength = target.type === "title" ? 80 :
+                target.type === "date" ? 30 :
+                target.type === "caption" ? 24 :
+                target.type === "goals" || target.type === "homeGoals" || target.type === "awayGoals" ? 240 :
+                target.type === "time" ? 10 : 22;
+            inlineEditor.rows = target.type === "goals" || target.type === "homeGoals" || target.type === "awayGoals" ? 5 : 1;
+            inlineEditor.classList.toggle("is-multiline", inlineEditor.rows > 1);
+            const bodyRect = document.querySelector(".expanded-preview-body").getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            const hitX = canvasRect.left + (target.x + target.width / 2) * canvasRect.width / canvas.width;
+            const hitY = canvasRect.top + (target.y + target.height / 2) * canvasRect.height / canvas.height;
+            inlineEditor.style.left = `${hitX - bodyRect.left}px`;
+            inlineEditor.style.top = `${hitY - bodyRect.top}px`;
+            inlineEditor.style.fontSize = `${Math.max(13, Math.min(25, 18 * canvasRect.width / canvas.width * 2))}px`;
+            inlineEditor.hidden = false;
+            inlineEditor.focus();
+            inlineEditor.select();
+        }
+
+        function closeInlineEditor(save = true) {
+            if (!activeInlineTarget) return;
+            if (save) updateInlineTarget(activeInlineTarget, inlineEditor.value);
+            else inlineEditor.value = getInlineTargetValue(activeInlineTarget);
+            activeInlineTarget = null;
+            inlineEditor.hidden = true;
+        }
+
+        canvas.addEventListener("click", event => {
+            if (!expandedPreview.open) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * canvas.width / rect.width;
+            const y = (event.clientY - rect.top) * canvas.height / rect.height;
+            const target = [...posterHitRegions].reverse().find(region =>
+                x >= region.x && x <= region.x + region.width &&
+                y >= region.y && y <= region.y + region.height
+            );
+            if (!target) {
+                closeInlineEditor();
+                return;
+            }
+            if (target.type === "brandLogo") {
+                closeInlineEditor();
+                brandLogoInput.click();
+            } else if (target.type === "leagueLogo") {
+                closeInlineEditor();
+                leagueLogoInput.click();
+            } else if (target.type === "homeLogo" || target.type === "awayLogo") {
+                closeInlineEditor();
+                const rowElement = rowsEl.children[target.rowIndex];
+                const selector = target.type === "homeLogo" ? ".home-logo input[type='file']" : ".away-logo input[type='file']";
+                rowElement.querySelector(selector).click();
+            } else {
+                showInlineEditor(target, event.clientX, event.clientY);
+            }
+        });
+
+        inlineEditor.addEventListener("input", () => {
+            if (activeInlineTarget) updateInlineTarget(activeInlineTarget, inlineEditor.value);
+        });
+        inlineEditor.addEventListener("keydown", event => {
+            if (event.key === "Enter" && activeInlineTarget && ["goals", "homeGoals", "awayGoals"].includes(activeInlineTarget.type) && !event.ctrlKey && !event.metaKey) return;
+            if (event.key === "Enter") {
+                event.preventDefault();
+                inlineEditor.blur();
+            } else if (event.key === "Escape") {
+                event.preventDefault();
+                closeInlineEditor(false);
+            }
+        });
+        inlineEditor.addEventListener("blur", () => closeInlineEditor());
+
         function drawPoster() {
             const theme = themes[currentTemplate];
             const width = canvas.width;
             const height = canvas.height;
+            posterHitRegions = [];
             ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = backgroundColorInput.value || theme.bg;
             ctx.fillRect(0, 0, width, height);
@@ -246,7 +467,16 @@ const examples = {
                 drawImageCover(backgroundImage, 0, 0, width, height);
                 ctx.restore();
             }
-            drawJfPoster(theme, width, height);
+            if (currentTemplate === "sf") drawSfPoster(theme, width, height);
+            else if (currentTemplate === "pro") drawProPoster(theme, width, height);
+            else if (currentTemplate === "result") drawResultPoster(theme, width, height);
+            else drawJfPoster(theme, width, height);
+            const thumbnail = document.querySelector(`[data-template="${currentTemplate}"] .template-preview`);
+            if (thumbnail) {
+                const thumbnailContext = thumbnail.getContext("2d");
+                thumbnailContext.clearRect(0, 0, thumbnail.width, thumbnail.height);
+                thumbnailContext.drawImage(canvas, 0, 0, thumbnail.width, thumbnail.height);
+            }
         }
 
         function drawWatermark(width, height) {
@@ -317,6 +547,7 @@ const examples = {
             const bottomLogoSize = 64 * logoScale;
             const topLogoY = 24;
             drawBrandLogo(width / 2, topLogoY, topLogoSize);
+            addPosterHitRegion("brandLogo", width / 2 - topLogoSize / 2, topLogoY, topLogoSize, topLogoSize);
             const title = titleInput.value.trim() || "UCHRASHUVLAR RO'YXATI";
             const titleLines = wrapTitle(title, width - 130, 48, 3);
             const titleStartY = topLogoY + topLogoSize + 32;
@@ -327,6 +558,7 @@ const examples = {
                 ctx.fillStyle = textColorInputs.title.value;
                 ctx.font = `900 ${size}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(line, width / 2, titleStartY + index * 43, width - 130);
+                addPosterHitRegion("title", 65, titleStartY + index * 43 - 22, width - 130, 44);
             });
             const headerHeight = titleStartY + titleLines.length * 43 + 24;
             if (dateInput.value.trim()) {
@@ -334,6 +566,7 @@ const examples = {
                 const date = dateInput.value.trim().toUpperCase();
                 ctx.font = `800 ${fitText(date, width - 100, 26, 800, 13)}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(date, width / 2, headerHeight - 14, width - 100);
+                addPosterHitRegion("date", 50, headerHeight - 32, width - 100, 36);
             }
             const leftMargin = rows.length > 10 ? 36 : 48;
             const footerHeight = bottomLogoSize + 26;
@@ -368,6 +601,8 @@ const examples = {
                 const logoY = y + (rowHeight - logoSize) / 2;
                 drawLogo(row.homeLogo, row.home, cardX + 8, logoY, logoSize, "#ffffff", true, textColorInputs.team.value);
                 drawLogo(row.awayLogo, row.away, cardX + cardWidth - logoSize - 8, logoY, logoSize, "#ffffff", true, textColorInputs.team.value);
+                addPosterHitRegion("homeLogo", cardX + 8, logoY, logoSize, logoSize, index);
+                addPosterHitRegion("awayLogo", cardX + cardWidth - logoSize - 8, logoY, logoSize, logoSize, index);
 
                 ctx.fillStyle = textColorInputs.team.value;
                 ctx.textAlign = "center";
@@ -377,17 +612,20 @@ const examples = {
                 const homeSize = fitText(row.home, homeTextWidth, Math.min(columns === 2 ? 20 : 30, rowHeight * .32), 900, 8);
                 ctx.font = `900 ${homeSize}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(row.home.toUpperCase(), homeTextX + homeTextWidth / 2, y + rowHeight / 2, homeTextWidth);
+                addPosterHitRegion("home", homeTextX, y, homeTextWidth, rowHeight, index);
 
                 const awayX = cardX + sideWidth + timeWidth + 10;
                 const awayTextWidth = Math.max(12, sideWidth - logoSize - 20);
                 const awaySize = fitText(row.away, awayTextWidth, Math.min(columns === 2 ? 20 : 30, rowHeight * .32), 900, 8);
                 ctx.font = `900 ${awaySize}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(row.away.toUpperCase(), awayX + awayTextWidth / 2, y + rowHeight / 2, awayTextWidth);
+                addPosterHitRegion("away", awayX, y, awayTextWidth, rowHeight, index);
 
                 ctx.fillStyle = textColorInputs.time.value;
                 const timeSize = fitText(row.time, timeWidth - 12, Math.min(columns === 2 ? 26 : 38, rowHeight * .4), 900, 9);
                 ctx.font = `900 ${timeSize}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(row.time, cardX + sideWidth + timeWidth / 2, y + rowHeight / 2);
+                addPosterHitRegion("time", cardX + sideWidth, y, timeWidth, rowHeight, index);
             });
             if (!rows.length) {
                 ctx.fillStyle = textColorInputs.team.value;
@@ -396,13 +634,549 @@ const examples = {
                 ctx.fillText("UCHRASHUV QO‘SHING", width / 2, startY + rowHeight / 2);
             }
             drawBrandLogo(width / 2, height - bottomLogoSize - 13, bottomLogoSize);
+            addPosterHitRegion("brandLogo", width / 2 - bottomLogoSize / 2, height - bottomLogoSize - 13, bottomLogoSize, bottomLogoSize);
         }
 
-        document.querySelectorAll(".template").forEach(button => {
-            button.addEventListener("click", () => setTemplate(button.dataset.template));
+        function fillRoundRect(x, y, width, height, radius, fill, stroke = null) {
+            ctx.beginPath();
+            ctx.roundRect(x, y, width, height, radius);
+            ctx.fillStyle = fill;
+            ctx.fill();
+            if (stroke) {
+                ctx.strokeStyle = stroke;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+        }
+
+        function drawPosterHeading(width, y, titleWidth, titleColor, dateColor, fontSize = 38) {
+            const title = titleInput.value.trim().toUpperCase();
+            const lines = wrapTitle(title || "UCHRASHUVLAR RO'YXATI", titleWidth, fontSize, 2);
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            lines.forEach((line, index) => {
+                const size = fitText(line, titleWidth, fontSize, 900, 16);
+                ctx.fillStyle = titleColor;
+                ctx.font = `900 ${size}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(line, width / 2, y + index * (fontSize * .9), titleWidth);
+                addPosterHitRegion("title", width / 2 - titleWidth / 2, y + index * (fontSize * .9) - fontSize / 2, titleWidth, fontSize);
+            });
+            const dateY = y + lines.length * fontSize * .9 + 9;
+            if (dateInput.value.trim()) {
+                const date = dateInput.value.trim().toUpperCase();
+                ctx.fillStyle = dateColor;
+                ctx.font = `700 ${fitText(date, titleWidth, 22, 700, 13)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(date, width / 2, dateY, titleWidth);
+                addPosterHitRegion("date", width / 2 - titleWidth / 2, dateY - 14, titleWidth, 28);
+            }
+            return dateY + 24;
+        }
+
+        function drawTemplateGrid(width, top, bottom, maxRowHeight, columnsGap = 18) {
+            const columns = rows.length > 10 ? 2 : 1;
+            const margin = columns === 2 ? 48 : 96;
+            const columnGap = columns === 2 ? columnsGap : 0;
+            const cardWidth = (width - margin * 2 - columnGap * (columns - 1)) / columns;
+            const count = Math.max(1, Math.ceil(rows.length / columns));
+            const available = Math.max(0, bottom - top);
+            const rowGap = Math.min(13, Math.max(4, available / (count * 11)));
+            const rowHeight = Math.min(maxRowHeight, (available - rowGap * (count - 1)) / count);
+            const usedHeight = count * rowHeight + (count - 1) * rowGap;
+            return { columns, margin, cardWidth, rowHeight, rowGap, startY: top + Math.max(0, (available - usedHeight) / 2) };
+        }
+
+        function drawSfPoster(theme, width, height) {
+            ctx.save();
+            ctx.globalAlpha = .32;
+            ctx.fillStyle = textColorInputs.brand.value;
+            ctx.font = `800 ${Math.max(20, width * .032)}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const sideLabel = brandCaptionInput.value.trim().toUpperCase() || "RED STAR FUTBOL";
+            const labelWidth = ctx.measureText(sideLabel).width;
+            const labelStep = labelWidth + 14;
+            [24, 58, width - 58, width - 24].forEach((x, index) => {
+                ctx.save();
+                ctx.translate(x, height / 2);
+                ctx.rotate(index < 2 ? -Math.PI / 2 : Math.PI / 2);
+                for (let y = -height / 2 - labelWidth; y < height / 2 + labelWidth; y += labelStep) {
+                    ctx.fillText(sideLabel, y, 0);
+                }
+                ctx.restore();
+            });
+            ctx.restore();
+            addPosterHitRegion("caption", 0, 0, 82, height);
+            addPosterHitRegion("caption", width - 82, 0, 82, height);
+            const headerBottom = drawPosterHeading(width, 83, width - 220, textColorInputs.title.value, textColorInputs.date.value, 40);
+            const footerSpace = Math.min(200, height * .18);
+            const grid = drawTemplateGrid(width, Math.max(225, headerBottom + 38), height - footerSpace, 92);
+            rows.forEach((row, index) => {
+                const column = index % grid.columns;
+                const gridRow = Math.floor(index / grid.columns);
+                const x = grid.margin + column * (grid.cardWidth + (grid.columns === 2 ? 18 : 0));
+                const y = grid.startY + gridRow * (grid.rowHeight + grid.rowGap);
+                const timeWidth = Math.min(142, grid.cardWidth * .23);
+                const teamWidth = (grid.cardWidth - timeWidth) / 2;
+                const logoSize = Math.min(50, grid.rowHeight * .64);
+                fillRoundRect(x, y, grid.cardWidth, grid.rowHeight, 21, rowColorInput.value);
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x + teamWidth, y, timeWidth, grid.rowHeight, 0);
+                ctx.fillStyle = timeBackgroundColorInput.value;
+                ctx.fill();
+                ctx.restore();
+                ctx.strokeStyle = textColorInputs.brand.value;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x + teamWidth, y + 7);
+                ctx.lineTo(x + teamWidth, y + grid.rowHeight - 7);
+                ctx.moveTo(x + teamWidth + timeWidth, y + 7);
+                ctx.lineTo(x + teamWidth + timeWidth, y + grid.rowHeight - 7);
+                ctx.stroke();
+                drawLogo(row.homeLogo, row.home, x + 12, y + (grid.rowHeight - logoSize) / 2, logoSize, "#ffffff", true, textColorInputs.team.value);
+                drawLogo(row.awayLogo, row.away, x + grid.cardWidth - logoSize - 12, y + (grid.rowHeight - logoSize) / 2, logoSize, "#ffffff", true, textColorInputs.team.value);
+                addPosterHitRegion("homeLogo", x + 12, y + (grid.rowHeight - logoSize) / 2, logoSize, logoSize, index);
+                addPosterHitRegion("awayLogo", x + grid.cardWidth - logoSize - 12, y + (grid.rowHeight - logoSize) / 2, logoSize, logoSize, index);
+                ctx.fillStyle = textColorInputs.team.value;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const leftTextX = x + logoSize + 18;
+                const leftTextWidth = Math.max(20, teamWidth - logoSize - 24);
+                const rightTextX = x + teamWidth + timeWidth + 8;
+                const rightTextWidth = Math.max(20, teamWidth - logoSize - 24);
+                const nameSize = Math.min(24, grid.rowHeight * .31);
+                ctx.font = `800 ${fitText(row.home, leftTextWidth, nameSize, 800, 9)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.home, leftTextX + leftTextWidth / 2, y + grid.rowHeight / 2, leftTextWidth);
+                addPosterHitRegion("home", leftTextX, y, leftTextWidth, grid.rowHeight, index);
+                ctx.font = `800 ${fitText(row.away, rightTextWidth, nameSize, 800, 9)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.away, rightTextX + rightTextWidth / 2, y + grid.rowHeight / 2, rightTextWidth);
+                addPosterHitRegion("away", rightTextX, y, rightTextWidth, grid.rowHeight, index);
+                ctx.fillStyle = textColorInputs.time.value;
+                ctx.font = `900 ${fitText(row.time, timeWidth - 12, Math.min(30, grid.rowHeight * .38), 900, 10)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.time, x + teamWidth + timeWidth / 2, y + grid.rowHeight / 2);
+                addPosterHitRegion("time", x + teamWidth, y, timeWidth, grid.rowHeight, index);
+            });
+            const logoSize = 46 * Number(brandLogoSizeInput.value) / 100;
+            const footerY = height - footerSpace + 12;
+            drawBrandLogo(width / 2, footerY, logoSize);
+            addPosterHitRegion("brandLogo", width / 2 - logoSize / 2, footerY, logoSize, logoSize);
+            ctx.fillStyle = textColorInputs.brand.value;
+            ctx.font = `800 ${fitText(brandCaptionInput.value, width - 100, 25, 800, 12)}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(brandCaptionInput.value.toUpperCase(), width / 2, footerY + logoSize + 24, width - 100);
+            addPosterHitRegion("caption", 50, footerY + logoSize + 8, width - 100, 34);
+        }
+
+        function drawResultPoster(theme, width, height) {
+            const match = rows[0] || { home: "CHELSEA", time: "4 - 0", away: "SOUTHAMPTON" };
+            const scale = width / 1000;
+            const panelX = 90 * scale;
+            const panelY = 545 * scale;
+            const panelWidth = width - panelX * 2;
+            const panelHeight = height - panelY;
+            const logoSize = 108 * scale;
+            const panelRadius = 42 * scale;
+
+            if (!backgroundImage) {
+                ctx.fillStyle = "#111923";
+                ctx.fillRect(0, 0, width, height);
+            }
+
+            const shade = ctx.createLinearGradient(0, 0, 0, height);
+            shade.addColorStop(0, "rgba(0,0,0,.2)");
+            shade.addColorStop(.48, "rgba(0,0,0,.02)");
+            shade.addColorStop(.62, "rgba(0,0,0,.32)");
+            shade.addColorStop(1, "rgba(0,0,0,.66)");
+            ctx.fillStyle = shade;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(panelX + panelRadius, panelY);
+            ctx.lineTo(width - panelX - panelRadius, panelY);
+            ctx.quadraticCurveTo(width - panelX, panelY, width - panelX, panelY + panelRadius);
+            ctx.lineTo(width - panelX, height);
+            ctx.lineTo(panelX, height);
+            ctx.lineTo(panelX, panelY + panelRadius);
+            ctx.quadraticCurveTo(panelX, panelY, panelX + panelRadius, panelY);
+            ctx.closePath();
+            const panelFill = ctx.createLinearGradient(0, panelY, 0, height);
+            panelFill.addColorStop(0, "rgba(8,10,16,.48)");
+            panelFill.addColorStop(1, "rgba(8,10,16,.72)");
+            ctx.fillStyle = panelFill;
+            ctx.fill();
+            const edge = ctx.createLinearGradient(panelX, 0, width - panelX, 0);
+            edge.addColorStop(0, "#8c272e");
+            edge.addColorStop(.5, "rgba(217,217,210,.5)");
+            edge.addColorStop(1, "#384d65");
+            ctx.strokeStyle = edge;
+            ctx.lineWidth = 3 * scale;
+            ctx.stroke();
+            ctx.restore();
+
+            const brandBox = { x: 31 * scale, y: 24 * scale, width: 115 * scale, height: 42 * scale };
+            if (brandLogo) drawImageContain(brandLogo, brandBox.x, brandBox.y, brandBox.width, brandBox.height);
+            else drawBrandLogo(brandBox.x + brandBox.width / 2, brandBox.y, brandBox.height);
+            addPosterHitRegion("brandLogo", brandBox.x, brandBox.y, brandBox.width, brandBox.height);
+
+            const leagueSize = 56 * scale;
+            const leagueY = panelY - leagueSize * .45;
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,.45)";
+            ctx.shadowBlur = 12 * scale;
+            ctx.fillStyle = "#111820";
+            ctx.beginPath();
+            ctx.arc(width / 2, leagueY + leagueSize / 2, leagueSize / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            if (leagueLogo) {
+                drawImageContain(leagueLogo, width / 2 - leagueSize / 2 + 4 * scale, leagueY + 4 * scale, leagueSize - 8 * scale, leagueSize - 8 * scale);
+            } else {
+                ctx.fillStyle = "#f4f4f0";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = `900 ${24 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText("PL", width / 2, leagueY + leagueSize / 2);
+            }
+            addPosterHitRegion("leagueLogo", width / 2 - leagueSize / 2 - 8 * scale, leagueY - 8 * scale, leagueSize + 16 * scale, leagueSize + 16 * scale);
+
+            const homeCenter = width * .255;
+            const awayCenter = width * .745;
+            const crestY = panelY + 32 * scale;
+            const drawCrest = (image, label, centerX, rowIndex, type) => {
+                ctx.save();
+                ctx.fillStyle = "rgba(255,255,255,.96)";
+                ctx.beginPath();
+                ctx.arc(centerX, crestY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                if (image) {
+                    ctx.beginPath();
+                    ctx.arc(centerX, crestY + logoSize / 2, logoSize / 2 - 5, 0, Math.PI * 2);
+                    ctx.clip();
+                    drawImageContain(image, centerX - logoSize / 2 + 8, crestY + 8, logoSize - 16, logoSize - 16);
+                } else {
+                    ctx.fillStyle = "#263343";
+                    ctx.font = '900 32px "Segoe UI", Arial, sans-serif';
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(label.slice(0, 2).toUpperCase(), centerX, crestY + logoSize / 2);
+                }
+                ctx.restore();
+                addPosterHitRegion(type, centerX - logoSize / 2, crestY, logoSize, logoSize, rowIndex);
+            };
+            drawCrest(match.homeLogo, match.home, homeCenter, 0, "homeLogo");
+            drawCrest(match.awayLogo, match.away, awayCenter, 0, "awayLogo");
+
+            ctx.fillStyle = textColorInputs.team.value;
+            const teamY = panelY + 169 * scale;
+            ctx.font = `900 ${fitText(match.home.toUpperCase(), width * .37, 25 * scale, 900, 13 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(match.home.toUpperCase(), homeCenter, teamY, width * .37);
+            addPosterHitRegion("home", homeCenter - width * .19, teamY - 28 * scale, width * .38, 56 * scale, 0);
+            ctx.font = `900 ${fitText(match.away.toUpperCase(), width * .37, 25 * scale, 900, 13 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(match.away.toUpperCase(), awayCenter, teamY, width * .37);
+            addPosterHitRegion("away", awayCenter - width * .19, teamY - 28 * scale, width * .38, 56 * scale, 0);
+
+            ctx.fillStyle = textColorInputs.time.value;
+            const scoreY = panelY + 91 * scale;
+            ctx.font = `900 ${fitText(match.time, width * .37, 88 * scale, 900, 44 * scale)}px "Segoe UI", Arial, sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(match.time, width / 2, scoreY, width * .37);
+            addPosterHitRegion("time", width * .31, scoreY - 55 * scale, width * .38, 92 * scale, 0);
+
+            ctx.fillStyle = theme.accent;
+            ctx.font = `900 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText("FULL-TIME", width / 2, panelY + 205 * scale);
+
+            const goalLines = goalScorersInput.value.split(/\r?\n/);
+            const separatorIndex = goalLines.findIndex(line => line.trim() === "|");
+            const homeGoals = (separatorIndex >= 0 ? goalLines.slice(0, separatorIndex) : goalLines)
+                .map(line => line.trim()).filter(Boolean);
+            const awayGoals = separatorIndex >= 0 ? goalLines.slice(separatorIndex + 1).map(line => line.trim()).filter(Boolean) : [];
+            const goalTop = panelY + 244 * scale;
+            const maxRows = Math.max(homeGoals.length, awayGoals.length, 1);
+            const goalLineHeight = Math.min(31 * scale, (panelHeight - 252 * scale) / maxRows);
+            const drawGoalColumn = (lines, x, align, hitType) => {
+                lines.slice(0, 7).forEach((line, index) => {
+                    const y = goalTop + index * goalLineHeight;
+                    ctx.fillStyle = "#f2f1e9";
+                    ctx.font = `700 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.textAlign = align;
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(line, x, y, width * .36);
+                });
+                const hitX = hitType === "homeGoals" ? panelX + 18 * scale : width / 2 + 18 * scale;
+                addPosterHitRegion(hitType, hitX, goalTop - 16 * scale, panelWidth * .43, Math.max(44 * scale, Math.min(lines.length, 7) * goalLineHeight), 0);
+            };
+            drawGoalColumn(homeGoals, panelX + panelWidth * .39, "right", "homeGoals");
+            drawGoalColumn(awayGoals, panelX + panelWidth * .61, "left", "awayGoals");
+        }
+
+        function drawProPoster(theme, width, height) {
+            const scale = Number(brandLogoSizeInput.value) / 100;
+            const logoSize = 58 * scale;
+            const logoX = width - 74 - logoSize;
+            const accent = theme.accent;
+            const ink = textColorInputs.title.value;
+
+            const glow = ctx.createRadialGradient(width - 120, 95, 8, width - 120, 95, 240);
+            glow.addColorStop(0, "rgba(36,139,131,.12)");
+            glow.addColorStop(1, "rgba(36,139,131,0)");
+            ctx.fillStyle = glow;
+            ctx.fillRect(width - 380, 0, 380, 330);
+
+            ctx.fillStyle = accent;
+            ctx.beginPath();
+            ctx.roundRect(62, 52, 5, 164, 2.5);
+            ctx.fill();
+
+            fillRoundRect(82, 48, 218, 30, 15, "#e4f2f0");
+            ctx.fillStyle = textColorInputs.brand.value;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = '800 13px "Segoe UI", Arial, sans-serif';
+            ctx.fillText("PITCHPLAN  /  MATCHDAY", 98, 63);
+
+            const title = titleInput.value.trim().toUpperCase() || "UCHRASHUVLAR RO'YXATI";
+            const titleWidth = Math.max(100, logoX - logoSize * .22 - 112);
+            const titleLines = wrapTitle(title, titleWidth, 45, 2);
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            titleLines.forEach((line, index) => {
+                const size = fitText(line, titleWidth, 45, 900, 19);
+                ctx.fillStyle = textColorInputs.title.value;
+                ctx.font = `900 ${size}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(line, 82, 112 + index * 49, titleWidth);
+                    addPosterHitRegion("title", 82, 88 + index * 49, titleWidth, 48);
+                });
+
+            const date = dateInput.value.trim().toUpperCase();
+            const dateY = 112 + titleLines.length * 49 + 7;
+            if (date) {
+                const dateWidth = Math.min(ctx.measureText(date).width + 30, titleWidth + 20);
+                fillRoundRect(82, dateY - 15, dateWidth, 30, 15, "#ffffff", "#e0e8ed");
+                ctx.fillStyle = accent;
+                ctx.beginPath();
+                ctx.arc(97, dateY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = textColorInputs.date.value;
+                ctx.font = `700 ${fitText(date, titleWidth - 20, 15, 700, 10)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(date, 110, dateY, titleWidth - 24);
+                addPosterHitRegion("date", 82, dateY - 15, dateWidth, 30);
+            }
+
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(logoX + logoSize / 2, 126, logoSize * .72, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#dcebe9";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            drawBrandLogo(logoX + logoSize / 2, 126 - logoSize / 2, logoSize);
+            addPosterHitRegion("brandLogo", logoX, 126 - logoSize / 2, logoSize, logoSize);
+
+            ctx.strokeStyle = "#dbe4ea";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(64, 244);
+            ctx.lineTo(width - 64, 244);
+            ctx.stroke();
+
+            ctx.fillStyle = ink;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = '850 16px "Segoe UI", Arial, sans-serif';
+            ctx.fillText("MATCH SCHEDULE", 68, 274);
+            ctx.fillStyle = textColorInputs.date.value;
+            ctx.textAlign = "right";
+            ctx.font = '700 13px "Segoe UI", Arial, sans-serif';
+            ctx.fillText(`${String(rows.length).padStart(2, "0")}  FIXTURES`, width - 68, 274);
+
+            const grid = drawTemplateGrid(width, 302, height - 112, 126, 16);
+            rows.forEach((row, index) => {
+                const column = index % grid.columns;
+                const gridRow = Math.floor(index / grid.columns);
+                const x = grid.margin + column * (grid.cardWidth + (grid.columns === 2 ? 16 : 0));
+                const y = grid.startY + gridRow * (grid.rowHeight + grid.rowGap);
+                const logoSize = Math.min(grid.columns === 2 ? 38 : 54, grid.rowHeight * .52);
+                const timeWidth = Math.min(grid.columns === 2 ? 88 : 120, grid.cardWidth * .2);
+                const teamWidth = (grid.cardWidth - timeWidth) / 2;
+
+                ctx.save();
+                ctx.shadowColor = "rgba(29,51,73,.09)";
+                ctx.shadowBlur = 16;
+                ctx.shadowOffsetY = 5;
+                fillRoundRect(x, y, grid.cardWidth, grid.rowHeight, 18, rowColorInput.value);
+                ctx.restore();
+                fillRoundRect(x, y, grid.cardWidth, grid.rowHeight, 18, "rgba(255,255,255,0)", "#e1e8ee");
+                ctx.fillStyle = theme.accent;
+                ctx.beginPath();
+                ctx.roundRect(x, y + 13, 4, grid.rowHeight - 26, 2);
+                ctx.fill();
+
+                const homeLogoX = x + 22;
+                const awayLogoX = x + grid.cardWidth - logoSize - 20;
+                drawLogo(row.homeLogo, row.home, homeLogoX, y + (grid.rowHeight - logoSize) / 2, logoSize, "#ffffff", true, textColorInputs.team.value);
+                drawLogo(row.awayLogo, row.away, awayLogoX, y + (grid.rowHeight - logoSize) / 2, logoSize, "#ffffff", true, textColorInputs.team.value);
+                addPosterHitRegion("homeLogo", homeLogoX, y + (grid.rowHeight - logoSize) / 2, logoSize, logoSize, index);
+                addPosterHitRegion("awayLogo", awayLogoX, y + (grid.rowHeight - logoSize) / 2, logoSize, logoSize, index);
+
+                ctx.fillStyle = "#8394a3";
+                ctx.textAlign = "left";
+                ctx.textBaseline = "top";
+                ctx.font = '750 10px "Segoe UI", Arial, sans-serif';
+                ctx.fillText(String(index + 1).padStart(2, "0"), x + 18, y + 10);
+
+                ctx.fillStyle = textColorInputs.team.value;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                const homeX = homeLogoX + logoSize + 12;
+                const homeWidth = Math.max(16, teamWidth - logoSize - 34);
+                const awayX = x + teamWidth + timeWidth + 8;
+                const awayWidth = Math.max(16, teamWidth - logoSize - 32);
+                const nameSize = Math.min(grid.columns === 2 ? 17 : 24, grid.rowHeight * .28);
+                ctx.font = `750 ${fitText(row.home, homeWidth, nameSize, 750, 8)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.home.toUpperCase(), homeX + homeWidth / 2, y + grid.rowHeight / 2, homeWidth);
+                addPosterHitRegion("home", homeX, y, homeWidth, grid.rowHeight, index);
+                ctx.font = `750 ${fitText(row.away, awayWidth, nameSize, 750, 8)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.away.toUpperCase(), awayX + awayWidth / 2, y + grid.rowHeight / 2, awayWidth);
+                addPosterHitRegion("away", awayX, y, awayWidth, grid.rowHeight, index);
+
+                const pillWidth = Math.min(timeWidth - 8, 104);
+                const pillHeight = Math.min(48, grid.rowHeight * .48);
+                fillRoundRect(x + teamWidth + (timeWidth - pillWidth) / 2, y + (grid.rowHeight - pillHeight) / 2, pillWidth, pillHeight, pillHeight / 2, timeBackgroundColorInput.value);
+                ctx.fillStyle = accent;
+                ctx.beginPath();
+                ctx.arc(x + teamWidth + timeWidth / 2, y + grid.rowHeight / 2 - pillHeight / 2 - 9, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = textColorInputs.time.value;
+                ctx.font = `800 ${fitText(row.time, pillWidth - 10, Math.min(21, pillHeight * .52), 800, 9)}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText(row.time, x + teamWidth + timeWidth / 2, y + grid.rowHeight / 2);
+                addPosterHitRegion("time", x + teamWidth, y, timeWidth, grid.rowHeight, index);
+            });
+
+            ctx.strokeStyle = "#dbe4ea";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(64, height - 78);
+            ctx.lineTo(width - 64, height - 78);
+            ctx.stroke();
+            ctx.fillStyle = accent;
+            ctx.beginPath();
+            ctx.arc(76, height - 42, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = textColorInputs.brand.value;
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = '800 14px "Segoe UI", Arial, sans-serif';
+            ctx.fillText(brandCaptionInput.value.trim().toUpperCase(), 90, height - 42, width - 180);
+            addPosterHitRegion("caption", 90, height - 62, width - 180, 40);
+            ctx.fillStyle = textColorInputs.date.value;
+            ctx.textAlign = "right";
+            ctx.font = '700 12px "Segoe UI", Arial, sans-serif';
+            ctx.fillText("MADE FOR MATCHDAY", width - 68, height - 42);
+        }
+
+        function renderTemplatePreviews() {
+            const state = {
+                template: currentTemplate,
+                rows,
+                title: titleInput.value,
+                date: dateInput.value,
+                caption: brandCaptionInput.value,
+                goals: goalScorersInput.value,
+                leagueLogo,
+                background: backgroundColorInput.value,
+                backgroundOpacity: backgroundOpacityInput.value,
+                row: rowColorInput.value,
+                timeBackground: timeBackgroundColorInput.value,
+                colors: Object.fromEntries(Object.entries(textColorInputs).map(([key, input]) => [key, input.value])),
+                customBackground: customBackgroundColor,
+                customText: new Set(customTextColors)
+            };
+            Object.keys(examples).forEach(name => {
+                setTemplate(name);
+                drawPoster();
+            });
+            setTemplate(state.template);
+            currentTemplate = state.template;
+            rows = state.rows;
+            titleInput.value = state.title;
+            dateInput.value = state.date;
+            brandCaptionInput.value = state.caption;
+            goalScorersInput.value = state.goals;
+            leagueLogo = state.leagueLogo;
+            backgroundColorInput.value = state.background;
+            backgroundOpacityInput.value = state.backgroundOpacity;
+            opacityValue.textContent = `${state.backgroundOpacity}%`;
+            rowColorInput.value = state.row;
+            timeBackgroundColorInput.value = state.timeBackground;
+            Object.entries(state.colors).forEach(([key, value]) => { textColorInputs[key].value = value; });
+            customBackgroundColor = state.customBackground;
+            customTextColors.clear();
+            state.customText.forEach(key => customTextColors.add(key));
+            updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
+            renderInputs();
+            drawPoster();
+        }
+
+        document.getElementById("preview-expand").addEventListener("click", () => {
+            expandedCanvasStage.append(canvas);
+            canvas.classList.add("is-editable");
+            expandedPreview.showModal();
+        });
+        function restoreExpandedCanvas() {
+            closeInlineEditor();
+            canvas.classList.remove("is-editable");
+            if (canvas.parentElement !== canvasOriginalParent) canvasOriginalParent.append(canvas);
+        }
+        document.getElementById("expanded-preview-close").addEventListener("click", () => {
+            restoreExpandedCanvas();
+            expandedPreview.close();
+        });
+        expandedPreview.addEventListener("cancel", restoreExpandedCanvas);
+        expandedPreview.addEventListener("close", () => {
+            restoreExpandedCanvas();
+        });
+        expandedPreview.addEventListener("keydown", event => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            restoreExpandedCanvas();
+            expandedPreview.close();
+        });
+        expandedPreview.addEventListener("click", event => {
+            if (event.target === expandedPreview) {
+                restoreExpandedCanvas();
+                expandedPreview.close();
+            }
+        });
+
+        document.querySelectorAll(".template-card").forEach(card => {
+            card.addEventListener("click", () => {
+                setTemplate(card.dataset.template);
+                homeView.hidden = true;
+                editorView.hidden = false;
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        });
+        document.getElementById("back-to-templates").addEventListener("click", () => {
+            editorView.hidden = true;
+            homeView.hidden = false;
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        document.querySelector(".brand").addEventListener("click", event => {
+            event.preventDefault();
+            editorView.hidden = true;
+            homeView.hidden = false;
+            window.scrollTo({ top: 0, behavior: "smooth" });
         });
         titleInput.addEventListener("input", drawPoster);
         dateInput.addEventListener("input", drawPoster);
+        brandCaptionInput.addEventListener("input", drawPoster);
+        goalScorersInput.addEventListener("input", drawPoster);
         Object.entries(textColorInputs).forEach(([key, input]) => {
             input.addEventListener("input", () => {
                 customTextColors.add(key);
@@ -433,12 +1207,31 @@ const examples = {
             if (!file) return;
             readImageFile(file, image => {
                 brandLogo = image;
+                customBrandLogo = true;
                 updateLogoPreview(brandLogoPreview, image, "PP");
                 drawPoster();
                 statusEl.textContent = "Shaxsiy logo posterga qo‘shildi.";
             }, event.target);
         });
+        leagueLogoInput.addEventListener("change", event => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            readImageFile(file, image => {
+                leagueLogo = image;
+                updateLogoPreview(leagueLogoPreview, image, "PL");
+                drawPoster();
+                statusEl.textContent = "Liga logosi posterga qo‘shildi.";
+            }, event.target);
+        });
+        document.getElementById("clear-league-logo").addEventListener("click", () => {
+            leagueLogo = null;
+            leagueLogoInput.value = "";
+            updateLogoPreview(leagueLogoPreview, null, "PL");
+            drawPoster();
+            statusEl.textContent = "Liga logosi olib tashlandi.";
+        });
         document.getElementById("clear-brand-logo").addEventListener("click", () => {
+            customBrandLogo = false;
             brandLogo = defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
             brandLogoInput.value = "";
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
@@ -478,3 +1271,4 @@ const examples = {
             }
         });
         setTemplate("jf");
+        renderTemplatePreviews();
