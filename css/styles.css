@@ -167,7 +167,7 @@
             -webkit-backdrop-filter: blur(14px) saturate(155%);
             box-shadow: 0 6px 18px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.2);
         }
-        .logo-upload img { width: 100%; height: 100%; object-fit: cover; }
+        .logo-upload img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
         .logo-upload input { display: none; }
         .match-row input[type="text"] {
             display: block; width: 100%; min-width: 0; height: 36px; padding: 0 8px;
@@ -205,6 +205,43 @@
         }
         .expanded-preview::backdrop { background: rgba(3,8,16,.88); backdrop-filter: blur(8px); }
         .expanded-preview[open] { display: flex; flex-direction: column; }
+        .club-picker-dialog {
+            width: min(900px, calc(100vw - 32px));
+            max-width: none;
+            max-height: min(760px, calc(100dvh - 32px));
+            padding: 0;
+            overflow: hidden;
+            border: 1px solid rgba(180,205,245,.2);
+            border-radius: 22px;
+            background: rgba(14,23,38,.88);
+            color: var(--text);
+            box-shadow: 0 30px 100px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12);
+            backdrop-filter: blur(28px) saturate(155%);
+            -webkit-backdrop-filter: blur(28px) saturate(155%);
+        }
+        .club-picker-dialog[open] { display: flex; flex-direction: column; }
+        .club-picker-dialog::backdrop { background: rgba(3,8,16,.7); backdrop-filter: blur(9px); }
+        .club-picker-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 24px 16px; }
+        .club-picker-header h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+        .club-picker-header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .club-picker-close { width: 38px; min-height: 38px; padding: 0; border-radius: 50%; font-size: 22px; }
+        .league-tabs { display: flex; gap: 8px; padding: 0 24px 16px; overflow-x: auto; border-bottom: 1px solid rgba(255,255,255,.09); }
+        .league-tab { flex: 0 0 auto; min-height: 38px; padding: 0 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: rgba(255,255,255,.045); color: #b9c7dc; font-size: 12px; font-weight: 750; cursor: pointer; }
+        .league-tab.is-active { border-color: rgba(143,179,255,.56); background: rgba(106,147,221,.25); color: #f6f8ff; box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+        .club-picker-content { min-height: 0; padding: 18px 24px 22px; overflow: auto; }
+        .club-picker-tools { display: flex; gap: 10px; margin-bottom: 16px; }
+        .club-search { display: flex; flex: 1; min-width: 0; align-items: center; gap: 9px; padding: 0 12px; border: 1px solid #34435b; border-radius: 11px; background: rgba(5,12,23,.58); color: #98abc6; }
+        .club-search > span { font-size: 23px; line-height: 1; }
+        .club-search input { width: 100%; min-width: 0; height: 42px; border: 0; outline: 0; background: transparent; color: var(--text); }
+        .club-search:focus-within { border-color: #6485ff; box-shadow: 0 0 0 3px rgba(100,133,255,.13); }
+        .device-logo-button { min-height: 44px; white-space: nowrap; background: rgba(89,125,190,.25); }
+        .club-logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 10px; }
+        .club-logo-choice { display: grid; min-width: 0; min-height: 126px; align-content: center; justify-items: center; gap: 10px; padding: 12px 8px; border: 1px solid rgba(255,255,255,.1); border-radius: 14px; background: rgba(255,255,255,.045); color: #e7edf8; cursor: pointer; }
+        .club-logo-choice:hover, .club-logo-choice:focus-visible { border-color: rgba(152,187,255,.65); background-color: rgba(111,153,225,.2); }
+        .club-logo-choice img { display: block; width: 62px; height: 62px; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(0,0,0,.28)); }
+        .club-logo-choice span { max-width: 100%; overflow: hidden; font-size: 11px; font-weight: 700; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+        .club-picker-note { margin: 15px 0 0; color: #9aabc2; font-size: 12px; text-align: center; }
+        .club-picker-note:empty { display: none; }
         .expanded-preview-header { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 22px; border-bottom: 1px solid var(--line); background: #111b2b; }
         .expanded-preview-header > div { display: grid; gap: 3px; }
         .expanded-preview-header strong { font-size: 15px; }
@@ -256,4 +293,214 @@
             .match-row .remove-row { width: 24px; height: 28px; }
             .canvas-wrap { padding: 8px; }
             .preview-size { display: none; }
+            .club-picker-dialog { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); border-radius: 17px; }
+            .club-picker-header { padding: 16px 16px 12px; }
+            .club-picker-header h2 { font-size: 17px; }
+            .club-picker-header p { font-size: 11px; }
+            .league-tabs { gap: 6px; padding: 0 16px 12px; }
+            .league-tab { min-height: 34px; padding-inline: 11px; font-size: 11px; }
+            .club-picker-content { padding: 14px 14px 18px; }
+            .club-picker-tools { flex-direction: column; }
+            .club-logo-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+            .club-logo-choice { min-height: 104px; padding: 8px 5px; }
+            .club-logo-choice img { width: 52px; height: 52px; }
+        }
+
+        :root {
+            color-scheme: light;
+            --page: #f5f6fc;
+            --panel: #ffffff;
+            --panel-2: #f8f9fe;
+            --line: #e5e7f0;
+            --text: #25283b;
+            --muted: #777f96;
+            --blue: #7658e8;
+            --cyan: #54bce8;
+        }
+        body {
+            background:
+                radial-gradient(ellipse at 12% 0%, rgba(211,220,255,.72), transparent 36%),
+                radial-gradient(ellipse at 94% 15%, rgba(240,218,250,.58), transparent 32%),
+                #f6f7fc;
+            color: var(--text);
+        }
+        .topbar {
+            border-bottom-color: rgba(224,226,239,.8);
+            background: rgba(255,255,255,.76);
+            box-shadow: 0 4px 24px rgba(69,74,118,.04);
+            backdrop-filter: blur(18px) saturate(150%);
+            -webkit-backdrop-filter: blur(18px) saturate(150%);
+        }
+        .top-note, .intro p, .template-card-description, .section-label span,
+        .preview-size, .hint, .hint-inline, .field label span { color: #777f96; }
+        .intro h1, .panel-heading h2, .preview-top h2 { color: #292c40; }
+        .template-card {
+            border-color: rgba(226,228,240,.95);
+            background: rgba(255,255,255,.9);
+            color: #292c40;
+            box-shadow: 0 12px 34px rgba(71,76,126,.09);
+        }
+        .template-card:hover, .template-card:focus-visible {
+            border-color: #c2b6fa;
+            background: rgba(255,255,255,.96);
+            box-shadow: 0 18px 42px rgba(92,76,172,.15);
+        }
+        .template-card-action { color: #7458db; }
+        .editor, .preview-panel {
+            border-color: rgba(229,230,241,.94);
+            background: rgba(255,255,255,.88);
+            box-shadow: 0 16px 48px rgba(64,70,119,.09);
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+        }
+        .step { color: #8b8fa5; }
+        .field label, .field-label { color: #626981; }
+        .field input:not([type="color"]):not([type="range"]):not([type="file"]),
+        .field textarea, .match-row input[type="text"], .club-search input, .canvas-inline-editor {
+            border: 1px solid #e1e3ed;
+            border-radius: 11px;
+            background: rgba(250,250,254,.94);
+            color: #292c40;
+            box-shadow: inset 0 1px 2px rgba(57,62,100,.035);
+            transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+        }
+        .field input:not([type="color"]):not([type="range"]):not([type="file"])::placeholder,
+        .field textarea::placeholder, .club-search input::placeholder { color: #a0a5b6; }
+        .field input:not([type="color"]):not([type="range"]):not([type="file"]):focus,
+        .field textarea:focus, .match-row input[type="text"]:focus,
+        .club-search:focus-within, .canvas-inline-editor:focus {
+            border-color: #9b87ef;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(128,101,226,.12);
+        }
+        .field input[type="color"] {
+            border: 1px solid #e1e3ed;
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .field input[type="range"].range-input { accent-color: #8065e2; }
+        .field input[type="file"].file-input {
+            border: 1px solid #e1e3ed;
+            border-radius: 11px;
+            background: #fafafe;
+            color: #626981;
+        }
+        .field input[type="file"]::file-selector-button {
+            border: 1px solid #e3defb;
+            border-radius: 8px;
+            background: #f0edff;
+            color: #5f4ac5;
+        }
+        .field input[type="file"]::file-selector-button:hover {
+            background: #e5dfff;
+            box-shadow: 0 4px 12px rgba(92,76,172,.12);
+        }
+        .brand-logo-upload { background: #f5f3ff; }
+        .section-label strong { color: #373b50; }
+        .match-row {
+            border-color: #e7e8f0;
+            background: rgba(249,250,254,.92);
+        }
+        .match-row:hover {
+            border-color: #d8d0f7;
+            background-color: rgba(242,239,255,.88);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 5px 16px rgba(78,68,137,.06);
+        }
+        .match-row input[type="text"] { background: #fff; }
+        .logo-upload {
+            border: 1px dashed #cbc5eb;
+            background: #f1effa;
+            color: #6c5db2;
+        }
+        .logo-upload:hover, .logo-upload:focus-visible {
+            border-color: #9f8ce8;
+            background-color: #eae5ff;
+            box-shadow: 0 5px 14px rgba(95,77,171,.12), inset 0 1px 0 rgba(255,255,255,.9);
+        }
+        .remove-row { color: #9298aa; }
+        .remove-row:hover { color: #cf5670; background: rgba(242,117,145,.11); }
+        .btn {
+            border-color: #e3e4ed;
+            background: rgba(255,255,255,.82);
+            color: #464b62;
+            box-shadow: 0 3px 9px rgba(69,74,118,.05);
+        }
+        button:hover {
+            border-color: #c9c0f3;
+            background-color: rgba(239,236,255,.92);
+            color: #51429c;
+            box-shadow: 0 9px 22px rgba(92,76,172,.12), inset 0 1px 0 rgba(255,255,255,.95);
+        }
+        .btn-add {
+            border-color: #d6d0f1;
+            color: #6655bb;
+            background: rgba(246,244,255,.75);
+        }
+        .btn-export {
+            border-color: transparent;
+            background: linear-gradient(120deg, #7860e8, #62b8e8);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(112,93,211,.2);
+        }
+        .btn-export:hover {
+            border-color: rgba(255,255,255,.65);
+            background: linear-gradient(120deg, #6e54df, #4ea8dc);
+            color: #fff;
+        }
+        .preview-expand {
+            border-color: rgba(255,255,255,.65);
+            background: rgba(255,255,255,.86);
+            color: #393b50;
+            box-shadow: 0 6px 20px rgba(26,32,53,.18);
+            backdrop-filter: blur(14px) saturate(145%);
+            -webkit-backdrop-filter: blur(14px) saturate(145%);
+        }
+        .canvas-wrap {
+            background-color: #f1f2f8;
+            background-image: linear-gradient(45deg,#e8e9f1 25%,transparent 25%),linear-gradient(-45deg,#e8e9f1 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#e8e9f1 75%),linear-gradient(-45deg,transparent 75%,#e8e9f1 75%);
+            box-shadow: inset 0 0 0 1px rgba(70,76,118,.06);
+        }
+        #poster { box-shadow: 0 18px 44px rgba(44,48,77,.2); }
+        .club-picker-dialog {
+            border-color: rgba(221,222,238,.9);
+            background: rgba(255,255,255,.94);
+            color: #292c40;
+            box-shadow: 0 30px 90px rgba(48,48,89,.25), inset 0 1px 0 rgba(255,255,255,.95);
+        }
+        .club-picker-header h2 { color: #292c40; }
+        .club-picker-header p, .club-picker-note { color: #777f96; }
+        .league-tabs { border-bottom-color: #e8e8f0; }
+        .league-tab {
+            border-color: #e6e5ef;
+            background: rgba(248,248,253,.9);
+            color: #666d83;
+        }
+        .league-tab.is-active {
+            border-color: #c9bff3;
+            background: #eeeaff;
+            color: #5c49b4;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+        }
+        .club-search {
+            border-color: #e1e3ed;
+            background: rgba(250,250,254,.96);
+            color: #858ba0;
+        }
+        .device-logo-button { background: #f0edff; color: #5f4ac5; }
+        .club-logo-choice {
+            border-color: #e8e8f0;
+            background: rgba(250,250,254,.9);
+            color: #454a60;
+        }
+        .club-logo-choice:hover, .club-logo-choice:focus-visible {
+            border-color: #c9bff3;
+            background-color: #f1eeff;
+        }
+        .expanded-preview { background: #25283b; }
+        .expanded-preview-header { border-bottom-color: rgba(255,255,255,.1); background: #303349; }
+        .canvas-inline-editor { background: #fff; color: #292c40; }
+        .toast { color: #398263; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; }
         }

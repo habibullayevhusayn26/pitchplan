@@ -67,6 +67,29 @@ const themes = {
     result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     matchday: { bg: "#10171b", row: "#141a20", timeBg: "#f0d84a", accent: "#f0d84a", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#17191d", brand: "#ffffff" } }
 };
+const premierLeagueClubs = [
+    { name: "AFC Bournemouth", file: "AFC_Bournemouth_(2013).svg.webp" },
+    { name: "Arsenal", file: "Arsenal_FC.svg.webp" },
+    { name: "Aston Villa", file: "Aston_Villa_FC_new_crest.svg" },
+    { name: "Brighton & Hove Albion", file: "Brighton_and_Hove_Albion_FC_crest.svg.webp" },
+    { name: "Brentford", file: "Brentford_FC_crest.svg" },
+    { name: "Cardiff City", file: "Cardiff_City_crest.svg.webp" },
+    { name: "Chelsea", file: "Chelsea_FC.svg.webp" },
+    { name: "Coventry City", file: "Coventry_City_FC_crest.svg" },
+    { name: "Crystal Palace", file: "Crystal_Palace_FC_logo_(2022).svg" },
+    { name: "Everton", file: "Everton_FC_logo.svg.webp" },
+    { name: "Fulham", file: "Fulham_FC_(shield).svg" },
+    { name: "Hull City", file: "Hull_City_A.F.C._logo.svg" },
+    { name: "Ipswich Town", file: "Ipswich_Town.svg" },
+    { name: "Leeds United", file: "Leeds_United_F.C._logo.svg" },
+    { name: "Liverpool", file: "Liverpool-FC-logo-PNG-transparent-1024x1871.png" },
+    { name: "Manchester City", file: "Manchester_City_FC_badge.svg.webp" },
+    { name: "Manchester United", file: "Manchester_United_FC_crest.svg" },
+    { name: "Newcastle United", file: "Newcastle_United_Logo.png" },
+    { name: "Nottingham Forest", file: "Nottingham_Forest_F.C._logo.svg.webp" },
+    { name: "Sunderland", file: "Logo_Sunderland.svg.webp" },
+    { name: "Tottenham Hotspur", file: "tottenham-hotspur-logo-icon-only-footylogos.png" }
+];
         const canvas = document.getElementById("poster");
         const ctx = canvas.getContext("2d");
         const textEntrySelector = "input:not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='range']), textarea, [contenteditable='true']";
@@ -87,6 +110,11 @@ const themes = {
         const homeView = document.getElementById("home-view");
         const editorView = document.getElementById("editor-view");
         const rowsEl = document.getElementById("match-list");
+        const clubPickerDialog = document.getElementById("club-picker");
+        const clubLogoGrid = document.getElementById("club-logo-grid");
+        const clubSearchInput = document.getElementById("club-search");
+        const clubPickerNote = document.getElementById("club-picker-note");
+        const deviceLogoInput = document.getElementById("device-logo-input");
         const titleInput = document.getElementById("poster-title");
         const dateInput = document.getElementById("poster-date");
         const statusEl = document.getElementById("status");
@@ -124,6 +152,12 @@ const themes = {
         const customTextColors = new Set();
         let posterHitRegions = [];
         let activeInlineTarget = null;
+        let workspaceInitialized = false;
+        let workspaceSaveTimer = 0;
+        let workspaceSaveQueue = Promise.resolve();
+        let workspaceDatabasePromise = null;
+        let activeLogoPickerTarget = null;
+        let selectedLeague = "premier-league";
         const defaultBrandLogo = new Image();
         defaultBrandLogo.onload = () => {
             if (!customBrandLogo) brandLogo = defaultBrandLogo;
@@ -132,7 +166,10 @@ const themes = {
                 if (!row.awayLogo) row.awayLogo = defaultBrandLogo;
             });
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
-            renderTemplatePreviews();
+            if (workspaceInitialized) {
+                renderTemplatePreviews();
+                drawPoster();
+            }
         };
         defaultBrandLogo.onerror = () => {
             statusEl.textContent = "Standart PitchPlan logosi yuklanmadi. O‘z logongizni yuklashingiz mumkin.";
@@ -223,19 +260,17 @@ const themes = {
                 const resultTemplate = currentTemplate === "result";
                 item.innerHTML = `
                     <div class="match-team-control home-team">
-                        <label class="logo-upload home-logo" title="Uy jamoasi logosi">
+                        <button type="button" class="logo-upload home-logo" title="Uy jamoasi logosini tanlang" aria-label="${index + 1}-uchrashuv uy jamoasi logosi">
                             <span class="logo-fallback"></span>
-                            <input type="file" accept="image/*" aria-label="${index + 1}-uchrashuv uy jamoasi logosi">
-                        </label>
+                        </button>
                         <input type="text" maxlength="22" value="${escapeHtml(row.home)}" aria-label="${index + 1}-uy jamoasi">
                     </div>
                     <input class="time-control" type="text" maxlength="10" value="${escapeHtml(row.time)}" aria-label="${index + 1}-${resultTemplate ? "match hisobi" : "uchrashuv vaqti"}">
                     <div class="match-team-control away-team">
                         <input type="text" maxlength="22" value="${escapeHtml(row.away)}" aria-label="${index + 1}-mehmon jamoa">
-                        <label class="logo-upload away-logo" title="Mehmon jamoa logosi">
+                        <button type="button" class="logo-upload away-logo" title="Mehmon jamoa logosini tanlang" aria-label="${index + 1}-uchrashuv mehmon jamoasi logosi">
                             <span class="logo-fallback"></span>
-                            <input type="file" accept="image/*" aria-label="${index + 1}-mehmon jamoa logosi">
-                        </label>
+                        </button>
                     </div>
                     <button type="button" class="remove-row" aria-label="${index + 1}-uchrashuvni o‘chirish">×</button>`;
                 const homeInput = item.querySelector(".home-team input[type='text']");
@@ -247,8 +282,8 @@ const themes = {
                 homeInput.addEventListener("input", event => { row.home = event.target.value; homeLogoLabel.querySelector(".logo-fallback").textContent = row.home.slice(0, 2).toUpperCase(); drawPoster(); });
                 timeInput.addEventListener("input", event => { row.time = event.target.value; drawPoster(); });
                 awayInput.addEventListener("input", event => { row.away = event.target.value; awayLogoLabel.querySelector(".logo-fallback").textContent = row.away.slice(0, 2).toUpperCase(); drawPoster(); });
-                homeLogoLabel.querySelector('input[type="file"]').addEventListener("change", event => loadLogo(event, row, "homeLogo", homeLogoLabel));
-                awayLogoLabel.querySelector('input[type="file"]').addEventListener("change", event => loadLogo(event, row, "awayLogo", awayLogoLabel));
+                homeLogoLabel.addEventListener("click", () => openClubLogoPicker(row, "homeLogo", homeLogoLabel));
+                awayLogoLabel.addEventListener("click", () => openClubLogoPicker(row, "awayLogo", awayLogoLabel));
                 item.querySelector(".remove-row").addEventListener("click", () => {
                     rows.splice(index, 1);
                     renderInputs();
@@ -280,16 +315,91 @@ const themes = {
             }
         }
 
-        function loadLogo(event, row, key, label) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            readImageFile(file, image => {
-                row[key] = image;
-                updateLogoPreview(label, image, key === "homeLogo" ? row.home : row.away);
-                drawPoster();
-                statusEl.textContent = "Jamoa logosi posterga qo‘shildi.";
-            }, event.target);
+        function renderClubLogoChoices() {
+            clubLogoGrid.replaceChildren();
+            const query = clubSearchInput.value.trim().toLocaleLowerCase();
+            if (selectedLeague !== "premier-league") {
+                clubPickerNote.textContent = "Bu liga uchun logolar hozircha qo‘shilmagan. Qurilmangizdan rasm tanlashingiz mumkin.";
+                return;
+            }
+            const filteredClubs = premierLeagueClubs.filter(club => club.name.toLocaleLowerCase().includes(query));
+            filteredClubs.forEach(club => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "club-logo-choice";
+                button.setAttribute("aria-label", `${club.name} logosini tanlash`);
+                const image = document.createElement("img");
+                image.src = new URL(`./images/epl/${encodeURIComponent(club.file)}`, document.baseURI).href;
+                image.alt = "";
+                image.loading = "lazy";
+                const name = document.createElement("span");
+                name.textContent = club.name;
+                button.append(image, name);
+                button.addEventListener("click", () => {
+                    const target = activeLogoPickerTarget;
+                    if (!target) return;
+                    loadImageSource(image.src).then(selectedImage => {
+                        applyTeamLogo(target, selectedImage);
+                        clubPickerDialog.close();
+                    }).catch(error => {
+                        clubPickerNote.textContent = `${club.name} logosini yuklab bo‘lmadi. Boshqa logo tanlang yoki qurilmangizdan yuklang.`;
+                        console.error("Club logo load failed:", error);
+                    });
+                });
+                clubLogoGrid.append(button);
+            });
+            clubPickerNote.textContent = filteredClubs.length ? "" : "Qidiruv bo‘yicha klub topilmadi.";
         }
+
+        function openClubLogoPicker(row, key, label) {
+            activeLogoPickerTarget = { row, key, label };
+            clubSearchInput.value = "";
+            selectedLeague = "premier-league";
+            document.querySelectorAll(".league-tab").forEach(tab => {
+                const active = tab.dataset.league === selectedLeague;
+                tab.classList.toggle("is-active", active);
+                tab.setAttribute("aria-pressed", String(active));
+            });
+            renderClubLogoChoices();
+            clubPickerDialog.showModal();
+        }
+
+        function applyTeamLogo(target, image) {
+            if (!target || !image) return;
+            target.row[target.key] = image;
+            updateLogoPreview(target.label, image, target.key === "homeLogo" ? target.row.home : target.row.away);
+            drawPoster();
+            statusEl.textContent = "Jamoa logosi posterga qo‘shildi.";
+            activeLogoPickerTarget = null;
+        }
+
+        document.querySelectorAll(".league-tab").forEach(tab => {
+            tab.addEventListener("click", () => {
+                selectedLeague = tab.dataset.league;
+                document.querySelectorAll(".league-tab").forEach(item => {
+                    const active = item === tab;
+                    item.classList.toggle("is-active", active);
+                    item.setAttribute("aria-pressed", String(active));
+                });
+                renderClubLogoChoices();
+            });
+        });
+        clubSearchInput.addEventListener("input", renderClubLogoChoices);
+        document.getElementById("club-picker-close").addEventListener("click", () => clubPickerDialog.close());
+        clubPickerDialog.addEventListener("close", () => {
+            activeLogoPickerTarget = null;
+            deviceLogoInput.value = "";
+        });
+        document.getElementById("device-logo-button").addEventListener("click", () => deviceLogoInput.click());
+        deviceLogoInput.addEventListener("change", event => {
+            const file = event.target.files && event.target.files[0];
+            const target = activeLogoPickerTarget;
+            if (!file || !target) return;
+            readImageFile(file, image => {
+                applyTeamLogo(target, image);
+                clubPickerDialog.close();
+            }, event.target);
+        });
 
         function readImageFile(file, onLoad, input) {
             if (!file.type.startsWith("image/")) {
@@ -345,8 +455,10 @@ const themes = {
 
         function drawLogo(image, label, x, y, size, color, contain = false, labelColor = "#ffffff") {
             if (size <= 0) return;
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, size, size);
+            if (!image) {
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, size, size);
+            }
             if (image) {
                 if (size <= 10) {
                     drawImageContain(image, x, y, size, size);
@@ -475,8 +587,8 @@ const themes = {
             } else if (target.type === "homeLogo" || target.type === "awayLogo") {
                 closeInlineEditor();
                 const rowElement = rowsEl.children[target.rowIndex];
-                const selector = target.type === "homeLogo" ? ".home-logo input[type='file']" : ".away-logo input[type='file']";
-                rowElement.querySelector(selector).click();
+                const selector = target.type === "homeLogo" ? ".home-logo" : ".away-logo";
+                openClubLogoPicker(rows[target.rowIndex], target.type, rowElement.querySelector(selector));
             } else {
                 showInlineEditor(target, event.clientX, event.clientY);
             }
@@ -523,6 +635,155 @@ const themes = {
                 thumbnailContext.clearRect(0, 0, thumbnail.width, thumbnail.height);
                 thumbnailContext.drawImage(canvas, 0, 0, thumbnail.width, thumbnail.height);
             }
+            scheduleWorkspaceSave();
+        }
+
+        function openWorkspaceDatabase() {
+            if (!window.indexedDB) return Promise.reject(new Error("Bu brauzerda avtomatik saqlash qo‘llab-quvvatlanmaydi."));
+            if (!workspaceDatabasePromise) {
+                workspaceDatabasePromise = new Promise((resolve, reject) => {
+                    const request = window.indexedDB.open("pitchplan-workspace", 1);
+                    request.onupgradeneeded = () => {
+                        if (!request.result.objectStoreNames.contains("drafts")) {
+                            request.result.createObjectStore("drafts");
+                        }
+                    };
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error || new Error("Saqlash omborini ochib bo‘lmadi."));
+                });
+            }
+            return workspaceDatabasePromise;
+        }
+
+        function saveWorkspaceSnapshot(snapshot) {
+            return openWorkspaceDatabase().then(database => new Promise((resolve, reject) => {
+                const transaction = database.transaction("drafts", "readwrite");
+                transaction.objectStore("drafts").put(snapshot, "current");
+                transaction.oncomplete = resolve;
+                transaction.onerror = () => reject(transaction.error || new Error("Ishni saqlab bo‘lmadi."));
+                transaction.onabort = () => reject(transaction.error || new Error("Ishni saqlash bekor qilindi."));
+            }));
+        }
+
+        function readWorkspaceSnapshot() {
+            return openWorkspaceDatabase().then(database => new Promise((resolve, reject) => {
+                const request = database.transaction("drafts", "readonly").objectStore("drafts").get("current");
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error || new Error("Saqlangan ishni o‘qib bo‘lmadi."));
+            }));
+        }
+
+        function imageSource(image) {
+            return image ? image.src : null;
+        }
+
+        function captureWorkspace() {
+            return {
+                template: currentTemplate,
+                editorOpen: !editorView.hidden,
+                title: titleInput.value,
+                date: dateInput.value,
+                caption: brandCaptionInput.value,
+                goals: goalScorersInput.value,
+                venue: matchdayVenueInput.value,
+                competition: matchdayCompetitionInput.value,
+                rows: rows.map(row => ({
+                    home: row.home,
+                    time: row.time,
+                    away: row.away,
+                    homeLogo: imageSource(row.homeLogo),
+                    awayLogo: imageSource(row.awayLogo)
+                })),
+                background: backgroundColorInput.value,
+                backgroundImage: imageSource(backgroundImage),
+                backgroundOpacity: backgroundOpacityInput.value,
+                nonResultBackgroundOpacity,
+                row: rowColorInput.value,
+                timeBackground: timeBackgroundColorInput.value,
+                colors: Object.fromEntries(Object.entries(textColorInputs).map(([key, input]) => [key, input.value])),
+                customBackground: customBackgroundColor,
+                customText: Array.from(customTextColors),
+                brandLogoSize: brandLogoSizeInput.value,
+                customBrandLogo,
+                brandLogo: customBrandLogo ? imageSource(brandLogo) : null,
+                leagueLogo: imageSource(leagueLogo)
+            };
+        }
+
+        function enqueueWorkspaceSave(snapshot) {
+            workspaceSaveQueue = workspaceSaveQueue
+                .then(() => saveWorkspaceSnapshot(snapshot))
+                .catch(error => {
+                    statusEl.textContent = "Avtomatik saqlash amalga oshmadi. Brauzer xotirasida joy borligini tekshiring.";
+                    console.error("Workspace autosave failed:", error);
+                });
+        }
+
+        function scheduleWorkspaceSave() {
+            if (!workspaceInitialized) return;
+            window.clearTimeout(workspaceSaveTimer);
+            workspaceSaveTimer = window.setTimeout(() => enqueueWorkspaceSave(captureWorkspace()), 250);
+        }
+
+        function loadImageSource(source) {
+            if (!source) return Promise.resolve(null);
+            return new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error("Saqlangan logotip yoki fon rasmini yuklab bo‘lmadi."));
+                image.src = source;
+            });
+        }
+
+        async function restoreWorkspace(snapshot) {
+            if (!snapshot || !examples[snapshot.template] || !Array.isArray(snapshot.rows)) {
+                throw new Error("Saqlangan ish formati yaroqsiz.");
+            }
+            setTemplate(snapshot.template);
+            const [savedBackground, savedBrand, savedLeague, ...rowLogos] = await Promise.all([
+                loadImageSource(snapshot.backgroundImage),
+                loadImageSource(snapshot.brandLogo),
+                loadImageSource(snapshot.leagueLogo),
+                ...snapshot.rows.flatMap(row => [loadImageSource(row.homeLogo), loadImageSource(row.awayLogo)])
+            ]);
+            currentTemplate = snapshot.template;
+            titleInput.value = snapshot.title;
+            dateInput.value = snapshot.date;
+            brandCaptionInput.value = snapshot.caption;
+            goalScorersInput.value = snapshot.goals;
+            matchdayVenueInput.value = snapshot.venue;
+            matchdayCompetitionInput.value = snapshot.competition;
+            rows = snapshot.rows.map((row, index) => ({
+                home: row.home,
+                time: row.time,
+                away: row.away,
+                homeLogo: rowLogos[index * 2],
+                awayLogo: rowLogos[index * 2 + 1]
+            }));
+            backgroundImage = savedBackground;
+            brandLogo = snapshot.customBrandLogo ? savedBrand : (defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
+            customBrandLogo = Boolean(snapshot.customBrandLogo);
+            leagueLogo = savedLeague;
+            backgroundColorInput.value = snapshot.background;
+            backgroundOpacityInput.value = snapshot.backgroundOpacity;
+            nonResultBackgroundOpacity = snapshot.nonResultBackgroundOpacity;
+            opacityValue.textContent = `${snapshot.backgroundOpacity}%`;
+            rowColorInput.value = snapshot.row;
+            timeBackgroundColorInput.value = snapshot.timeBackground;
+            brandLogoSizeInput.value = snapshot.brandLogoSize;
+            brandLogoSizeValue.textContent = `${snapshot.brandLogoSize}%`;
+            Object.entries(snapshot.colors).forEach(([key, value]) => {
+                if (textColorInputs[key]) textColorInputs[key].value = value;
+            });
+            customBackgroundColor = Boolean(snapshot.customBackground);
+            customTextColors.clear();
+            snapshot.customText.forEach(key => customTextColors.add(key));
+            updateLogoPreview(brandLogoPreview, brandLogo, "PP");
+            updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
+            homeView.hidden = Boolean(snapshot.editorOpen);
+            editorView.hidden = !snapshot.editorOpen;
+            renderInputs();
+            drawPoster();
         }
 
         function drawWatermark(width, height) {
@@ -1415,12 +1676,14 @@ const themes = {
         document.getElementById("back-to-templates").addEventListener("click", () => {
             editorView.hidden = true;
             homeView.hidden = false;
+            scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
         document.querySelector(".brand").addEventListener("click", event => {
             event.preventDefault();
             editorView.hidden = true;
             homeView.hidden = false;
+            scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
         titleInput.addEventListener("input", drawPoster);
@@ -1522,5 +1785,25 @@ const themes = {
                 console.error("Poster export failed:", error);
             }
         });
-        setTemplate("jf");
-        renderTemplatePreviews();
+        async function initializeWorkspace() {
+            setTemplate("jf");
+            renderTemplatePreviews();
+            try {
+                const savedWorkspace = await readWorkspaceSnapshot();
+                if (savedWorkspace) {
+                    await restoreWorkspace(savedWorkspace);
+                    statusEl.textContent = "Oldingi tahriringiz tiklandi.";
+                }
+            } catch (error) {
+                statusEl.textContent = "Saqlangan ishni tiklab bo‘lmadi. Yangi tahrirni davom ettirishingiz mumkin.";
+                console.error("Workspace restore failed:", error);
+            }
+            workspaceInitialized = true;
+            drawPoster();
+        }
+        window.addEventListener("pagehide", () => {
+            if (!workspaceInitialized) return;
+            window.clearTimeout(workspaceSaveTimer);
+            enqueueWorkspaceSave(captureWorkspace());
+        });
+        initializeWorkspace();

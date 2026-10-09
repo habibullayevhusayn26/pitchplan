@@ -6,7 +6,7 @@
     <meta name="description" content="PitchPlan bilan futbol uchrashuvlari jadvalini yarating, tahrirlang va rasm sifatida yuklab oling.">
     <title>PitchPlan — futbol jadvali dizayneri</title>
     <link rel="icon" type="image/png" href="./images/pitchplan.png">
-    <link rel="stylesheet" href="css/styles.css?v=4">
+    <link rel="stylesheet" href="css/styles.css?v=6">
 </head>
 <body>
     <header class="topbar">
@@ -181,7 +181,7 @@
                     <button type="button" class="btn preview-expand" id="preview-expand" aria-label="Katta preview ochish">⛶ Katta ko‘rish</button>
                 </div>
                 <div class="preview-top" style="margin:14px 0 0">
-                    <span class="preview-size">Rasm tayyor bo‘lgach, PNG formatida saqlang.</span>
+                    <span class="preview-size">Tahrirlar avtomatik saqlanadi. Tayyor rasmni PNG formatida yuklab oling.</span>
                     <button type="button" class="btn btn-export" id="download">↓ PNG yuklab olish</button>
                 </div>
                 <p class="toast" id="status" role="status" aria-live="polite"></p>
@@ -204,6 +204,36 @@
         </div>
     </dialog>
 
-    <script src="js/app.js" defer></script>
+    <dialog class="club-picker-dialog" id="club-picker" aria-labelledby="club-picker-title">
+        <div class="club-picker-header">
+            <div>
+                <h2 id="club-picker-title">Klub logosini tanlang</h2>
+                <p>Ligani tanlang yoki o‘z qurilmangizdan logo yuklang.</p>
+            </div>
+            <button type="button" class="btn club-picker-close" id="club-picker-close" aria-label="Oynani yopish">×</button>
+        </div>
+        <nav class="league-tabs" id="league-tabs" aria-label="Futbol ligalari">
+            <button type="button" class="league-tab is-active" data-league="premier-league" aria-pressed="true">Premier Liga</button>
+            <button type="button" class="league-tab" data-league="laliga" aria-pressed="false">LaLiga</button>
+            <button type="button" class="league-tab" data-league="serie-a" aria-pressed="false">A seriya</button>
+            <button type="button" class="league-tab" data-league="ligue-1" aria-pressed="false">Liga 1</button>
+            <button type="button" class="league-tab" data-league="bundesliga" aria-pressed="false">Bundesliga</button>
+        </nav>
+        <div class="club-picker-content">
+            <div class="club-picker-tools">
+                <label class="club-search">
+                    <span aria-hidden="true">⌕</span>
+                    <input id="club-search" type="search" placeholder="Klub nomini qidiring..." autocomplete="off" aria-label="Klub nomini qidiring">
+                </label>
+                <button type="button" class="btn device-logo-button" id="device-logo-button">＋ Qurilmadan tanlash</button>
+                <input id="device-logo-input" type="file" accept="image/*" hidden>
+            </div>
+            <div class="club-logo-grid" id="club-logo-grid" aria-live="polite"></div>
+            <p class="club-picker-note" id="club-picker-note"></p>
+        </div>
+    </dialog>
+
+    <script src="js/app.js?v=6" defer></script>
 </body>
 </html>
+    
