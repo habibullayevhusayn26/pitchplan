@@ -397,7 +397,7 @@
         };
     }
 
-    function getMatchEvents(summary) {
+    function getMatchEvents(summary, match) {
         const keyEvents = Array.isArray(summary.keyEvents) ? summary.keyEvents : [];
         const commentaryEvents = Array.isArray(summary.commentary)
             ? summary.commentary.map(item => item.play || item)
@@ -431,9 +431,22 @@
                         ? `Gol: ${participants[0]} · Pas: ${participants[1]}`
                         : participants[0] || event.shortText || event.text || "Gol"
                     : participants[0] || event.shortText || event.text || "Kartochka";
+            const eventTeamId = event.team?.id;
+            const eventTeamName = String(event.team?.displayName || event.team?.name || "").trim().toLocaleLowerCase();
+            const homeName = match.home.name.trim().toLocaleLowerCase();
+            const awayName = match.away.name.trim().toLocaleLowerCase();
+            const reportedSide = event.homeAway || event.team?.homeAway || event.competitor?.homeAway;
+            const side = eventTeamId != null && String(eventTeamId) === String(match.home.id) ||
+                eventTeamName && eventTeamName === homeName || reportedSide === "home"
+                ? "home"
+                : eventTeamId != null && String(eventTeamId) === String(match.away.id) ||
+                    eventTeamName && eventTeamName === awayName || reportedSide === "away"
+                    ? "away"
+                    : "neutral";
             return [{
                 id: event.id || `${category}-${clock}-${index}`,
                 category,
+                side,
                 clock: clock || "—",
                 team: event.team?.displayName || event.team?.name || "",
                 detail,
@@ -442,11 +455,11 @@
         });
     }
 
-    function renderMatchEvents(summary) {
+    function renderMatchEvents(summary, match) {
         const section = createElement("section", "match-events");
         section.setAttribute("aria-label", "Uchrashuv voqealari");
         const heading = createElement("h3", "match-events-heading", "O‘yin voqealari");
-        const events = getMatchEvents(summary);
+        const events = getMatchEvents(summary, match);
         section.append(heading);
         if (!events.length) {
             section.append(createElement("p", "match-events-empty", "Gol, kartochka yoki almashtirish voqealari hozircha mavjud emas."));
@@ -454,7 +467,7 @@
         }
         const list = createElement("ol", "match-events-list");
         events.forEach(event => {
-            const item = createElement("li", `match-event is-${event.category}`);
+            const item = createElement("li", `match-event is-${event.category} is-${event.side}`);
             const minute = createElement("time", "match-event-minute", event.clock);
             const markerText = event.category === "goal" ? "⚽"
                 : event.category === "yellow-card" ? "🟨"
@@ -483,7 +496,7 @@
         const homeStats = getTeamStatistics(summary, "home");
         const awayStats = getTeamStatistics(summary, "away");
         const grid = createElement("div", "match-statistics");
-        if (match.isLive || match.isCompleted) grid.append(renderMatchEvents(summary));
+        if (match.isLive || match.isCompleted) grid.append(renderMatchEvents(summary, match));
         const heading = createElement("div", "match-statistics-heading");
         heading.append(
             createElement("span", "", match.home.name),
@@ -832,14 +845,19 @@
         const clubEntry = competitors.find(competitor => String(competitor.team?.id) === String(club.id));
         const opponent = getClubOpponent(event, club.id);
         const card = createElement("article", "club-match-card");
+        const isLive = competition?.status?.type?.state === "in";
+        if (isLive) card.classList.add("is-live");
         const link = createElement("a", "club-match-link");
         link.href = `#/match/${encodeURIComponent(club.league)}/${encodeURIComponent(event.id)}`;
+        link.setAttribute("aria-label", `${club.name} va ${opponent?.team?.displayName || "raqib"} uchrashuvi${isLive ? ", jonli" : ""}. Tafsilotlarni ochish`);
         appendImage(link, getTeamLogo(opponent?.team || {}), "", "club-match-opponent-logo");
         const info = createElement("span", "club-match-info");
         const isHome = clubEntry?.homeAway === "home";
         info.append(
             createElement("strong", "", `${isHome ? "Uyda" : "Safarda"} · ${opponent?.team?.displayName || "Raqib"}`),
-            createElement("small", "", `${formatMatchDate(event.date, true)} · ${formatKickoff(event.date).split(" · ").pop()}`)
+            createElement("small", "", isLive
+                ? `Jonli o‘yin · ${competition.status.displayClock || competition.status.type.shortDetail || "Hozir"}`
+                : `${formatMatchDate(event.date, true)} · ${formatKickoff(event.date).split(" · ").pop()}`)
         );
         const score = competition?.status?.type?.state === "pre"
             ? "VS"
@@ -848,6 +866,7 @@
                 : `${getClubScore(event, opponent)} – ${getClubScore(event, clubEntry)}`;
         link.append(info, createElement("strong", "club-match-score", score));
         card.append(link);
+        if (isLive) return card;
 
         const details = createElement("details", "club-match-details");
         const summaryLabel = createElement("summary", "", "To‘liq statistika");
@@ -979,6 +998,9 @@
             (event.competitions?.[0]?.competitors || []).some(team => String(team.team?.id) === String(club.id))
         ).sort((first, second) => Date.parse(first.date) - Date.parse(second.date));
         const now = Date.now();
+        const live = clubEvents.filter(event =>
+            event.competitions?.[0]?.status?.type?.state === "in"
+        );
         const previous = clubEvents.filter(event =>
             event.competitions?.[0]?.status?.type?.state === "post" && Date.parse(event.date) <= now
         ).slice(-5).reverse();
@@ -1003,8 +1025,11 @@
         } else {
             standingsPanel.append(createElement("p", "match-detail-empty", "Joriy mavsum jadvalidan klub o‘rni topilmadi."));
         }
-        const nextPanel = createClubPanel("Keyingi o‘yini");
-        if (next.length) {
+        const nextPanel = createClubPanel(live.length ? "Jonli o‘yini" : "Keyingi o‘yini");
+        if (live.length) {
+            nextPanel.classList.add("club-live-match-panel");
+            nextPanel.append(renderClubMatchCard(live[0], club, signal, generation));
+        } else if (next.length) {
             const nextCard = renderClubMatchCard(next[0], club, signal, generation);
             nextPanel.append(nextCard);
         } else if (events) {
