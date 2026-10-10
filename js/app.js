@@ -2096,11 +2096,6 @@ function getClubDisplayName(name) {
             renderInputs();
             drawPoster();
         });
-        function isTelegramInAppBrowser() {
-            const userAgent = navigator.userAgent || "";
-            return userAgent.includes("Telegram") || (window?.Telegram && typeof window.Telegram.WebView !== "undefined");
-        }
-
         document.getElementById("download").addEventListener("click", () => {
             const originalWidth = canvas.width;
             const originalHeight = canvas.height;
@@ -2117,40 +2112,25 @@ function getClubDisplayName(name) {
                 canvas.width = Math.round(originalWidth * exportScale);
                 canvas.height = Math.round(originalHeight * exportScale);
                 drawPoster();
-                canvas.toBlob(blob => {
+                canvas.toBlob(async blob => {
                     restoreCanvas();
                     if (!blob) {
                         statusEl.textContent = "PNG yaratilmadi. Iltimos, qayta urinib ko‘ring.";
                         return;
                     }
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.href = url;
-                    link.rel = "noopener";
-                    link.style.display = "none";
-
-                    const useTabFallback = isTelegramInAppBrowser();
-
-                    if (useTabFallback) {
-                        document.body.append(link);
-                        const newTab = window.open(url, "_blank", "noopener,noreferrer");
-                        if (newTab) {
-                            statusEl.textContent = "Rasm yangi tabda ochildi. Long-press qilib saqlang yoki saqlashni tanlang.";
-                        } else {
-                            link.target = "_blank";
-                            link.click();
-                            statusEl.textContent = "Brauzer rasmni avtomatik yuklab olishni blokladi. Rasm yangi tabda ochildi.";
-                        }
-                        link.remove();
-                    } else {
-                        link.download = "sportposter.png";
-                        document.body.append(link);
-                        link.click();
-                        link.remove();
-                        statusEl.textContent = "Poster PNG formatida yuklab olindi.";
+                    try {
+                        const result = await window.pitchplanSaveImage(blob, "sportposter.png");
+                        statusEl.textContent = result.method === "share"
+                            ? "Rasm ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
+                            : result.method === "cancelled"
+                                ? "Rasmni saqlash bekor qilindi."
+                                : result.method === "preview"
+                                    ? "Rasm yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
+                                    : "Poster PNG formatida yuklab olindi.";
+                    } catch (error) {
+                        statusEl.textContent = "Rasmni saqlashda xatolik yuz berdi. Qayta urinib ko‘ring.";
+                        console.error("Poster export failed:", error);
                     }
-
-                    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
                 }, "image/png");
             } catch (error) {
                 restoreCanvas();

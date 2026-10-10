@@ -440,11 +440,6 @@
         return canvas;
     }
 
-    function isTelegramInAppBrowser() {
-        const userAgent = navigator.userAgent || "";
-        return userAgent.includes("Telegram") || (window.Telegram && typeof window.Telegram.WebView !== "undefined");
-    }
-
     async function downloadStandingsPoster() {
         if (!currentRows.length) {
             setStatus("Avval jadval ma’lumotlari yuklanishini kuting.", true);
@@ -467,32 +462,17 @@
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
             });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.rel = "noopener";
-            link.style.display = "none";
             const safeLeague = exportLeague.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            if (isTelegramInAppBrowser()) {
-                document.body.append(link);
-                const newTab = window.open(url, "_blank", "noopener,noreferrer");
-                if (newTab) {
-                    setStatus("Jadval rasmi yangi tabda ochildi. Saqlash uchun rasmni bosib turing.");
-                } else {
-                    link.target = "_blank";
-                    link.click();
-                    setStatus("Rasm yangi tabda ochildi. Saqlash uchun rasmni bosib turing.");
-                }
-                link.remove();
-            } else {
-                link.download = `${safeLeague || "liga"}-${seasonLabel.textContent}-jadvali.png`;
-                document.body.append(link);
-                link.click();
-                link.remove();
-                setStatus("Turnir jadvali PNG formatida yuklab olindi.");
-            }
-            window.setTimeout(() => URL.revokeObjectURL(url), 3000);
+            const filename = `${safeLeague || "liga"}-${seasonLabel.textContent}-jadvali.png`;
+            const result = await window.pitchplanSaveImage(blob, filename);
+            setStatus(result.method === "share"
+                ? "Jadval ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
+                : result.method === "cancelled"
+                    ? "Jadvalni saqlash bekor qilindi."
+                    : result.method === "preview"
+                        ? "Jadval rasmi yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
+                        : "Turnir jadvali PNG formatida yuklab olindi.");
         } catch (error) {
             setStatus("Jadval rasmini yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
             console.error("Standings poster export failed:", error);
