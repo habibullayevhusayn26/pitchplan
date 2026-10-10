@@ -2,7 +2,7 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="PitchPlan bilan futbol uchrashuvlari jadvalini yarating, tahrirlang va rasm sifatida yuklab oling.">
     <title>PitchPlan — futbol jadvali dizayneri</title>
@@ -119,16 +119,6 @@
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
-                <button type="button" class="template-card" data-template="pro" aria-label="PITCHPLAN PRO shablonini tanlash va tahrirlash">
-                    <span class="template-card-image">
-                        <canvas class="template-preview" width="500" height="600" aria-label="PITCHPLAN PRO shabloni ko‘rinishi"></canvas>
-                    </span>
-                    <span class="template-card-details">
-                        <span class="template-card-title">PITCHPLAN PRO</span>
-                        <span class="template-card-description">Premium och tuslar, nafis aksentlar va Matchday bezaklari</span>
-                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
-                    </span>
-                </button>
                 <button type="button" class="template-card" data-template="result" aria-label="MATCH RESULT shablonini tanlash va tahrirlash">
                     <span class="template-card-image">
                         <canvas class="template-preview" width="500" height="600" aria-label="MATCH RESULT shabloni ko‘rinishi"></canvas>
@@ -139,13 +129,23 @@
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
-                <button type="button" class="template-card" data-template="matchday" aria-label="MATCHDAY POSTER shablonini tanlash va tahrirlash">
+                <button type="button" class="template-card" data-template="football-news" aria-label="FUTBOL YANGILIKLARI shablonini tanlash va tahrirlash">
                     <span class="template-card-image">
-                        <canvas class="template-preview" width="500" height="600" aria-label="MATCHDAY POSTER shabloni ko‘rinishi"></canvas>
+                        <canvas class="template-preview" width="500" height="600" aria-label="FUTBOL YANGILIKLARI shabloni ko‘rinishi"></canvas>
                     </span>
                     <span class="template-card-details">
-                        <span class="template-card-title">MATCHDAY POSTER</span>
-                        <span class="template-card-description">Ikki klub o‘rtasidagi o‘yin uchun 1:1 MATCHDAY poster</span>
+                        <span class="template-card-title">FUTBOL YANGILIKLARI</span>
+                        <span class="template-card-description">Suratli fon, sana va pastki logo tahrirlanadigan yangiliklar posteri</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+                <button type="button" class="template-card" data-template="football-lux" aria-label="LUX FOOTBALL NEWS shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="500" aria-label="LUX FOOTBALL NEWS shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">LUX FOOTBALL NEWS</span>
+                        <span class="template-card-description">1:1 foto poster, kanal logosi va ikki rangli sarlavha bilan</span>
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
@@ -270,13 +270,19 @@
             <button type="button" class="btn back-to-templates" id="back-to-templates">← Poster shablonlariga qaytish</button>
             <div class="workspace">
             <section class="editor" aria-labelledby="edit-heading">
-                <div class="panel-heading"><h2 id="edit-heading">Poster sozlamalari</h2><span class="step">01 / Tahrirlash</span></div>
+                <div class="panel-heading">
+                    <h2 id="edit-heading">Poster sozlamalari</h2>
+                    <div class="panel-heading-actions">
+                        <span class="step">01 / Tahrirlash</span>
+                        <button type="button" class="btn btn-reset-template" id="reset-template" aria-label="Shu poster sozlamalarini standart holatga qaytarish" title="Shu poster sozlamalarini standart holatga qaytarish">↺ Standart</button>
+                    </div>
+                </div>
                 <div class="field-grid">
-                    <div class="field" id="title-field"><label for="poster-title">Sarlavha</label><input id="poster-title" maxlength="80" value="BUGUNNING ASOSIY UCHRASHUVLARI"></div>
+                    <div class="field" id="title-field"><label for="poster-title">Sarlavha</label><textarea id="poster-title" maxlength="80" rows="1">BUGUNNING ASOSIY UCHRASHUVLARI</textarea></div>
                     <div class="field" id="date-field"><label for="poster-date">Sana / izoh</label><input id="poster-date" maxlength="30" value="9-OKTABR"></div>
                 </div>
-                <div class="section-label"><strong>Poster ko‘rinishi</strong><span>Fon va shaxsiy logo</span></div>
-                <div class="field">
+                <div class="section-label" id="poster-appearance-heading"><strong>Poster ko‘rinishi</strong><span>Fon va shaxsiy logo</span></div>
+                <div class="field" id="poster-brand-logo-field">
                     <label for="brand-logo">Poster logosi (shablonda alohida joylashadi)</label>
                     <div class="brand-logo-controls">
                         <label class="logo-upload brand-logo-upload" id="brand-logo-preview" title="Shaxsiy logoni yuklang">
@@ -287,7 +293,7 @@
                         <button type="button" class="btn btn-clear-logo" id="clear-brand-logo">Asl logoni tiklash</button>
                     </div>
                 </div>
-                <div class="field-grid appearance-fields">
+                <div class="field-grid appearance-fields" id="poster-appearance-fields">
                     <div class="field">
                         <label for="background-color">Fon rangi</label>
                         <input id="background-color" type="color" value="#ffffff">
@@ -300,12 +306,34 @@
                         <label for="time-background-color">Vaqt katagi foni</label>
                         <input id="time-background-color" type="color" value="#52d719">
                     </div>
-                    <div class="field">
+                    <div class="field" id="background-image-field">
                         <label for="background-image">Fon rasmi</label>
                         <input id="background-image" class="file-input" type="file" accept="image/*">
                     </div>
                 </div>
-                <div class="field">
+                <div class="field-grid" id="football-news-controls" hidden>
+                    <div class="field">
+                        <label for="football-news-effect-color">Gradient rangi</label>
+                        <input id="football-news-effect-color" type="color" value="#000000">
+                    </div>
+                    <div class="field">
+                        <span class="field-label" id="football-news-ratio-label">Rasm nisbati</span>
+                        <div class="football-news-ratio-options" role="group" aria-labelledby="football-news-ratio-label">
+                            <button type="button" class="football-news-ratio-option" data-ratio="1:1" aria-label="1:1 nisbat" aria-pressed="false">1:1</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="3:4" aria-label="3:4 nisbat" aria-pressed="false">3:4</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="5:6" aria-label="5:6 nisbat" aria-pressed="true">5:6</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="7:5" aria-label="7:5 nisbat" aria-pressed="false">7:5</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="field" id="matchlist-layout-controls" hidden>
+                    <span class="field-label" id="matchlist-layout-label">Jadval ustunlari</span>
+                    <div class="matchlist-layout-options" role="group" aria-labelledby="matchlist-layout-label">
+                        <button type="button" class="matchlist-layout-option" data-columns="1" aria-pressed="true">1 ustun</button>
+                        <button type="button" class="matchlist-layout-option" data-columns="2" aria-pressed="false">2 ustun</button>
+                    </div>
+                </div>
+                <div class="field" id="background-opacity-field">
                     <label for="background-opacity">Fon rasmi ko‘rinishi <span id="opacity-value">35%</span></label>
                     <input id="background-opacity" class="range-input" type="range" min="0" max="100" value="35">
                 </div>
@@ -330,15 +358,7 @@
 78'  M. Cucurella</textarea>
                     </div>
                 </div>
-                <div class="field" id="matchday-venue-field" hidden>
-                    <label for="matchday-venue">Stadion / uchrashuv joyi</label>
-                    <input id="matchday-venue" type="text" maxlength="40" value="ETIHAD STADIUM · MANCHESTER">
-                </div>
-                <div class="field" id="matchday-competition-field" hidden>
-                    <label for="matchday-competition">Musobaqa / bosqich</label>
-                    <input id="matchday-competition" type="text" maxlength="40" value="PREMIER LEAGUE · 13-TUR">
-                </div>
-                <div class="section-label"><strong>Yozuv ranglari</strong><span>Matnlarni alohida sozlang</span></div>
+                <div class="section-label" id="text-colors-heading"><strong>Yozuv ranglari</strong><span>Matnlarni alohida sozlang</span></div>
                 <div class="field-grid color-fields">
                     <div class="field"><label for="title-color">Sarlavha</label><input id="title-color" type="color" value="#ffffff"></div>
                     <div class="field"><label for="date-color">Sana</label><input id="date-color" type="color" value="#11d4ee"></div>
@@ -346,15 +366,19 @@
                     <div class="field" id="time-color-field"><label id="time-color-label" for="time-color">O‘yin vaqti</label><input id="time-color" type="color" value="#3970c8"></div>
                     <div class="field" id="brand-color-field"><label for="brand-color">Logo / pastki yozuv</label><input id="brand-color" type="color" value="#ffffff"></div>
                 </div>
+                <div class="field" id="photo-text-size-field" hidden>
+                    <label for="photo-text-size"><span id="photo-text-size-label">Asosiy matn o‘lchami</span> <span id="photo-text-size-value">100%</span></label>
+                    <input id="photo-text-size" class="range-input" type="range" min="50" max="160" step="5" value="100">
+                </div>
                 <div class="field" id="brand-caption-field">
                     <label for="brand-caption">Logo yonidagi yozuv</label>
-                    <input id="brand-caption" type="text" maxlength="24" value="PITCHPLAN">
+                    <input id="brand-caption" type="text" maxlength="40" value="PITCHPLAN">
                 </div>
                 <div class="field" id="brand-logo-size-field">
                     <label for="brand-logo-size">Logo o‘lchami <span id="brand-logo-size-value">200%</span></label>
                     <input id="brand-logo-size" class="range-input" type="range" min="50" max="300" step="10" value="200">
                 </div>
-                <div class="section-label"><strong>Uchrashuvlar</strong><span id="matches-hint">Jamoa nomi, vaqt va logo</span></div>
+                <div class="section-label" id="matches-section-label"><strong>Uchrashuvlar</strong><span id="matches-hint">Jamoa nomi, vaqt va logo</span></div>
                 <div class="match-list" id="match-list" aria-label="Uchrashuvlarni tahrirlash"></div>
                 <div class="editor-actions">
                     <button type="button" class="btn btn-add" id="add-row">＋ Uchrashuv qo‘shish</button>
@@ -433,7 +457,7 @@
     </dialog>
 
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=23" defer></script>
+    <script src="js/app.js?v=30" defer></script>
     <script src="js/standings.js?v=11" defer></script>
     <script src="js/live-matches.js?v=27" defer></script>
 </body>

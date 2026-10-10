@@ -11,6 +11,7 @@
         }
         * { box-sizing: border-box; }
         [hidden] { display: none !important; }
+        html, body { max-width: 100%; overflow-x: clip; }
         body {
             margin: 0;
             min-height: 100vh;
@@ -155,7 +156,9 @@
         .editor { padding: 22px; }
         .panel-heading { display: flex; justify-content: space-between; align-items: center; margin-bottom: 17px; }
         .panel-heading h2 { margin: 0; font-size: 17px; }
+        .panel-heading-actions { display: flex; align-items: center; gap: 9px; }
         .step { color: #8ca0bb; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+        .btn-reset-template { min-height: 30px; padding: 0 9px; font-size: 11px; white-space: nowrap; }
         .templates { display: grid; grid-template-columns: minmax(150px, 1fr); gap: 10px; margin-bottom: 22px; }
         .template {
             padding: 9px; border: 1px solid var(--line); border-radius: 12px; background: #101a29;
@@ -192,6 +195,36 @@
         .field input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         .field input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 9px; }
         .field input[type="color"]::-moz-color-swatch { border: 0; border-radius: 9px; }
+        .field select {
+            width: 100%; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid var(--line);
+            border-radius: 9px; background: var(--panel); color: var(--text);
+        }
+        #football-news-controls .field:last-child { grid-column: 1 / -1; }
+        .football-news-ratio-options { display: flex; align-items: center; gap: 5px; }
+        .football-news-ratio-option {
+            display: grid; flex: 0 0 auto; place-items: center; height: 32px; width: auto; min-width: 0;
+            padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+            color: var(--muted); font-size: 9px; font-weight: 750; line-height: 1; cursor: pointer;
+        }
+        .football-news-ratio-option[data-ratio="1:1"] { aspect-ratio: 1 / 1; }
+        .football-news-ratio-option[data-ratio="3:4"] { aspect-ratio: 3 / 4; }
+        .football-news-ratio-option[data-ratio="5:6"] { aspect-ratio: 5 / 6; }
+        .football-news-ratio-option[data-ratio="7:5"] { aspect-ratio: 7 / 5; }
+        .football-news-ratio-option:hover,
+        .football-news-ratio-option[aria-pressed="true"] {
+            border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
+        }
+        .football-news-ratio-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+        .matchlist-layout-options { display: flex; gap: 7px; }
+        .matchlist-layout-option {
+            min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+            background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .matchlist-layout-option:hover,
+        .matchlist-layout-option[aria-pressed="true"] {
+            border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
+        }
+        .matchlist-layout-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
         .color-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
         .color-fields .field {
             padding: 8px 10px 7px; border: 1px solid rgba(136,150,185,.26); border-radius: 12px;
