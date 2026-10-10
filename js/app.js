@@ -216,7 +216,7 @@ function getClubDisplayName(name) {
         .replace(/\bAc\b/gi, "AC");
 }
         const canvas = document.getElementById("poster");
-        const ctx = canvas.getContext("2d");
+        let ctx = canvas.getContext("2d");
         const textEntrySelector = "input:not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='color']):not([type='range']), textarea, [contenteditable='true']";
         function isTextEntry(target) {
             return target instanceof Element && target.closest(textEntrySelector) !== null;
@@ -268,6 +268,17 @@ function getClubDisplayName(name) {
         const goalScorersInput = document.getElementById("goal-scorers");
         const brandLogoSizeInput = document.getElementById("brand-logo-size");
         const brandLogoSizeValue = document.getElementById("brand-logo-size-value");
+        const autoResultButton = document.getElementById("auto-result-button");
+        const autoResultOptions = document.getElementById("auto-result-options");
+        const autoUpcomingMatchesButton = document.getElementById("auto-upcoming-matches-button");
+        const redStarRangeDialog = document.getElementById("red-star-range-dialog");
+        const redStarRangeOptions = document.querySelectorAll("[data-upcoming-start-day]");
+        const redStarPasswordDialog = document.getElementById("red-star-password-dialog");
+        const redStarPasswordForm = document.getElementById("red-star-password-form");
+        const redStarPasswordInput = document.getElementById("red-star-password-input");
+        const redStarPasswordError = document.getElementById("red-star-password-error");
+        const redStarAccessStorageKey = "pitchplan-red-star-unlocked";
+        const brandLogoShapeOptions = document.querySelectorAll(".brand-logo-shape-option");
         const photoTextSizeField = document.getElementById("photo-text-size-field");
         const photoTextSizeInput = document.getElementById("photo-text-size");
         const photoTextSizeLabel = document.getElementById("photo-text-size-label");
@@ -293,6 +304,7 @@ function getClubDisplayName(name) {
         let brandLogo = null;
         let brandLogosByTemplate = new Map();
         let leagueLogo = null;
+        let brandLogoShape = "square";
         let customBrandLogo = false;
         let customBackgroundColor = false;
         let nonResultBackgroundOpacity = backgroundOpacityInput.value;
@@ -433,8 +445,10 @@ function getClubDisplayName(name) {
             const matchlistTemplate = name === "matchlist";
             footballNewsControls.hidden = !newsTemplate;
             matchlistLayoutControls.hidden = !matchlistTemplate;
+            document.getElementById("red-star-auto-field").hidden = name !== "sf";
             updateMatchlistLayoutOptions();
             document.getElementById("result-controls").hidden = !resultTemplate;
+            document.getElementById("result-auto-field").hidden = !resultTemplate;
             document.getElementById("poster-appearance-heading").hidden = newsTemplate;
             document.getElementById("poster-brand-logo-field").hidden = false;
             document.getElementById("poster-appearance-fields").hidden = false;
@@ -450,7 +464,7 @@ function getClubDisplayName(name) {
                 luxTemplate ? "Logoni olib tashlash" : "Asl logoni tiklash";
             document.getElementById("background-image-field").querySelector("label").textContent =
                 luxTemplate ? "Asosiy rasm" : "Fon rasmi";
-            document.getElementById("matches-hint").textContent = resultTemplate ? "Klub nomi, hisob va logo" : "Jamoa nomi, vaqt va logo";
+            document.getElementById("matches-hint").textContent = resultTemplate ? "Klub nomi, hisob va logo — o‘zingiz ham tahrirlang" : "Jamoa nomi, vaqt va logo";
             document.getElementById("add-row").hidden = photoTemplate;
             ["row-color-field", "time-background-field"].forEach(id => {
                 document.getElementById(id).hidden = photoTemplate;
@@ -458,7 +472,7 @@ function getClubDisplayName(name) {
             document.getElementById("time-color-field").hidden = resultTemplate || newsTemplate || luxTemplate;
             document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate;
             document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate;
-            document.getElementById("brand-logo-size-field").hidden = resultTemplate || newsTemplate;
+            document.getElementById("brand-logo-size-field").hidden = false;
             document.getElementById("brand-logo-size-field").querySelector("label").childNodes[0].textContent =
                 luxTemplate ? "Kanal logosi o‘lchami " : "Logo o‘lchami ";
             document.getElementById("editor-hint").hidden = photoTemplate;
@@ -603,9 +617,19 @@ function getClubDisplayName(name) {
                 const homeLogoLabel = item.querySelector(".home-logo");
                 const awayLogoLabel = item.querySelector(".away-logo");
                 item.querySelector(".remove-row").hidden = resultTemplate;
-                homeInput.addEventListener("input", event => { row.home = event.target.value; homeLogoLabel.querySelector(".logo-fallback").textContent = row.home.slice(0, 2).toUpperCase(); drawPoster(); });
+                homeInput.addEventListener("input", event => {
+                    row.home = event.target.value;
+                    row.homeEdited = true;
+                    homeLogoLabel.querySelector(".logo-fallback").textContent = row.home.slice(0, 2).toUpperCase();
+                    drawPoster();
+                });
                 timeInput.addEventListener("input", event => { row.time = event.target.value; drawPoster(); });
-                awayInput.addEventListener("input", event => { row.away = event.target.value; awayLogoLabel.querySelector(".logo-fallback").textContent = row.away.slice(0, 2).toUpperCase(); drawPoster(); });
+                awayInput.addEventListener("input", event => {
+                    row.away = event.target.value;
+                    row.awayEdited = true;
+                    awayLogoLabel.querySelector(".logo-fallback").textContent = row.away.slice(0, 2).toUpperCase();
+                    drawPoster();
+                });
                 homeLogoLabel.addEventListener("click", () => openClubLogoPicker(row, "homeLogo", homeLogoLabel));
                 awayLogoLabel.addEventListener("click", () => openClubLogoPicker(row, "awayLogo", awayLogoLabel));
                 item.querySelector(".remove-row").addEventListener("click", () => {
@@ -623,6 +647,98 @@ function getClubDisplayName(name) {
             return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
         }
 
+        function isCustomTeamLogo(image) {
+            if (!image) return false;
+            const src = typeof image === "string" ? image : image.src || "";
+            if (!src) return false;
+            return src !== defaultBrandLogo.src && src !== "./images/pitchplan.png";
+        }
+
+        function normalizeLogoLookupValue(value) {
+            return String(value || "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/&/g, " and ")
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, " ")
+                .trim();
+        }
+
+        function resolveClubLogoUrlByName(teamName, preferredLeague = "") {
+            const normalizedQuery = normalizeLogoLookupValue(teamName);
+            if (!normalizedQuery) return "";
+            const leagues = [];
+            if (preferredLeague) leagues.push(preferredLeague);
+            Object.keys(leagueLogoFolders).forEach(league => {
+                if (!leagues.includes(league)) leagues.push(league);
+            });
+            for (const league of leagues) {
+                const entries = leagueLogoFiles[league] || [];
+                const match = entries.find(([name]) => {
+                    const candidate = normalizeLogoLookupValue(name);
+                    return candidate === normalizedQuery || candidate.includes(normalizedQuery) || normalizedQuery.includes(candidate);
+                });
+                if (match) {
+                    const [, file] = match;
+                    return new URL(`./images/${leagueLogoFolders[league]}/${encodeURIComponent(file)}`, document.baseURI).href;
+                }
+            }
+            return "";
+        }
+
+        async function loadExportSafeImageSource(source) {
+            if (!source) return null;
+            let imageUrl;
+            try {
+                imageUrl = new URL(source, document.baseURI);
+            } catch {
+                return loadImageSource(source);
+            }
+            if (imageUrl.origin === window.location.origin || !/^https?:$/.test(imageUrl.protocol)) {
+                return loadImageSource(source);
+            }
+            return new Promise(resolve => {
+                const image = new Image();
+                image.crossOrigin = "anonymous";
+                image.onload = () => {
+                    try {
+                        const safeCanvas = document.createElement("canvas");
+                        safeCanvas.width = image.naturalWidth;
+                        safeCanvas.height = image.naturalHeight;
+                        safeCanvas.getContext("2d").drawImage(image, 0, 0);
+                        resolve(loadImageSource(safeCanvas.toDataURL("image/png")));
+                    } catch (error) {
+                        console.warn("External poster logo could not be made export-safe:", error);
+                        resolve(null);
+                    }
+                };
+                image.onerror = () => {
+                    console.warn("External poster logo does not allow safe canvas export:", source);
+                    resolve(null);
+                };
+                image.src = source;
+            });
+        }
+
+        async function loadAutoTeamLogo(teamName, remoteSource, league) {
+            const localLeague = {
+                "eng.1": "premier-league",
+                "esp.1": "laliga",
+                "ita.1": "serie-a",
+                "ger.1": "bundesliga",
+                "fra.1": "ligue-1"
+            }[league] || "";
+            const localSource = resolveClubLogoUrlByName(teamName, localLeague);
+            if (localSource) {
+                try {
+                    return await loadImageSource(localSource);
+                } catch (error) {
+                    console.warn(`Local logo for ${teamName} could not be loaded:`, error);
+                }
+            }
+            return loadExportSafeImageSource(remoteSource);
+        }
+
         function updateLogoPreview(label, image, fallback) {
             if (!label) return;
             label.querySelector("img")?.remove();
@@ -637,6 +753,218 @@ function getClubDisplayName(name) {
                 text.hidden = false;
                 text.textContent = fallback.slice(0, 2).toUpperCase();
             }
+        }
+
+        async function getRecentCompletedResultMatches() {
+            const getter = window.getRecentCompletedMatchesForPoster || window.pitchplanRecentCompletedMatches;
+            const refresher = window.fetchRecentCompletedMatchesForPoster;
+            let matches = [];
+            if (typeof getter === "function") {
+                matches = getter().filter(match => match && (match.homeName || match.home?.name) && (match.awayName || match.away?.name));
+            }
+            if (matches.length) return matches;
+            if (typeof refresher === "function") {
+                await refresher();
+                if (typeof getter === "function") {
+                    matches = getter().filter(match => match && (match.homeName || match.home?.name) && (match.awayName || match.away?.name));
+                }
+            }
+            return matches;
+        }
+
+        function parseNumericMatchScore(value) {
+            if (typeof value === "number" && Number.isFinite(value)) return value;
+            const asNumber = Number.parseInt(String(value ?? "0"), 10);
+            return Number.isFinite(asNumber) ? asNumber : 0;
+        }
+
+        async function fetchAutoResultSummary(match) {
+            if (!match?.league || !match?.id) return null;
+            try {
+                const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${match.league}/summary?event=${encodeURIComponent(match.id)}`, {
+                    cache: "no-store"
+                });
+                if (!response.ok) throw new Error(`server ${response.status}`);
+                const summary = await response.json();
+                return summary || null;
+            } catch (error) {
+                console.warn("Auto result summary fetch failed:", error);
+                return null;
+            }
+        }
+
+        function extractGoalScorersFromSummary(summary, homeName, awayName) {
+            const events = Array.isArray(summary?.keyEvents) ? summary.keyEvents :
+                Array.isArray(summary?.commentary) ? summary.commentary.map(item => item.play || item) : [];
+            const goalEvents = events.filter(event => {
+                const type = String(event?.type?.type || event?.type?.text || "").toLowerCase();
+                const text = String(event?.text || event?.shortText || "").toLowerCase();
+                return /goal/.test(type) || /goal/.test(text) || /scored/.test(text) || event?.scoringPlay;
+            });
+            if (!goalEvents.length) return "";
+            const normalizeLine = value => String(value ?? "").replace(/\s+/g, " ").trim();
+            const homeNameKey = normalizeLine(homeName).toLowerCase();
+            const awayNameKey = normalizeLine(awayName).toLowerCase();
+            const matchEventToLine = event => {
+                const participant = normalizeLine(
+                    event?.participants?.[0]?.athlete?.displayName ||
+                    event?.participants?.[0]?.athlete?.fullName ||
+                    event?.participants?.[0]?.displayName ||
+                    event?.participants?.[0]?.name ||
+                    event?.team?.displayName ||
+                    event?.team?.name ||
+                    "Gol muallifi"
+                );
+                const minute = normalizeLine(
+                    event?.clock?.displayValue ||
+                    event?.time?.displayValue ||
+                    event?.clock?.value ||
+                    event?.period?.displayValue ||
+                    ""
+                );
+                if (!participant) return "";
+                return minute ? `${participant} ${minute}'` : participant;
+            };
+            const homeGoals = [];
+            const awayGoals = [];
+            goalEvents.forEach(event => {
+                const teamName = normalizeLine(event?.team?.displayName || event?.team?.name || "").toLowerCase();
+                const reportedSide = String(event?.homeAway || event?.team?.homeAway || event?.competitor?.homeAway || "").toLowerCase();
+                const participant = normalizeLine(
+                    event?.participants?.[0]?.athlete?.displayName ||
+                    event?.participants?.[0]?.athlete?.fullName ||
+                    event?.participants?.[0]?.displayName ||
+                    event?.participants?.[0]?.name ||
+                    ""
+                );
+                const line = matchEventToLine(event);
+                if (!line) return;
+                const isHome = reportedSide === "home" ||
+                    (teamName && homeNameKey.includes(teamName)) ||
+                    (teamName && teamName.includes(homeNameKey)) ||
+                    (participant && participant.toLowerCase().includes(homeNameKey));
+                const isAway = reportedSide === "away" ||
+                    (teamName && awayNameKey.includes(teamName)) ||
+                    (teamName && teamName.includes(awayNameKey)) ||
+                    (participant && participant.toLowerCase().includes(awayNameKey));
+                if (isHome && !isAway) homeGoals.push(line);
+                else if (isAway && !isHome) awayGoals.push(line);
+                else if (homeNameKey && !teamName && participant && participant.toLowerCase().includes(homeNameKey)) homeGoals.push(line);
+                else if (awayNameKey && !teamName && participant && participant.toLowerCase().includes(awayNameKey)) awayGoals.push(line);
+                else if (homeGoals.length + awayGoals.length === 0) homeGoals.push(line);
+            });
+            const dedupe = array => [...new Set(array.map(line => line.trim()).filter(Boolean))];
+            const home = dedupe(homeGoals).slice(0, 7);
+            const away = dedupe(awayGoals).slice(0, 7);
+            const sections = [];
+            if (home.length) sections.push(...home);
+            if (home.length && away.length) {
+                sections.push("|");
+                sections.push(...away);
+            } else if (away.length) {
+                sections.unshift("|");
+                sections.push(...away);
+            }
+            return sections.join("\n");
+        }
+
+        function getSummaryScore(summary, homeName, awayName) {
+            const standings = summary?.header?.competitions?.[0]?.competitors ||
+                summary?.boxscore?.teams ||
+                [];
+            if (!Array.isArray(standings) || !standings.length) return null;
+            const homeTeam = standings.find(item => {
+                const name = String(item?.team?.displayName || item?.team?.name || item?.homeAway || "").toLowerCase();
+                return item?.homeAway === "home" || name.includes(homeName.toLowerCase()) || name === homeName.toLowerCase();
+            }) || standings.find(item => item?.homeAway === "home") || standings[0];
+            const awayTeam = standings.find(item => {
+                const name = String(item?.team?.displayName || item?.team?.name || item?.homeAway || "").toLowerCase();
+                return item?.homeAway === "away" || name.includes(awayName.toLowerCase()) || name === awayName.toLowerCase();
+            }) || standings.find(item => item?.homeAway === "away") || standings[1] || standings[0];
+            if (!homeTeam || !awayTeam) return null;
+            const homeScore = parseNumericMatchScore(homeTeam.score ?? homeTeam?.statistics?.find(item => item?.name === "score")?.value);
+            const awayScore = parseNumericMatchScore(awayTeam.score ?? awayTeam?.statistics?.find(item => item?.name === "score")?.value);
+            if (!homeScore && !awayScore) return null;
+            return { homeScore, awayScore };
+        }
+
+        async function applyAutoResultMatch(match) {
+            const existingRow = rows[0] || {};
+            const homeName = match.homeName || match.home?.name || "HOME";
+            const awayName = match.awayName || match.away?.name || "AWAY";
+            const manualHomeName = existingRow.homeEdited ? String(existingRow.home || "").trim() : "";
+            const manualAwayName = existingRow.awayEdited ? String(existingRow.away || "").trim() : "";
+            const manualHomeLogo = existingRow.homeLogoCustom && isCustomTeamLogo(existingRow.homeLogo) ? existingRow.homeLogo : null;
+            const manualAwayLogo = existingRow.awayLogoCustom && isCustomTeamLogo(existingRow.awayLogo) ? existingRow.awayLogo : null;
+
+            const summary = await fetchAutoResultSummary(match);
+            const summaryScores = getSummaryScore(summary, homeName, awayName);
+            const homeScore = parseNumericMatchScore(summaryScores?.homeScore ?? match.homeScore ?? match.home?.score);
+            const awayScore = parseNumericMatchScore(summaryScores?.awayScore ?? match.awayScore ?? match.away?.score);
+            const scoreText = `${homeScore} - ${awayScore}`;
+            const resultDate = match.date ? new Date(match.date) : new Date();
+            const scorerText = extractGoalScorersFromSummary(summary, homeName, awayName);
+            const [homeLogo, awayLogo, leagueImage] = await Promise.all([
+                loadAutoTeamLogo(homeName, match.homeLogo || match.home?.logo || "", match.league),
+                loadAutoTeamLogo(awayName, match.awayLogo || match.away?.logo || "", match.league),
+                loadImageSource(match.leagueLogo || "")
+            ]);
+            rows = [{
+                home: manualHomeName || homeName,
+                time: scoreText,
+                away: manualAwayName || awayName,
+                homeLogo: manualHomeLogo || homeLogo || null,
+                awayLogo: manualAwayLogo || awayLogo || null,
+                homeLogoCustom: Boolean(manualHomeLogo),
+                awayLogoCustom: Boolean(manualAwayLogo),
+                homeEdited: Boolean(manualHomeName),
+                awayEdited: Boolean(manualAwayName)
+            }];
+            leagueLogo = leagueImage || null;
+            titleInput.value = "";
+            dateInput.value = resultDate.toLocaleDateString("uz-UZ", { day: "2-digit", month: "2-digit", year: "numeric" });
+            brandCaptionInput.value = match.leagueName || "PITCHPLAN";
+            goalScorersInput.value = scorerText;
+            updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
+            renderInputs();
+            drawPoster();
+            autoResultOptions.hidden = true;
+            const logoWarning = (!homeLogo && !manualHomeLogo) || (!awayLogo && !manualAwayLogo)
+                ? " Ayrim logolar yuklanmadi; poster saqlashda xatolik bo‘lmasligi uchun nom bosh harflari ko‘rsatiladi."
+                : "";
+            statusEl.textContent = `${rows[0].home} ${scoreText} ${rows[0].away} posterga kiritildi.${logoWarning}`;
+        }
+
+        async function renderAutoResultMatches() {
+            const matches = await getRecentCompletedResultMatches();
+            autoResultOptions.replaceChildren();
+            if (!matches.length) {
+                const empty = document.createElement("p");
+                empty.className = "result-auto-empty";
+                empty.textContent = "So‘nggi yakunlangan o‘yinlar topilmadi.";
+                autoResultOptions.append(empty);
+                autoResultOptions.hidden = false;
+                return;
+            }
+            matches.forEach(match => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "result-auto-option";
+                const homeName = match.homeName || match.home?.name || "Home";
+                const awayName = match.awayName || match.away?.name || "Away";
+                const homeScore = parseNumericMatchScore(match.homeScore ?? match.home?.score);
+                const awayScore = parseNumericMatchScore(match.awayScore ?? match.away?.score);
+                const score = `${homeScore} - ${awayScore}`;
+                const schedule = new Date(match.date || Date.now());
+                const heading = document.createElement("strong");
+                heading.textContent = `${homeName} ${score} ${awayName}`;
+                const meta = document.createElement("small");
+                meta.textContent = `${match.leagueName || "League"} · ${schedule.toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit", hour12: false })}`;
+                button.append(heading, meta);
+                button.addEventListener("click", () => applyAutoResultMatch(match));
+                autoResultOptions.append(button);
+            });
+            autoResultOptions.hidden = false;
         }
 
         function renderClubLogoChoices() {
@@ -733,6 +1061,7 @@ function getClubDisplayName(name) {
         function applyTeamLogo(target, image) {
             if (!target || !image) return;
             target.row[target.key] = image;
+            target.row[`${target.key}Custom`] = true;
             updateLogoPreview(target.label, image, target.key === "homeLogo" ? target.row.home : target.row.away);
             drawPoster();
             statusEl.textContent = "Jamoa logosi posterga qo‘shildi.";
@@ -795,12 +1124,12 @@ function getClubDisplayName(name) {
             reader.readAsDataURL(file);
         }
 
-        function fitText(text, maxWidth, startSize, weight = 700, minSize = 11) {
+        function fitText(text, maxWidth, startSize, weight = 700, minSize = 11, fontFamily = "Segoe UI") {
             let size = startSize;
-            ctx.font = `${weight} ${size}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `${weight} ${size}px "${fontFamily}", Arial, sans-serif`;
             while (ctx.measureText(text).width > maxWidth && size > minSize) {
                 size -= 1;
-                ctx.font = `${weight} ${size}px "Segoe UI", Arial, sans-serif`;
+                ctx.font = `${weight} ${size}px "${fontFamily}", Arial, sans-serif`;
             }
             return size;
         }
@@ -812,11 +1141,62 @@ function getClubDisplayName(name) {
             ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
         }
 
+        function drawImageContainWithOutline(image, x, y, width, height, outlineWidth) {
+            const imageScale = Math.min(width / image.width, height / image.height);
+            const drawWidth = image.width * imageScale;
+            const drawHeight = image.height * imageScale;
+            const drawX = x + (width - drawWidth) / 2;
+            const drawY = y + (height - drawHeight) / 2;
+            const padding = Math.ceil(outlineWidth) + 1;
+            const silhouette = document.createElement("canvas");
+            silhouette.width = Math.ceil(drawWidth) + padding * 2;
+            silhouette.height = Math.ceil(drawHeight) + padding * 2;
+            const silhouetteContext = silhouette.getContext("2d");
+            silhouetteContext.drawImage(image, padding, padding, drawWidth, drawHeight);
+            silhouetteContext.globalCompositeOperation = "source-in";
+            silhouetteContext.fillStyle = "#ffffff";
+            silhouetteContext.fillRect(0, 0, silhouette.width, silhouette.height);
+
+            ctx.save();
+            for (let step = 0; step < 16; step += 1) {
+                const angle = (Math.PI * 2 * step) / 16;
+                ctx.drawImage(
+                    silhouette,
+                    drawX - padding + Math.cos(angle) * outlineWidth,
+                    drawY - padding + Math.sin(angle) * outlineWidth
+                );
+            }
+            ctx.restore();
+            ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+        }
+
         function drawImageCover(image, x, y, width, height) {
             const scale = Math.max(width / image.width, height / image.height);
             const drawWidth = image.width * scale;
             const drawHeight = image.height * scale;
             ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+        }
+
+        function drawImageWithLogoShape(image, x, y, width, height, shape = brandLogoShape) {
+            if (shape === "circle") {
+                const radius = Math.min(width, height) / 2;
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(x + width / 2, y + height / 2, radius, 0, Math.PI * 2);
+                ctx.clip();
+                drawImageContain(image, x, y, width, height);
+                ctx.restore();
+                return;
+            }
+            drawImageContain(image, x, y, width, height);
+        }
+
+        function updateBrandLogoShapeOptions() {
+            brandLogoShapeOptions.forEach(button => {
+                const active = button.dataset.brandShape === brandLogoShape;
+                button.classList.toggle("is-active", active);
+                button.setAttribute("aria-pressed", String(active));
+            });
         }
 
         function drawLogo(image, label, x, y, size, color, contain = false, labelColor = "#ffffff") {
@@ -1105,7 +1485,7 @@ function getClubDisplayName(name) {
                 ctx.fillRect(logoX, logoY, logoBoxWidth, logoBoxHeight);
             }
             if (brandLogo) {
-                drawImageContain(brandLogo, logoX + 13 * scale, logoY + 13 * scale, logoBoxWidth - 26 * scale, logoBoxHeight - 26 * scale);
+                drawImageWithLogoShape(brandLogo, logoX + 13 * scale, logoY + 13 * scale, logoBoxWidth - 26 * scale, logoBoxHeight - 26 * scale);
             } else {
                 ctx.fillStyle = "#ffffff";
                 ctx.textAlign = "center";
@@ -1135,7 +1515,16 @@ function getClubDisplayName(name) {
                 const imageScale = Math.min(logoWidth / brandLogo.width, logoHeight / brandLogo.height);
                 const imageWidth = brandLogo.width * imageScale;
                 const imageHeight = brandLogo.height * imageScale;
-                ctx.drawImage(brandLogo, logoX, logoY, imageWidth, imageHeight);
+                if (brandLogoShape === "circle") {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(logoX + imageWidth / 2, logoY + imageHeight / 2, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
+                    ctx.clip();
+                    ctx.drawImage(brandLogo, logoX, logoY, imageWidth, imageHeight);
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(brandLogo, logoX, logoY, imageWidth, imageHeight);
+                }
             } else {
                 let logoFontSize = Math.min(54 * scale * logoScale, logoHeight * .64);
                 ctx.save();
@@ -1285,6 +1674,7 @@ function getClubDisplayName(name) {
                 customBackground: customBackgroundColor,
                 customText: Array.from(customTextColors),
                 brandLogoSize: brandLogoSizeInput.value,
+                brandLogoShape,
                 customBrandLogo,
                 brandLogo: customBrandLogo ? imageSource(brandLogo) : null,
                 nonLuxBrandLogoSize,
@@ -1359,7 +1749,10 @@ function getClubDisplayName(name) {
                 loadImageSource(snapshot.backgroundImage),
                 loadImageSource(snapshot.brandLogo),
                 loadImageSource(snapshot.leagueLogo),
-                ...snapshot.rows.flatMap(row => [loadImageSource(row.homeLogo), loadImageSource(row.awayLogo)])
+                ...snapshot.rows.flatMap(row => [
+                    loadExportSafeImageSource(row.homeLogo),
+                    loadExportSafeImageSource(row.awayLogo)
+                ])
             ]);
             const savedTemplateBackgrounds = await Promise.all(Object.entries(snapshot.backgroundImages || {}).map(async ([template, source]) =>
                 [template, await loadImageSource(source)]
@@ -1390,6 +1783,8 @@ function getClubDisplayName(name) {
             brandLogo = snapshot.customBrandLogo ? savedBrand :
                 snapshot.template !== "football-lux" && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
             customBrandLogo = Boolean(snapshot.customBrandLogo);
+            brandLogoShape = snapshot.brandLogoShape === "circle" ? "circle" : "square";
+            updateBrandLogoShapeOptions();
             if (customBrandLogo && brandLogo) brandLogosByTemplate.set(currentTemplate, brandLogo);
             else brandLogosByTemplate.delete(currentTemplate);
             leagueLogo = savedLeague;
@@ -1423,7 +1818,7 @@ function getClubDisplayName(name) {
             ctx.save();
             ctx.globalAlpha = .055;
             if (brandLogo) {
-                drawImageContain(brandLogo, width * .12, height * .22, width * .76, height * .58);
+                drawImageWithLogoShape(brandLogo, width * .12, height * .22, width * .76, height * .58);
             } else {
                 ctx.fillStyle = textColorInputs.brand.value;
                 ctx.textAlign = "center";
@@ -1436,7 +1831,7 @@ function getClubDisplayName(name) {
 
         function drawBrandLogo(centerX, y, size) {
             if (brandLogo) {
-                drawImageContain(brandLogo, centerX - size / 2, y, size, size);
+                drawImageWithLogoShape(brandLogo, centerX - size / 2, y, size, size);
                 return;
             }
             ctx.save();
@@ -1518,7 +1913,7 @@ function getClubDisplayName(name) {
             const availableHeight = height - tableTop - footerHeight;
             const gridRows = Math.ceil(rowCount / columns);
             const rowGap = Math.min(12, Math.max(2, availableHeight / (gridRows * 12)));
-            const rowHeight = Math.min(columns === 2 ? 132 : 116, (availableHeight - rowGap * (gridRows - 1)) / gridRows);
+            const rowHeight = Math.min(columns === 2 ? 96 : 116, (availableHeight - rowGap * (gridRows - 1)) / gridRows);
             const contentHeight = gridRows * rowHeight + Math.max(0, gridRows - 1) * rowGap;
             const startY = tableTop + (availableHeight - contentHeight) / 2;
             rows.forEach((row, index) => {
@@ -1769,6 +2164,36 @@ function getClubDisplayName(name) {
             addPosterHitRegion("caption", 50, footerY + footerLogoSize + 5, width - 100, 32);
         }
 
+        function getCompactTeamName(name) {
+            const normalized = name.trim().replace(/\s+/g, " ").toLocaleLowerCase("en");
+            const knownNames = {
+                "manchester united": "Man UTD",
+                "manchester city": "Man City",
+                "newcastle united": "Newcastle",
+                "nottingham forest": "Nott'm Forest",
+                "west ham united": "West Ham",
+                "wolverhampton wanderers": "Wolves",
+                "brighton & hove albion": "Brighton",
+                "paris saint-germain": "PSG",
+                "atletico madrid": "Atleti",
+                "tottenham hotspur": "Tottenham",
+                "crystal palace": "Palace",
+                "aston villa": "Villa",
+                "real sociedad": "Sociedad",
+                "borussia dortmund": "Dortmund",
+                "borussia mönchengladbach": "Gladbach",
+                "bayern munich": "Bayern",
+                "inter milan": "Inter",
+                "ac milan": "AC Milan",
+                "leeds united": "Leeds",
+                "ipswich town": "Ipswich"
+            };
+            if (knownNames[normalized]) return knownNames[normalized];
+            const words = name.trim().split(/\s+/);
+            if (words.length < 2) return name;
+            return `${words[0]} ${words.slice(1).map(word => word.length <= 3 ? word : `${word[0]}.`).join(" ")}`;
+        }
+
         function drawSfPoster(theme, width, height) {
             ctx.save();
             ctx.globalAlpha = .32;
@@ -1824,17 +2249,21 @@ function getClubDisplayName(name) {
                 ctx.fillStyle = textColorInputs.team.value;
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
+                ctx.letterSpacing = "1px";
                 const leftTextX = x + logoSize + 18;
                 const leftTextWidth = Math.max(20, teamWidth - logoSize - 24);
                 const rightTextX = x + teamWidth + timeWidth + 8;
                 const rightTextWidth = Math.max(20, teamWidth - logoSize - 24);
-                const nameSize = Math.min(24, grid.rowHeight * .31);
-                ctx.font = `800 ${fitText(row.home, leftTextWidth, nameSize, 800, 9)}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillText(row.home, leftTextX + leftTextWidth / 2, y + grid.rowHeight / 2, leftTextWidth);
+                const homeName = grid.columns === 2 ? getCompactTeamName(row.home) : row.home;
+                const awayName = grid.columns === 2 ? getCompactTeamName(row.away) : row.away;
+                const nameSize = Math.min(grid.columns === 2 ? 28 : 24, grid.rowHeight * (grid.columns === 2 ? .36 : .31));
+                ctx.font = `400 ${fitText(homeName, leftTextWidth, nameSize, 400, grid.columns === 2 ? 14 : 9, "Bebas Neue")}px "Bebas Neue", Arial, sans-serif`;
+                ctx.fillText(homeName, leftTextX + leftTextWidth / 2, y + grid.rowHeight / 2, leftTextWidth);
                 addPosterHitRegion("home", leftTextX, y, leftTextWidth, grid.rowHeight, index);
-                ctx.font = `800 ${fitText(row.away, rightTextWidth, nameSize, 800, 9)}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillText(row.away, rightTextX + rightTextWidth / 2, y + grid.rowHeight / 2, rightTextWidth);
+                ctx.font = `400 ${fitText(awayName, rightTextWidth, nameSize, 400, grid.columns === 2 ? 14 : 9, "Bebas Neue")}px "Bebas Neue", Arial, sans-serif`;
+                ctx.fillText(awayName, rightTextX + rightTextWidth / 2, y + grid.rowHeight / 2, rightTextWidth);
                 addPosterHitRegion("away", rightTextX, y, rightTextWidth, grid.rowHeight, index);
+                ctx.letterSpacing = "0px";
                 ctx.fillStyle = textColorInputs.time.value;
                 ctx.font = `900 ${fitText(row.time, timeWidth - 12, Math.min(30, grid.rowHeight * .38), 900, 10)}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText(row.time, x + teamWidth + timeWidth / 2, y + grid.rowHeight / 2);
@@ -1855,11 +2284,12 @@ function getClubDisplayName(name) {
         function drawResultPoster(theme, width, height) {
             const match = rows[0] || { home: "CHELSEA", time: "4 - 0", away: "SOUTHAMPTON" };
             const scale = width / 1000;
+            const brandLogoScale = Number(brandLogoSizeInput.value) / 100;
             const panelX = 90 * scale;
             const panelY = 545 * scale;
             const panelWidth = width - panelX * 2;
             const panelHeight = height - panelY;
-            const logoSize = 108 * scale;
+            const logoSize = 122 * scale;
             const panelRadius = 42 * scale;
 
             if (!backgroundImage) {
@@ -1899,61 +2329,111 @@ function getClubDisplayName(name) {
             ctx.stroke();
             ctx.restore();
 
-            const brandBox = { x: 31 * scale, y: 24 * scale, width: 115 * scale, height: 42 * scale };
-            if (brandLogo) drawImageContain(brandLogo, brandBox.x, brandBox.y, brandBox.width, brandBox.height);
-            else drawBrandLogo(brandBox.x + brandBox.width / 2, brandBox.y, brandBox.height);
+            const brandBox = {
+                x: 18 * scale,
+                y: 18 * scale,
+                width: 148 * scale * brandLogoScale,
+                height: 72 * scale * brandLogoScale
+            };
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,.35)";
+            ctx.shadowBlur = 18 * scale;
+            ctx.shadowOffsetY = 8 * scale;
+            fillRoundRect(brandBox.x, brandBox.y, brandBox.width, brandBox.height, 18 * scale, "rgba(255,255,255,.18)", "rgba(255,255,255,.26)");
+            ctx.restore();
+            const innerBrandX = brandBox.x + 7 * scale;
+            const innerBrandY = brandBox.y + 7 * scale;
+            const innerBrandW = brandBox.width - 14 * scale;
+            const innerBrandH = brandBox.height - 14 * scale;
+            if (brandLogo) drawImageWithLogoShape(brandLogo, innerBrandX, innerBrandY, innerBrandW, innerBrandH);
+            else drawBrandLogo(innerBrandX + innerBrandW / 2, innerBrandY + innerBrandH / 2, Math.min(innerBrandW, innerBrandH));
             addPosterHitRegion("brandLogo", brandBox.x, brandBox.y, brandBox.width, brandBox.height);
 
-            const leagueSize = 56 * scale;
-            const leagueY = panelY - leagueSize * .45;
+            const leagueSize = 82 * scale;
+            const leagueY = panelY - leagueSize * .62;
+            const leagueBadgeX = width / 2 - leagueSize / 2;
+            const leagueBadgeY = leagueY;
             ctx.save();
-            ctx.shadowColor = "rgba(0,0,0,.45)";
-            ctx.shadowBlur = 12 * scale;
-            ctx.fillStyle = "#111820";
+            ctx.filter = "blur(10px) saturate(1.3)";
+            ctx.fillStyle = "rgba(255,255,255,.12)";
             ctx.beginPath();
-            ctx.arc(width / 2, leagueY + leagueSize / 2, leagueSize / 2, 0, Math.PI * 2);
+            ctx.roundRect(leagueBadgeX - 18 * scale, leagueBadgeY - 14 * scale, leagueSize + 36 * scale, leagueSize + 28 * scale, 24 * scale);
             ctx.fill();
             ctx.restore();
+            ctx.save();
+            ctx.shadowColor = "rgba(15,20,30,.22)";
+            ctx.shadowBlur = 18 * scale;
+            ctx.shadowOffsetY = 8 * scale;
+            ctx.fillStyle = "rgba(255,255,255,.09)";
+            ctx.beginPath();
+            ctx.roundRect(leagueBadgeX - 16 * scale, leagueBadgeY - 12 * scale, leagueSize + 32 * scale, leagueSize + 24 * scale, 22 * scale);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,.42)";
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
+            ctx.restore();
             if (leagueLogo) {
-                drawImageContain(leagueLogo, width / 2 - leagueSize / 2 + 4 * scale, leagueY + 4 * scale, leagueSize - 8 * scale, leagueSize - 8 * scale);
+                drawImageContain(leagueLogo, leagueBadgeX, leagueBadgeY, leagueSize, leagueSize);
             } else {
                 ctx.fillStyle = "#f4f4f0";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `900 ${24 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.font = `900 ${28 * scale}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText("PL", width / 2, leagueY + leagueSize / 2);
             }
-            addPosterHitRegion("leagueLogo", width / 2 - leagueSize / 2 - 8 * scale, leagueY - 8 * scale, leagueSize + 16 * scale, leagueSize + 16 * scale);
+            addPosterHitRegion("leagueLogo", leagueBadgeX - 14 * scale, leagueBadgeY - 14 * scale, leagueSize + 28 * scale, leagueSize + 28 * scale);
 
             const homeCenter = width * .255;
             const awayCenter = width * .745;
             const crestY = panelY + 32 * scale;
             const drawCrest = (image, label, centerX, rowIndex, type) => {
+                const crestBoxX = centerX - logoSize / 2;
+                const crestBoxY = crestY;
+                const crestBoxSize = logoSize;
+
                 ctx.save();
-                ctx.fillStyle = "rgba(255,255,255,.96)";
+                ctx.shadowColor = "rgba(9, 12, 18, 0.35)";
+                ctx.shadowBlur = 18 * scale;
+                ctx.shadowOffsetY = 9 * scale;
+                ctx.fillStyle = "rgba(255,255,255,0.12)";
                 ctx.beginPath();
-                ctx.arc(centerX, crestY + logoSize / 2, logoSize / 2, 0, Math.PI * 2);
+                ctx.roundRect(crestBoxX - 10 * scale, crestBoxY - 8 * scale, crestBoxSize + 20 * scale, crestBoxSize + 16 * scale, 24 * scale);
                 ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.lineWidth = 1.2 * scale;
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(crestBoxX + 4 * scale, crestBoxY + 4 * scale, crestBoxSize - 8 * scale, crestBoxSize - 8 * scale, 18 * scale);
+                ctx.clip();
                 if (image) {
-                    ctx.beginPath();
-                    ctx.arc(centerX, crestY + logoSize / 2, logoSize / 2 - 5, 0, Math.PI * 2);
-                    ctx.clip();
-                    drawImageContain(image, centerX - logoSize / 2 + 8, crestY + 8, logoSize - 16, logoSize - 16);
+                    drawImageContainWithOutline(
+                        image,
+                        crestBoxX + 6 * scale,
+                        crestBoxY + 6 * scale,
+                        crestBoxSize - 12 * scale,
+                        crestBoxSize - 12 * scale,
+                        2.5 * scale
+                    );
                 } else {
-                    ctx.fillStyle = "#263343";
-                    ctx.font = '900 32px "Segoe UI", Arial, sans-serif';
+                    ctx.fillStyle = "rgba(38,51,67,0.72)";
+                    ctx.fillRect(crestBoxX + 4 * scale, crestBoxY + 4 * scale, crestBoxSize - 8 * scale, crestBoxSize - 8 * scale);
+                    ctx.fillStyle = "#e8edf5";
+                    ctx.font = `900 ${Math.max(22, crestBoxSize * 0.42)}px "Segoe UI", Arial, sans-serif`;
                     ctx.textAlign = "center";
                     ctx.textBaseline = "middle";
-                    ctx.fillText(label.slice(0, 2).toUpperCase(), centerX, crestY + logoSize / 2);
+                    ctx.fillText(label.slice(0, 2).toUpperCase(), centerX, crestBoxY + crestBoxSize / 2);
                 }
                 ctx.restore();
-                addPosterHitRegion(type, centerX - logoSize / 2, crestY, logoSize, logoSize, rowIndex);
+                addPosterHitRegion(type, crestBoxX, crestBoxY, crestBoxSize, crestBoxSize, rowIndex);
             };
             drawCrest(match.homeLogo, match.home, homeCenter, 0, "homeLogo");
             drawCrest(match.awayLogo, match.away, awayCenter, 0, "awayLogo");
 
             ctx.fillStyle = textColorInputs.team.value;
-            const teamY = panelY + 169 * scale;
+            const teamY = panelY + 183 * scale;
             ctx.font = `900 ${fitText(match.home.toUpperCase(), width * .37, 25 * scale, 900, 13 * scale)}px "Segoe UI", Arial, sans-serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -1964,7 +2444,7 @@ function getClubDisplayName(name) {
             addPosterHitRegion("away", awayCenter - width * .19, teamY - 28 * scale, width * .38, 56 * scale, 0);
 
             ctx.fillStyle = textColorInputs.time.value;
-            const scoreY = panelY + 91 * scale;
+            const scoreY = panelY + 116 * scale;
             const scoreScale = photoTextSizes.result / 100;
             ctx.font = `900 ${fitText(match.time, width * .37, 88 * scale * scoreScale, 900, 44 * scale * scoreScale)}px "Segoe UI", Arial, sans-serif`;
             ctx.textAlign = "center";
@@ -1974,7 +2454,7 @@ function getClubDisplayName(name) {
 
             ctx.fillStyle = theme.accent;
             ctx.font = `900 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
-            ctx.fillText("FULL-TIME", width / 2, panelY + 205 * scale);
+            ctx.fillText("FULL-TIME", width / 2, panelY + 220 * scale);
 
             const goalLines = goalScorersInput.value.split(/\r?\n/);
             const separatorIndex = goalLines.findIndex(line => line.trim() === "|");
@@ -2330,13 +2810,55 @@ function getClubDisplayName(name) {
             scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
+        function openRedStarPoster() {
+            setTemplate("sf");
+            showAppSection("editor");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        function hasRememberedRedStarAccess() {
+            try {
+                return localStorage.getItem(redStarAccessStorageKey) === "true";
+            } catch (error) {
+                console.error("Could not read remembered RED STAR poster access:", error);
+                statusEl.textContent = "Saqlangan RED STAR ruxsatini o‘qib bo‘lmadi. Parolni qayta kiriting.";
+                return false;
+            }
+        }
         document.querySelectorAll(".template-card").forEach(card => {
             card.addEventListener("click", () => {
+                if (card.dataset.template === "sf") {
+                    if (hasRememberedRedStarAccess()) {
+                        openRedStarPoster();
+                        return;
+                    }
+                    redStarPasswordInput.value = "";
+                    redStarPasswordError.hidden = true;
+                    redStarPasswordDialog.showModal();
+                    redStarPasswordInput.focus();
+                    return;
+                }
                 setTemplate(card.dataset.template);
                 showAppSection("editor");
                 window.scrollTo({ top: 0, behavior: "smooth" });
             });
         });
+        redStarPasswordForm.addEventListener("submit", event => {
+            event.preventDefault();
+            if (redStarPasswordInput.value !== "1728") {
+                redStarPasswordError.hidden = false;
+                redStarPasswordInput.select();
+                return;
+            }
+            try {
+                localStorage.setItem(redStarAccessStorageKey, "true");
+            } catch (error) {
+                console.error("Could not remember RED STAR poster access:", error);
+                statusEl.textContent = "Parol to‘g‘ri. Bu brauzer ruxsatni eslab qola olmadi.";
+            }
+            redStarPasswordDialog.close();
+            openRedStarPoster();
+        });
+        document.getElementById("red-star-password-close").addEventListener("click", () => redStarPasswordDialog.close());
         document.getElementById("back-to-templates").addEventListener("click", () => {
             showAppSection("templates");
             scheduleWorkspaceSave();
@@ -2356,6 +2878,80 @@ function getClubDisplayName(name) {
         dateInput.addEventListener("input", drawPoster);
         brandCaptionInput.addEventListener("input", drawPoster);
         goalScorersInput.addEventListener("input", drawPoster);
+        autoResultButton?.addEventListener("click", async () => {
+            const matches = await getRecentCompletedResultMatches();
+            if (!matches.length) {
+                statusEl.textContent = "So‘nggi yakunlangan o‘yinlar topilmadi.";
+                autoResultOptions.hidden = true;
+                return;
+            }
+            await renderAutoResultMatches();
+        });
+        async function loadUpcomingMatches(startDayOffset) {
+            autoUpcomingMatchesButton.disabled = true;
+            autoUpcomingMatchesButton.textContent = "Yuklanmoqda…";
+            try {
+                const fetchMatches = window.fetchUpcomingMatchesForPoster;
+                if (typeof fetchMatches !== "function") throw new Error("Upcoming match feed is unavailable.");
+                const matches = await fetchMatches(startDayOffset);
+                if (!matches.length) {
+                    statusEl.textContent = "Tanlangan vaqt oralig‘ida Top-5 ligalarda o‘yin topilmadi.";
+                    return;
+                }
+                const upcomingRows = await Promise.all(matches.map(async match => {
+                    const homeName = match.home?.name || "UY JAMOASI";
+                    const awayName = match.away?.name || "MEHMON JAMOASI";
+                    const [homeLogo, awayLogo] = await Promise.all([
+                        loadAutoTeamLogo(homeName, match.home?.logo || "", match.league),
+                        loadAutoTeamLogo(awayName, match.away?.logo || "", match.league)
+                    ]);
+                    return {
+                        home: homeName.toLocaleUpperCase("uz-UZ"),
+                        time: new Intl.DateTimeFormat("uz-UZ", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hourCycle: "h23"
+                        }).format(new Date(match.date)),
+                        away: awayName.toLocaleUpperCase("uz-UZ"),
+                        homeLogo,
+                        awayLogo
+                    };
+                }));
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() + startDayOffset);
+                startDate.setHours(6, 0, 0, 0);
+                const lastDate = new Date(startDate);
+                lastDate.setDate(lastDate.getDate() + 1);
+                const monthNames = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust", "sentabr", "oktabr", "noyabr", "dekabr"];
+                const formatDate = date => `${date.getDate()} ${monthNames[date.getMonth()]}`.toLocaleUpperCase("uz-UZ");
+                rows = upcomingRows;
+                titleInput.value = startDayOffset === 0 ? "BUGUNGI UCHRASHUVLAR" : "KEYINGI KUN UCHRASHUVLARI";
+                dateInput.value = `${formatDate(startDate)} – ${formatDate(lastDate)}`;
+                renderInputs();
+                drawPoster();
+                statusEl.textContent = `${rows.length} ta uchrashuv ${formatDate(startDate)} 06:00 dan ${formatDate(lastDate)} 06:00 gacha jadvalga kiritildi.`;
+            } catch (error) {
+                statusEl.textContent = "Tanlangan vaqt oralig‘idagi uchrashuvlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.";
+                console.error("Upcoming poster matches fetch failed:", error);
+            } finally {
+                autoUpcomingMatchesButton.disabled = false;
+                autoUpcomingMatchesButton.textContent = "Avtomatik jadval";
+            }
+        }
+        autoUpcomingMatchesButton?.addEventListener("click", () => {
+            redStarRangeDialog.showModal();
+        });
+        redStarRangeOptions.forEach(option => {
+            option.addEventListener("click", () => {
+                const startDayOffset = Number(option.dataset.upcomingStartDay);
+                if (startDayOffset !== 0 && startDayOffset !== 1) {
+                    throw new Error("RED STAR FUTBOL vaqt oralig‘i noto‘g‘ri.");
+                }
+                redStarRangeDialog.close();
+                loadUpcomingMatches(startDayOffset);
+            });
+        });
+        document.getElementById("red-star-range-close").addEventListener("click", () => redStarRangeDialog.close());
         Object.entries(textColorInputs).forEach(([key, input]) => {
             input.addEventListener("input", () => {
                 customTextColors.add(key);
@@ -2407,6 +3003,14 @@ function getClubDisplayName(name) {
             opacityValue.textContent = `${backgroundOpacityInput.value}%`;
             drawPoster();
         });
+        brandLogoShapeOptions.forEach(button => {
+            button.addEventListener("click", () => {
+                brandLogoShape = button.dataset.brandShape === "circle" ? "circle" : "square";
+                updateBrandLogoShapeOptions();
+                drawPoster();
+            });
+        });
+        updateBrandLogoShapeOptions();
         brandLogoInput.addEventListener("change", event => {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
@@ -2417,7 +3021,8 @@ function getClubDisplayName(name) {
                 updateLogoPreview(brandLogoPreview, image, currentTemplate === "football-lux" ? "KL" : "PP");
                 drawPoster();
                 statusEl.textContent = currentTemplate === "football-lux" ?
-                    "Kanal logosi posterga qo‘shildi." : "Shaxsiy logo posterga qo‘shildi.";
+                    `Kanal logosi posterga ${brandLogoShape === "circle" ? "doira shaklida" : "kvadrat shaklida"} qo‘shildi.` :
+                    `Shaxsiy logo posterga ${brandLogoShape === "circle" ? "doira shaklida" : "kvadrat shaklida"} qo‘shildi.`;
             }, event.target);
         });
         leagueLogoInput.addEventListener("change", event => {
@@ -2461,23 +3066,22 @@ function getClubDisplayName(name) {
             drawPoster();
         });
         document.getElementById("download").addEventListener("click", () => {
-            const originalWidth = canvas.width;
-            const originalHeight = canvas.height;
-            let canvasRestored = false;
-            const restoreCanvas = () => {
-                if (canvasRestored) return;
-                canvasRestored = true;
-                canvas.width = originalWidth;
-                canvas.height = originalHeight;
-                drawPoster();
-            };
             try {
                 const exportScale = 2.16;
-                canvas.width = Math.round(originalWidth * exportScale);
-                canvas.height = Math.round(originalHeight * exportScale);
-                drawPoster();
-                canvas.toBlob(async blob => {
-                    restoreCanvas();
+                const exportCanvas = document.createElement("canvas");
+                exportCanvas.width = Math.round(canvas.width * exportScale);
+                exportCanvas.height = Math.round(canvas.height * exportScale);
+                const exportContext = exportCanvas.getContext("2d");
+                if (!exportContext) throw new Error("Could not create poster export canvas.");
+                const previewContext = ctx;
+                try {
+                    ctx = exportContext;
+                    ctx.scale(exportScale, exportScale);
+                    drawPoster();
+                } finally {
+                    ctx = previewContext;
+                }
+                exportCanvas.toBlob(async blob => {
                     if (!blob) {
                         statusEl.textContent = "PNG yaratilmadi. Iltimos, qayta urinib ko‘ring.";
                         return;
@@ -2497,12 +3101,18 @@ function getClubDisplayName(name) {
                     }
                 }, "image/png");
             } catch (error) {
-                restoreCanvas();
                 statusEl.textContent = "Rasmni saqlashda xatolik yuz berdi. Qayta urinib ko‘ring.";
                 console.error("Poster export failed:", error);
             }
         });
         async function initializeWorkspace() {
+            try {
+                const loadedFonts = await document.fonts.load('400 20px "Bebas Neue"');
+                if (!loadedFonts.length) throw new Error("Bebas Neue font did not load.");
+            } catch (error) {
+                console.error("Bebas Neue font could not be loaded:", error);
+                statusEl.textContent = "Bebas Neue shriftini yuklab bo‘lmadi.";
+            }
             setTemplate("jf");
             try {
                 const savedWorkspace = await readWorkspaceSnapshot();

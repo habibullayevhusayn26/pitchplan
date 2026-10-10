@@ -1,3 +1,11 @@
+@font-face {
+    font-family: "Bebas Neue";
+    src: url("../fonts/BebasNeue-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
 :root {
             color-scheme: light;
             --page: #f4f6fb;
@@ -225,6 +233,17 @@
             border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
         }
         .matchlist-layout-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+        .brand-logo-shape-options { display: flex; gap: 7px; }
+        .brand-logo-shape-option {
+            min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+            background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .brand-logo-shape-option:hover,
+        .brand-logo-shape-option[aria-pressed="true"],
+        .brand-logo-shape-option.is-active {
+            border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
+        }
+        .brand-logo-shape-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
         .color-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
         .color-fields .field {
             padding: 8px 10px 7px; border: 1px solid rgba(136,150,185,.26); border-radius: 12px;
@@ -265,6 +284,34 @@
         .field label span { float: right; color: #9baec8; font-weight: 500; }
         .result-controls { margin-top: 4px; }
         .result-controls .field textarea { line-height: 1.6; }
+        .result-auto-field { gap: 8px; }
+        .result-auto-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .result-mode-badge {
+            display: inline-flex; align-items: center; justify-content: center; min-height: 22px;
+            padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(154,171,226,.42);
+            background: rgba(76,123,255,.1); color: var(--blue); font-size: 10px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+        }
+        .result-auto-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+        .result-auto-row .hint-inline { flex: 1; }
+        .result-auto-button {
+            min-height: 38px; padding: 0 16px; border-radius: 10px; border: 1px solid rgba(77,124,255,.42);
+            background: linear-gradient(135deg, rgba(93,131,255,.18), rgba(54,96,220,.14)); color: var(--blue);
+            font-weight: 800; letter-spacing: .02em; cursor: pointer; white-space: nowrap;
+        }
+        .result-auto-button:hover { filter: brightness(1.03); }
+        .result-auto-options {
+            display: grid; gap: 8px; margin-top: 8px; padding: 8px; border: 1px solid rgba(140,160,210,.28);
+            border-radius: 12px; background: rgba(13,20,32,.54); max-height: 260px; overflow: auto;
+        }
+        .result-auto-option {
+            display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 10px 12px; border: 1px solid rgba(137,159,206,.28);
+            border-radius: 10px; background: rgba(255,255,255,.03); color: var(--text); text-align: left; cursor: pointer;
+        }
+        .result-auto-option strong { font-size: 12px; }
+        .result-auto-option small { color: var(--muted); font-size: 10px; }
+        .result-auto-option:hover,
+        .result-auto-option:focus-visible { border-color: rgba(106,154,255,.72); background: rgba(77,124,255,.12); }
+        .result-auto-empty { margin: 0; color: var(--muted); font-size: 12px; }
         .brand-logo-field { margin-top: 3px; }
         .brand-logo-controls { display: flex; align-items: center; gap: 10px; }
         .brand-logo-upload { width: 48px; height: 48px; flex: 0 0 48px; border-radius: 50%; background: #f7f8f5; color: #222; font-size: 15px; }
@@ -1265,7 +1312,12 @@
             }
             .live-match-detail-center { display: grid; justify-items: center; gap: 6px; min-width: 100px; }
             .live-match-detail-team { display: grid; justify-items: center; gap: 10px; min-width: 0; color: #e8edf6; text-align: center; overflow-wrap: anywhere; }
-            .live-match-detail-team-logo { width: clamp(46px, 8vw, 76px); height: clamp(46px, 8vw, 76px); object-fit: contain; }
+            .live-match-detail-team-logo {
+                width: clamp(46px, 8vw, 76px);
+                height: clamp(46px, 8vw, 76px);
+                object-fit: contain;
+                filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 6px rgba(0,0,0,.3));
+            }
             .live-match-detail-score { color: #e8edf6; font-size: clamp(28px, 6vw, 48px); font-variant-numeric: tabular-nums; font-weight: 900; white-space: nowrap; }
             .live-match-detail-score.is-fixture { color: #a2b0c4; }
             .live-match-detail-meta { margin: 0; color: #a2b0c4; font-size: 12px; text-align: center; }
@@ -1514,7 +1566,13 @@
             }
             .live-match-team { display: flex; min-width: 0; align-items: center; gap: 10px; color: #36394d; font-size: 13px; font-weight: 750; }
             .live-match-team.is-away { flex-direction: row-reverse; text-align: right; }
-            .live-match-team-logo { width: 34px; height: 34px; flex: 0 0 auto; object-fit: contain; }
+            .live-match-team-logo {
+                width: 34px;
+                height: 34px;
+                flex: 0 0 auto;
+                object-fit: contain;
+                filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.28));
+            }
             .live-match-team-name { display: -webkit-box; min-width: 0; overflow: hidden; line-height: 1.2; overflow-wrap: anywhere; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
             .live-match-score { color: #282c41; font-size: clamp(20px, 2.4vw, 30px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.06em; white-space: nowrap; }
             .live-match-score.is-fixture { color: #9297a7; font-size: 13px; letter-spacing: .04em; }
@@ -2197,3 +2255,166 @@
                 .section-banner--matches .live-match-toolbar { justify-content: flex-end; }
                 .match-stat-secondary-grid { grid-template-columns: 1fr; }
             }
+
+        .red-star-password-dialog {
+            position: relative;
+            width: min(440px, calc(100vw - 32px));
+            max-height: calc(100dvh - 32px);
+            overflow: visible;
+            border: 1px solid rgba(255,255,255,.32);
+            border-radius: 28px;
+            background:
+                radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.2), transparent 46%),
+                linear-gradient(145deg, rgba(255,255,255,.2), rgba(255,255,255,.075) 48%, rgba(255,255,255,.11)),
+                rgba(25,34,55,.68);
+            color: #f7f8ff;
+            box-shadow: 0 32px 100px rgba(0,0,0,.36), 0 8px 28px rgba(12,19,36,.2), inset 0 1px 0 rgba(255,255,255,.4);
+            backdrop-filter: blur(42px) saturate(180%);
+            -webkit-backdrop-filter: blur(42px) saturate(180%);
+            animation: red-star-dialog-in .24s cubic-bezier(.2,.75,.25,1) both;
+        }
+        .red-star-password-dialog::backdrop {
+            background: rgba(9,14,27,.24);
+            backdrop-filter: blur(16px) saturate(125%);
+            -webkit-backdrop-filter: blur(16px) saturate(125%);
+        }
+        .red-star-password-dialog .club-picker-header {
+            padding: 26px 26px 13px;
+            background: transparent;
+        }
+        .red-star-password-dialog .club-picker-header h2 {
+            color: #fff;
+            font-size: 21px;
+            font-weight: 720;
+            letter-spacing: -.035em;
+        }
+        .red-star-password-dialog .club-picker-header p {
+            margin-top: 7px;
+            color: rgba(239,243,255,.7);
+            font-size: 13px;
+        }
+        .red-star-password-dialog .club-picker-close {
+            width: 34px;
+            min-height: 34px;
+            border-color: rgba(255,255,255,.22);
+            background: rgba(255,255,255,.12);
+            color: rgba(255,255,255,.88);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .red-star-password-dialog .club-picker-content {
+            padding: 8px 26px 26px;
+            overflow: visible;
+        }
+        .red-star-password-dialog .club-picker-tools {
+            display: grid;
+            gap: 12px;
+            margin: 0;
+        }
+        .red-star-password-dialog .club-search {
+            min-height: 52px;
+            padding: 0 15px;
+            border-color: rgba(255,255,255,.3);
+            border-radius: 16px;
+            background: rgba(12,19,36,.32);
+            color: #fff;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 5px 18px rgba(7,11,22,.1);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+        .red-star-password-dialog .club-search:focus-within {
+            border-color: rgba(177,190,255,.88);
+            box-shadow: 0 0 0 4px rgba(137,145,255,.2), inset 0 1px 0 rgba(255,255,255,.18);
+        }
+        .red-star-password-dialog .club-search input {
+            height: 50px;
+            color: #fff;
+            font-size: 16px;
+        }
+        .red-star-password-dialog .club-search input::placeholder {
+            color: rgba(239,243,255,.53);
+        }
+        .red-star-password-dialog .btn-export {
+            min-height: 48px;
+            border: 1px solid rgba(255,255,255,.38);
+            border-radius: 15px;
+            background: linear-gradient(120deg, rgba(135,113,255,.94), rgba(67,165,222,.94));
+            color: #fff;
+            font-size: 15px;
+            font-weight: 700;
+            box-shadow: 0 8px 22px rgba(47,83,180,.27), inset 0 1px 0 rgba(255,255,255,.36);
+        }
+        .red-star-password-dialog .btn-export:hover {
+            background: linear-gradient(120deg, #907cff, #56b5e8);
+            box-shadow: 0 10px 26px rgba(47,83,180,.35), inset 0 1px 0 rgba(255,255,255,.42);
+        }
+        .red-star-password-dialog .club-picker-note {
+            margin: 14px 0 0;
+            color: rgba(239,243,255,.67);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .red-star-password-dialog .club-picker-note a {
+            color: #d1c8ff;
+            font-weight: 700;
+            text-decoration-color: rgba(209,200,255,.56);
+            text-underline-offset: 3px;
+        }
+        .red-star-password-dialog .club-picker-note a:hover { color: #fff; }
+        .red-star-password-dialog #red-star-password-error {
+            margin: 0;
+            color: #ffd2d6;
+            text-align: left;
+        }
+        :root[data-theme="light"] .red-star-password-dialog {
+            border-color: rgba(255,255,255,.76);
+            background:
+                radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.62), transparent 48%),
+                linear-gradient(145deg, rgba(255,255,255,.64), rgba(246,247,255,.38) 52%, rgba(255,255,255,.48)),
+                rgba(237,240,252,.54);
+            color: #292c40;
+            box-shadow: 0 30px 90px rgba(48,48,89,.22), inset 0 1px 0 rgba(255,255,255,.96);
+        }
+        :root[data-theme="light"] .red-star-password-dialog .club-picker-header h2 { color: #292c40; }
+        :root[data-theme="light"] .red-star-password-dialog .club-picker-header p,
+        :root[data-theme="light"] .red-star-password-dialog .club-picker-note { color: #69718a; }
+        :root[data-theme="light"] .red-star-password-dialog .club-picker-close {
+            border-color: rgba(96,105,139,.17);
+            background: rgba(255,255,255,.54);
+            color: #515a72;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 12px rgba(47,52,83,.08);
+        }
+        :root[data-theme="light"] .red-star-password-dialog .club-search {
+            border-color: rgba(111,120,157,.2);
+            background: rgba(255,255,255,.28);
+            color: #454b61;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.78), 0 5px 18px rgba(47,52,83,.06);
+        }
+        #red-star-password-input {
+            border: 0;
+            border-radius: 11px;
+            background: transparent;
+            box-shadow: none;
+        }
+        :root[data-theme="light"] .red-star-password-dialog .club-search input { color: #292c40; }
+        :root[data-theme="light"] .red-star-password-dialog .club-search input::placeholder { color: #858ca1; }
+        :root[data-theme="light"] .red-star-password-dialog .btn-export {
+            border-color: rgba(255,255,255,.62);
+            background: linear-gradient(125deg, rgba(121,96,232,.96), rgba(72,166,218,.94));
+            color: #fff;
+        }
+        :root[data-theme="light"] .red-star-password-dialog .club-picker-note a { color: #6756bd; }
+        :root[data-theme="light"] .red-star-password-dialog #red-star-password-error { color: #b4233c; }
+        @keyframes red-star-dialog-in {
+            from { opacity: 0; transform: translateY(8px) scale(.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @media (max-width: 520px) {
+            .red-star-password-dialog { border-radius: 24px; }
+            .red-star-password-dialog .club-picker-header { padding: 22px 20px 12px; }
+            .red-star-password-dialog .club-picker-content { padding: 8px 20px 22px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .red-star-password-dialog { animation: none; }
+        }

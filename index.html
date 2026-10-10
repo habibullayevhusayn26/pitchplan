@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=63">
+    <link rel="stylesheet" href="css/styles.css?v=66">
 </head>
 <body>
     <header class="topbar">
@@ -293,6 +293,13 @@
                         <button type="button" class="btn btn-clear-logo" id="clear-brand-logo">Asl logoni tiklash</button>
                     </div>
                 </div>
+                <div class="field" id="brand-logo-shape-field">
+                    <span class="field-label">Logo shakli</span>
+                    <div class="brand-logo-shape-options" role="group" aria-label="Logo shakli">
+                        <button type="button" class="brand-logo-shape-option" data-brand-shape="square" aria-pressed="true">Kvadrat</button>
+                        <button type="button" class="brand-logo-shape-option" data-brand-shape="circle" aria-pressed="false">Doira</button>
+                    </div>
+                </div>
                 <div class="field-grid appearance-fields" id="poster-appearance-fields">
                     <div class="field">
                         <label for="background-color">Fon rangi</label>
@@ -333,6 +340,15 @@
                         <button type="button" class="matchlist-layout-option" data-columns="2" aria-pressed="false">2 ustun</button>
                     </div>
                 </div>
+                <div class="field result-auto-field" id="red-star-auto-field" hidden>
+                    <div class="result-auto-header">
+                        <span class="field-label">Avtomatik o‘yinlar jadvali</span>
+                    </div>
+                    <div class="result-auto-row">
+                        <button type="button" class="btn result-auto-button" id="auto-upcoming-matches-button">Avtomatik jadval</button>
+                        <span class="hint-inline">Top-5 ligalardagi uchrashuvlarni vaqt oralig‘ini tanlab yuklaydi.</span>
+                    </div>
+                </div>
                 <div class="field" id="background-opacity-field">
                     <label for="background-opacity">Fon rasmi ko‘rinishi <span id="opacity-value">35%</span></label>
                     <input id="background-opacity" class="range-input" type="range" min="0" max="100" value="35">
@@ -348,6 +364,17 @@
                             <span class="hint-inline">Ligaga tegishli logoni yuklang yoki almashtiring.</span>
                             <button type="button" class="btn btn-clear-logo" id="clear-league-logo">Tozalash</button>
                         </div>
+                    </div>
+                    <div class="field result-auto-field" id="result-auto-field">
+                        <div class="result-auto-header">
+                            <span class="field-label">Natija ma’lumotlari</span>
+                            <span class="result-mode-badge result-mode-badge--manual">Manual edit</span>
+                        </div>
+                        <div class="result-auto-row">
+                            <button type="button" class="btn result-auto-button" id="auto-result-button">Avtomatik</button>
+                            <span class="hint-inline">Manual: klub nomlari va logolarini qo‘l bilan o‘zgartirish mumkin. Auto: oxirgi yakunlangan o‘yinni tanlab to‘ldiradi.</span>
+                        </div>
+                        <div class="result-auto-options" id="auto-result-options" hidden></div>
                     </div>
                     <div class="field">
                         <label for="goal-scorers">Urilgan gollar</label>
@@ -406,6 +433,42 @@
         </div>
     </main>
 
+    <dialog class="club-picker-dialog red-star-password-dialog" id="red-star-password-dialog" aria-labelledby="red-star-password-title">
+        <div class="club-picker-header">
+            <div>
+                <h2 id="red-star-password-title">RED STAR FUTBOL paroli</h2>
+                <p>Posterni tahrirlash uchun parolni kiriting.</p>
+            </div>
+            <button type="button" class="btn club-picker-close" id="red-star-password-close" aria-label="Oynani yopish">×</button>
+        </div>
+        <div class="club-picker-content">
+            <form class="club-picker-tools" id="red-star-password-form">
+                <label class="club-search">
+                    <input id="red-star-password-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Poster paroli" aria-label="Poster paroli" required>
+                </label>
+                <button type="submit" class="btn btn-export">Kirish</button>
+                <p class="club-picker-note" id="red-star-password-error" role="alert" hidden>Parol noto‘g‘ri. Qayta urinib ko‘ring.</p>
+            </form>
+            <p class="club-picker-note">Parolni olish uchun <a href="https://t.me/admn28" target="_blank" rel="noopener noreferrer">t.me/admn28</a> manziliga yozing.</p>
+        </div>
+    </dialog>
+
+    <dialog class="club-picker-dialog" id="red-star-range-dialog" aria-labelledby="red-star-range-title">
+        <div class="club-picker-header">
+            <div>
+                <h2 id="red-star-range-title">Uchrashuvlar vaqtini tanlang</h2>
+                <p>Jadvalga qaysi vaqt oralig‘idagi o‘yinlar kiritilsin?</p>
+            </div>
+            <button type="button" class="btn club-picker-close" id="red-star-range-close" aria-label="Oynani yopish">×</button>
+        </div>
+        <div class="club-picker-content">
+            <div class="club-picker-tools">
+                <button type="button" class="btn" data-upcoming-start-day="0">Bugun 06:00 dan ertaga 06:00 gacha</button>
+                <button type="button" class="btn" data-upcoming-start-day="1">Ertaga 06:00 dan indin 06:00 gacha</button>
+            </div>
+        </div>
+    </dialog>
+
     <dialog class="expanded-preview" id="expanded-preview" aria-label="Posterni katta ko‘rish va tahrirlash">
         <div class="expanded-preview-header">
             <div>
@@ -457,9 +520,9 @@
     </dialog>
 
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=30" defer></script>
+    <script src="js/app.js?v=35" defer></script>
     <script src="js/standings.js?v=11" defer></script>
-    <script src="js/live-matches.js?v=27" defer></script>
+    <script src="js/live-matches.js?v=28" defer></script>
 </body>
 </html>
     

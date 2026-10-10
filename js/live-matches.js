@@ -254,6 +254,11 @@
     }
 
     function getMatches(events, league, includeInactive = false) {
+        const parseScore = value => {
+            if (typeof value === "number" && Number.isFinite(value)) return value;
+            const normalized = Number.parseInt(String(value ?? "0"), 10);
+            return Number.isFinite(normalized) ? normalized : 0;
+        };
         const getValidColor = candidates => {
             const color = candidates.find(value =>
                 typeof value === "string" && /^#?[\da-f]{6}$/i.test(value.trim())
@@ -323,7 +328,7 @@
                     name: home.team.displayName || home.team.name || "Uy jamoasi",
                     logo: getTeamLogo(home.team),
                     primaryColor: getKitColor(home),
-                    score: home.score
+                    score: parseScore(home.score)
                 },
                 away: {
                     id: away.team.id,
@@ -331,7 +336,7 @@
                     logo: getTeamLogo(away.team),
                     primaryColor: getKitColor(away),
                     awayKitColor: getAwayKitColor(away),
-                    score: away.score
+                    score: parseScore(away.score)
                 }
             }];
         });
@@ -1596,6 +1601,116 @@
             matchList.append(section);
         });
     }
+
+    function getRecentCompletedMatchesForPoster() {
+        const lastDayMs = 24 * 60 * 60 * 1000;
+        return matches
+            .filter(match => {
+                const matchTime = Date.parse(match.date);
+                return match.isCompleted && Number.isFinite(matchTime) && Date.now() - matchTime <= lastDayMs;
+            })
+            .slice()
+            .sort((first, second) => Date.parse(second.date) - Date.parse(first.date))
+            .slice(0, 12)
+            .map(match => ({
+                id: match.id,
+                league: match.league,
+                leagueName: leagueNames[match.league] || match.league,
+                leagueLogo: match.leagueLogo || leagueAssets[match.league] || null,
+                date: match.date,
+                homeName: match.home?.name,
+                awayName: match.away?.name,
+                homeScore: Number.isFinite(Number(match.home?.score)) ? Number(match.home.score) : 0,
+                awayScore: Number.isFinite(Number(match.away?.score)) ? Number(match.away.score) : 0,
+                homeLogo: match.home?.logo,
+                awayLogo: match.away?.logo,
+                home: match.home,
+                away: match.away
+            }));
+    }
+
+    async function refreshPosterMatchFeed() {
+        const generation = ++requestGeneration;
+        activeController?.abort();
+        activeController = new AbortController();
+        const { signal } = activeController;
+        try {
+            const dates = [getDate(-1), getDate(), getDate(1)];
+            const responses = await Promise.allSettled(leagues.map(async league => {
+                const dailyResponses = await Promise.all(dates.map(async date => {
+                    const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=100`;
+                    const response = await fetch(endpoint, { signal, cache: "no-store" });
+                    if (!response.ok) throw new Error(`${leagueNames[league]}: server ${response.status}`);
+                    const data = await response.json();
+                    if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]}: noto‘g‘ri javob`);
+                    return data.events;
+                }));
+                const uniqueEvents = new Map(dailyResponses.flat().map(event => [event.id, event]));
+                return getMatches([...uniqueEvents.values()], league, true)
+                    .filter(match => match.isLive || match.isUpcoming || match.isRecentlyCompleted);
+            }));
+            if (generation !== requestGeneration) return getRecentCompletedMatchesForPoster();
+            const successful = responses.filter(result => result.status === "fulfilled");
+            if (!successful.length) throw new AggregateError(successful.map(result => result.reason), "Recent matches could not be loaded.");
+            matches = successful.flatMap(result => result.value).sort((first, second) =>
+                second.isRecentlyCompleted - first.isRecentlyCompleted ||
+                (first.isRecentlyCompleted && second.isRecentlyCompleted
+                    ? Date.parse(second.date) - Date.parse(first.date)
+                    : leagues.indexOf(first.league) - leagues.indexOf(second.league) ||
+                        Date.parse(first.date) - Date.parse(second.date))
+            );
+            return getRecentCompletedMatchesForPoster();
+        } catch (error) {
+            console.error("Recent completed matches fetch failed:", error);
+            return getRecentCompletedMatchesForPoster();
+        }
+    }
+
+    window.getRecentCompletedMatchesForPoster = getRecentCompletedMatchesForPoster;
+    window.pitchplanRecentCompletedMatches = getRecentCompletedMatchesForPoster;
+    window.fetchRecentCompletedMatchesForPoster = refreshPosterMatchFeed;
+
+    async function fetchUpcomingMatchesForPoster(startDayOffset) {
+        if (startDayOffset !== 0 && startDayOffset !== 1) {
+            throw new Error("Poster match window must start today or tomorrow.");
+        }
+        const startAt = new Date();
+        startAt.setDate(startAt.getDate() + startDayOffset);
+        startAt.setHours(6, 0, 0, 0);
+        const endAt = new Date(startAt);
+        endAt.setDate(endAt.getDate() + 1);
+        const queryDates = [];
+        const dateCursor = new Date(startAt);
+        dateCursor.setHours(0, 0, 0, 0);
+        while (dateCursor <= endAt) {
+            queryDates.push(`${dateCursor.getFullYear()}${String(dateCursor.getMonth() + 1).padStart(2, "0")}${String(dateCursor.getDate()).padStart(2, "0")}`);
+            dateCursor.setDate(dateCursor.getDate() + 1);
+        }
+        const responses = await Promise.allSettled(leagues.map(async league => {
+            const dailyResponses = await Promise.all(queryDates.map(async date => {
+                const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=100`;
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) throw new Error(`${leagueNames[league]}: server ${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]}: noto‘g‘ri javob`);
+                return data.events;
+            }));
+            const uniqueEvents = new Map(dailyResponses.flat().map(event => [event.id, event]));
+            return getMatches([...uniqueEvents.values()], league, true)
+                .filter(match => {
+                    const kickoff = Date.parse(match.date);
+                    return Number.isFinite(kickoff) && kickoff >= startAt.getTime() && kickoff < endAt.getTime();
+                });
+        }));
+        const failed = responses.filter(result => result.status === "rejected");
+        if (failed.length) {
+            throw new AggregateError(failed.map(result => result.reason), `${failed.length} liganing o‘yinlar jadvalini olish muvaffaqiyatsiz tugadi.`);
+        }
+        return responses.flatMap(result => result.status === "fulfilled" ? result.value : [])
+            .sort((first, second) => Date.parse(first.date) - Date.parse(second.date));
+    }
+
+    window.fetchUpcomingMatchesForPoster = fetchUpcomingMatchesForPoster;
 
     async function refreshLiveMatches() {
         if (!active) return;
