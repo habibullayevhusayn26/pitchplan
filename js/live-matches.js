@@ -491,6 +491,7 @@
             createElement("span", "", match.away.name)
         );
         grid.append(heading);
+        const otherStatsGrid = createElement("div", "match-stat-secondary-grid");
 
         const knownKeys = new Set(statDefinitions.map(definition => definition.key));
         const additionalDefinitions = [...homeStats, ...awayStats]
@@ -511,8 +512,14 @@
             }, []);
         let availableStats = 0;
         [...statDefinitions, ...additionalDefinitions].forEach(definition => {
-            const home = getStatValue(homeStats, definition.key);
-            const away = getStatValue(awayStats, definition.key);
+            let home = getStatValue(homeStats, definition.key);
+            let away = getStatValue(awayStats, definition.key);
+            if (match.isLive && definition.key === "possessionPct" &&
+                (!home || !away || !Number.isFinite(home.numeric) || !Number.isFinite(away.numeric) ||
+                    home.numeric + away.numeric <= 0)) {
+                home = { display: "50%", numeric: 50 };
+                away = { display: "50%", numeric: 50 };
+            }
             if (!home && !away) return;
             availableStats += 1;
             const row = createElement("div", "match-stat-row");
@@ -545,9 +552,15 @@
             awayBar.style.width = `${awayRatio * 100}%`;
             bar.append(homeBar, awayBar);
             row.append(homeValue, label, awayValue, bar);
-            grid.append(row);
+            if (definition.key === "possessionPct") {
+                row.classList.add("is-possession");
+                grid.append(row);
+            } else {
+                otherStatsGrid.append(row);
+            }
         });
 
+        if (otherStatsGrid.childElementCount) grid.append(otherStatsGrid);
         if (!availableStats) {
             grid.append(createElement("p", "match-detail-empty", match.isUpcoming
                 ? "O‘yin boshlanmagani uchun joriy o‘yin statistikasi hali mavjud emas."
@@ -1460,6 +1473,13 @@
             if (!sectionData.items.length) return;
             const section = createElement("section", `live-match-section ${sectionData.className}`);
             section.append(createElement("h2", "live-match-section-heading", sectionData.title));
+            if (sectionData.className === "is-live") {
+                const grid = createElement("div", "live-match-grid");
+                sectionData.items.forEach(match => grid.append(createMatchCard(match)));
+                section.append(grid);
+                matchList.append(section);
+                return;
+            }
             const grouped = new Map();
             sectionData.items.forEach(match => {
                 if (!grouped.has(match.league)) grouped.set(match.league, []);

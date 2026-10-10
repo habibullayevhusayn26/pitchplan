@@ -86,6 +86,7 @@
     function getLiveStandings(events, startYear) {
         const seasonPrefix = `${startYear}-${String(startYear + 1).slice(-2)}`;
         const teams = new Map();
+        const liveTeamIds = new Set();
         let liveMatches = 0;
 
         events.forEach(event => {
@@ -112,6 +113,11 @@
             });
 
             const state = competition?.status?.type?.state;
+            if (state === "in") {
+                competitors.forEach(({ team }) => {
+                    if (team?.id) liveTeamIds.add(String(team.id));
+                });
+            }
             if (state !== "post" && state !== "in") return;
             const parsed = competitors.map(competitor => ({
                 competitor,
@@ -155,7 +161,7 @@
             second.goalsFor - first.goalsFor ||
             first.name.localeCompare(second.name)
         );
-        return { rows, liveMatches };
+        return { rows, liveMatches, liveTeamIds };
     }
 
     function setStatus(message, isError = false) {
@@ -164,7 +170,7 @@
         status.classList.toggle("is-loading", !isError && (message.includes("yuklan") || message.includes("tayyorlan")));
     }
 
-    function renderStandings(rows) {
+    function renderStandings(rows, liveTeamIds) {
         currentRows = rows;
         downloadButton.disabled = rows.length === 0;
         standingsBody.replaceChildren();
@@ -181,6 +187,7 @@
 
         rows.forEach((team, index) => {
             const row = document.createElement("tr");
+            if (liveTeamIds.has(String(team.id))) row.classList.add("is-live-team");
             const rank = document.createElement("td");
             rank.className = "standings-rank";
             rank.textContent = String(index + 1);
@@ -520,10 +527,10 @@
             if (generation !== requestGeneration) return;
             const eventsById = new Map(eventGroups.flat().map(event => [event.id, event]));
             const events = [...eventsById.values()];
-            const { rows, liveMatches } = getLiveStandings(events, startYear);
+            const { rows, liveMatches, liveTeamIds } = getLiveStandings(events, startYear);
             currentRound = getCurrentRound(rows, events, startYear, liveMatches);
             railRound.textContent = currentRound ? `${currentRound}-TUR` : "TUR —";
-            renderStandings(rows);
+            renderStandings(rows, liveTeamIds);
             lastSuccessfulUpdate = new Date();
             const updatedAt = new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit" }).format(lastSuccessfulUpdate);
             setStatus(`${liveMatches ? `${liveMatches} ta o‘yin jonli · ` : ""}${updatedAt} da yangilandi`);

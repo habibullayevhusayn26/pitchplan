@@ -1039,6 +1039,7 @@
                 color: #7559d5;
                 font-size: 22px;
             }
+            .home-shortcut-icon img { width: 22px; height: 22px; object-fit: contain; }
             .home-shortcut > span:nth-child(2) { display: grid; gap: 4px; }
             .home-shortcut strong { font-size: 14px; }
             .home-shortcut small { color: #777f96; font-size: 11px; }
@@ -1156,6 +1157,8 @@
                 -webkit-backdrop-filter: blur(18px) saturate(145%);
             }
             .live-match-detail-league { display: flex; align-items: center; gap: 10px; color: #70768b; font-size: 13px; font-weight: 800; }
+            .live-match-detail-header .live-match-detail-league,
+            .live-match-detail-header .live-match-detail-meta { color: #a2b0c4; }
             .live-match-detail-scoreboard {
                 display: grid;
                 grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1164,10 +1167,11 @@
                 margin: 24px 0 16px;
             }
             .live-match-detail-center { display: grid; justify-items: center; gap: 6px; min-width: 100px; }
-            .live-match-detail-team { display: grid; justify-items: center; gap: 10px; min-width: 0; color: #34394e; text-align: center; overflow-wrap: anywhere; }
+            .live-match-detail-team { display: grid; justify-items: center; gap: 10px; min-width: 0; color: #e8edf6; text-align: center; overflow-wrap: anywhere; }
             .live-match-detail-team-logo { width: clamp(46px, 8vw, 76px); height: clamp(46px, 8vw, 76px); object-fit: contain; }
-            .live-match-detail-score { color: #292d42; font-size: clamp(28px, 6vw, 48px); font-variant-numeric: tabular-nums; font-weight: 900; white-space: nowrap; }
-            .live-match-detail-meta { margin: 0; color: #858a9c; font-size: 12px; text-align: center; }
+            .live-match-detail-score { color: #e8edf6; font-size: clamp(28px, 6vw, 48px); font-variant-numeric: tabular-nums; font-weight: 900; white-space: nowrap; }
+            .live-match-detail-score.is-fixture { color: #a2b0c4; }
+            .live-match-detail-meta { margin: 0; color: #a2b0c4; font-size: 12px; text-align: center; }
             .match-clock-panel {
                 display: grid;
                 justify-items: center;
@@ -1363,7 +1367,7 @@
                 color: #21835c;
                 font-size: 11px;
             }
-            .live-match-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr)); gap: 14px; }
+            .live-match-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
             .live-match-card {
                 min-width: 0;
                 overflow: hidden;
@@ -1440,6 +1444,12 @@
                 align-items: center;
                 gap: 8px;
             }
+            .match-stat-secondary-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0 18px;
+            }
+            .match-stat-secondary-grid .match-stat-row { align-content: start; }
             .match-statistics-heading { margin: 0 0 9px; color: #9297a7; font-size: 9px; font-weight: 800; }
             .match-statistics-heading span:first-child, .match-statistics-heading span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .match-statistics-heading span:last-child { text-align: right; }
@@ -1683,6 +1693,7 @@
             .standings-table tbody tr:first-child { background: #f1f0e9; }
             .standings-table tbody tr:nth-child(odd):not(:first-child) { background: #fbfcfa; }
             .standings-table tbody tr:hover { background: #f4faef; }
+            .standings-table tbody tr.is-live-team > td:not(.standings-team) { color: #d92f45; }
             .standings-table th:first-child, .standings-rank { width: 34px; color: #717872; }
             .standings-table th:nth-child(2), .standings-table td:nth-child(2) { text-align: left; }
             .standings-team { min-width: 145px; padding-left: 3px !important; font-weight: 650; }
@@ -1803,6 +1814,7 @@
                     box-shadow: 0 18px 36px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.14);
                 }
                 .home-shortcut-icon { background: rgba(128,101,226,.24); color: #c7baff; }
+                .home-shortcut-icon img { filter: brightness(0) invert(1); }
                 .live-status {
                     border-color: rgba(180,205,245,.2);
                     background: rgba(27,41,63,.72);
@@ -1875,9 +1887,6 @@
                 .club-player-table th, .club-player-table td, .club-match-details { border-bottom-color: rgba(180,205,245,.13); }
                 .club-match-details { border-top-color: rgba(180,205,245,.13); }
                 .club-player-points, .club-match-details summary { color: #c7baff; }
-                .live-match-detail-team, .live-match-detail-score { color: #e8edf6; }
-                .live-match-detail-meta, .live-match-detail-league { color: #a2b0c4; }
-                .live-match-detail-score.is-fixture { color: #a2b0c4; }
                 .live-match-card-action { color: #d2c8ff; }
                 .live-match-card-header { border-bottom-color: rgba(180,205,245,.12); }
                 .live-match-league, .match-statistics-heading, .match-stat-label,
@@ -1965,7 +1974,7 @@
                 background-image: linear-gradient(90deg, rgba(249,252,250,.97) 0%, rgba(241,249,246,.92) 46%, rgba(235,246,242,.72) 100%), url("../images/section-standings.svg");
             }
             .section-banner--matches {
-                background-image: linear-gradient(90deg, rgba(249,252,250,.97) 0%, rgba(241,249,246,.92) 46%, rgba(235,246,242,.28) 100%), url("../images/section-matches.svg");
+                background-image: linear-gradient(90deg, rgba(249,252,250,.97) 0%, rgba(241,249,246,.92) 46%, rgba(235,246,242,.28) 100%), url("../images/section-fixtures.svg");
             }
             .section-banner .intro,
             .section-banner .live-heading { margin: 0 0 16px; }
@@ -1985,10 +1994,31 @@
             }
             .live-match-detail-header,
             .club-profile-header {
-                background-color: #17243a;
-                background-image: linear-gradient(90deg, rgba(249,252,250,.97) 0%, rgba(241,249,246,.92) 50%, rgba(235,246,242,.72) 100%), url("../images/section-matches.svg");
-                background-position: center;
-                background-size: cover;
+                position: relative;
+                isolation: isolate;
+                overflow: hidden;
+                background: transparent;
+            }
+            .live-match-detail-header::before,
+            .club-profile-header::before,
+            .live-match-detail-header::after,
+            .club-profile-header::after {
+                position: absolute;
+                z-index: -1;
+                inset: 0;
+                content: "";
+                pointer-events: none;
+            }
+            .live-match-detail-header::before,
+            .club-profile-header::before {
+                inset: -8px;
+                background: url("../images/section-matches.png") center / cover no-repeat;
+                filter: blur(5px) saturate(135%);
+            }
+            .live-match-detail-header::after,
+            .club-profile-header::after {
+                background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(255,255,255,.24));
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.38);
             }
             :root[data-theme="dark"] .section-banner,
             :root[data-theme="dark"] .live-match-detail-header,
@@ -2002,7 +2032,17 @@
             :root[data-theme="dark"] .section-banner--standings { --section-art: url("../images/section-standings.svg"); }
             :root[data-theme="dark"] .section-banner--matches,
             :root[data-theme="dark"] .live-match-detail-header,
-            :root[data-theme="dark"] .club-profile-header { --section-art: url("../images/section-matches.svg"); }
+            :root[data-theme="dark"] .club-profile-header { --section-art: url("../images/section-matches.png"); }
+            :root[data-theme="dark"] .section-banner--matches { --section-art: url("../images/section-fixtures.svg"); }
+            :root[data-theme="dark"] .live-match-detail-header,
+            :root[data-theme="dark"] .club-profile-header {
+                background: transparent;
+            }
+            :root[data-theme="dark"] .live-match-detail-header::after,
+            :root[data-theme="dark"] .club-profile-header::after {
+                background: linear-gradient(135deg, rgba(13,25,45,.5), rgba(13,25,45,.28));
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+            }
             :root[data-theme="dark"] .section-banner .home-eyebrow { color: #c7baff; }
             :root[data-theme="dark"] .section-banner .intro h1,
             :root[data-theme="dark"] .section-banner .live-heading h1 { color: #f5f7fb; }
@@ -2023,4 +2063,5 @@
                 .section-banner .live-heading { margin-bottom: 14px; }
                 .section-banner .live-match-filters { gap: 6px; }
                 .section-banner--matches .live-match-toolbar { justify-content: flex-end; }
+                .match-stat-secondary-grid { grid-template-columns: 1fr; }
             }
