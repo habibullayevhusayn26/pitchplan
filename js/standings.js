@@ -16,6 +16,7 @@
     const downloadButton = document.getElementById("standings-download");
     const railTitle = document.getElementById("standings-rail-title");
     const railSeason = document.getElementById("standings-rail-season");
+    const railRound = document.getElementById("standings-rail-round");
     const leagueLogo = document.getElementById("standings-league-logo");
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
@@ -23,6 +24,13 @@
         "ita.1": "./images/ligalar/serie_a-brandlogo.net_-512x512.png",
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
         "fra.1": "./images/ligalar/ligue-1.webp"
+    };
+    const leagueRailThemes = {
+        "eng.1": { start: "#caff27", middle: "#8cf21e", end: "#19d16d", accent: "#00aa75", glow: "rgba(8,175,111,.92)", text: "#12251a" },
+        "esp.1": { start: "#ff3158", middle: "#ff633e", end: "#ffb52e", accent: "#d8274c", glow: "rgba(216,39,76,.88)", text: "#fffaf3" },
+        "ita.1": { start: "#1649b8", middle: "#087aca", end: "#10b6d3", accent: "#103f8f", glow: "rgba(16,63,143,.9)", text: "#ffffff" },
+        "ger.1": { start: "#f01836", middle: "#d5092b", end: "#960c2f", accent: "#790a26", glow: "rgba(121,10,38,.9)", text: "#ffffff" },
+        "fra.1": { start: "#142b83", middle: "#2851b6", end: "#7d4ae0", accent: "#102364", glow: "rgba(16,35,100,.9)", text: "#ffffff" }
     };
     if (!standingsBody || !liveView || !tabs.length) return;
 
@@ -33,6 +41,19 @@
     let activeController = null;
     let lastSuccessfulUpdate = null;
     let currentRows = [];
+    let currentRound = null;
+
+    function applyLeagueRailTheme(league) {
+        const rail = document.querySelector(".standings-brand-rail");
+        if (!rail) return;
+        const theme = leagueRailThemes[league] || leagueRailThemes["eng.1"];
+        rail.style.setProperty("--league-rail-start", theme.start);
+        rail.style.setProperty("--league-rail-middle", theme.middle);
+        rail.style.setProperty("--league-rail-end", theme.end);
+        rail.style.setProperty("--league-rail-accent", theme.accent);
+        rail.style.setProperty("--league-rail-glow", theme.glow);
+        rail.style.setProperty("--league-rail-text", theme.text);
+    }
 
     function getCurrentSeasonStartYear() {
         const now = new Date();
@@ -41,6 +62,25 @@
 
     function formatSeason(startYear) {
         return `${startYear}/${String(startYear + 1).slice(-2)}`;
+    }
+
+    function getCurrentRound(rows, events, startYear, liveMatches) {
+        if (!rows.length) return null;
+        const seasonPrefix = `${startYear}-${String(startYear + 1).slice(-2)}`;
+        const scheduledGames = new Map();
+        events.forEach(event => {
+            if (!event.season?.slug?.startsWith(seasonPrefix)) return;
+            const competitors = event.competitions?.[0]?.competitors || [];
+            competitors.forEach(({ team }) => {
+                if (!team?.id) return;
+                scheduledGames.set(team.id, (scheduledGames.get(team.id) || 0) + 1);
+            });
+        });
+        const maxScheduledGames = Math.max(0, ...scheduledGames.values());
+        if (!maxScheduledGames) return null;
+        const maxPlayed = Math.max(...rows.map(team => team.played));
+        const activeRound = maxPlayed + (liveMatches ? 0 : 1);
+        return Math.min(activeRound, maxScheduledGames);
     }
 
     function getLiveStandings(events, startYear) {
@@ -228,7 +268,7 @@
         context.restore();
     }
 
-    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season) {
+    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season, round, leagueCode) {
         const canvas = document.createElement("canvas");
         const width = 1000;
         const railWidth = 132;
@@ -247,10 +287,11 @@
 
         context.fillStyle = "#f4f6f2";
         context.fillRect(0, 0, width, height);
+        const railTheme = leagueRailThemes[leagueCode] || leagueRailThemes["eng.1"];
         const railGradient = context.createLinearGradient(0, 0, railWidth, height);
-        railGradient.addColorStop(0, "#caff27");
-        railGradient.addColorStop(.52, "#8cf21e");
-        railGradient.addColorStop(1, "#19d16d");
+        railGradient.addColorStop(0, railTheme.start);
+        railGradient.addColorStop(.52, railTheme.middle);
+        railGradient.addColorStop(1, railTheme.end);
         context.fillStyle = railGradient;
         context.fillRect(0, 0, railWidth, height);
         context.save();
@@ -262,7 +303,7 @@
         context.lineTo(railWidth, height * .68);
         context.closePath();
         context.fill();
-        context.fillStyle = "#00aa75";
+        context.fillStyle = railTheme.accent;
         context.beginPath();
         context.moveTo(0, height * .78);
         context.lineTo(railWidth, height * .62);
@@ -272,7 +313,9 @@
         context.restore();
 
         if (brandLogo) {
-            context.drawImage(brandLogo, (railWidth - 68) / 2, 20, 68, 68);
+            const brandWidth = 108;
+            const brandHeight = brandWidth * brandLogo.height / brandLogo.width;
+            context.drawImage(brandLogo, (railWidth - brandWidth) / 2, 24, brandWidth, brandHeight);
         } else {
             drawExportRoundRect(context, (railWidth - 68) / 2, 20, 68, 68, 19, "#fff");
             context.fillStyle = "#6554bb";
@@ -284,10 +327,10 @@
         context.save();
         context.translate(railWidth / 2, height / 2 + 10);
         context.rotate(-Math.PI / 2);
-        context.fillStyle = "#17271b";
+        context.fillStyle = railTheme.text;
         context.font = "850 48px Segoe UI, Arial, sans-serif";
         context.textBaseline = "middle";
-        const logoSize = leagueBadge ? 56 : 0;
+        const logoSize = leagueBadge ? 68 : 0;
         const logoGap = leagueBadge ? 14 : 0;
         const maxTitleWidth = height - 185;
         const maxTextWidth = maxTitleWidth - logoSize - logoGap;
@@ -296,21 +339,38 @@
         const textX = -combinedWidth / 2 + logoSize + logoGap;
         context.textAlign = "left";
         if (leagueBadge) {
-            const scale = Math.min(logoSize / leagueBadge.width, logoSize / leagueBadge.height);
+            const badgeX = -combinedWidth / 2;
+            drawExportRoundRect(context, badgeX, -logoSize / 2, logoSize, logoSize, 13, "#ffffff");
+            context.strokeStyle = "rgba(23,39,27,.16)";
+            context.lineWidth = 1;
+            context.beginPath();
+            context.roundRect(badgeX, -logoSize / 2, logoSize, logoSize, 13);
+            context.stroke();
+            const badgeInnerSize = logoSize - 12;
+            const scale = Math.min(badgeInnerSize / leagueBadge.width, badgeInnerSize / leagueBadge.height);
             const badgeWidth = leagueBadge.width * scale;
             const badgeHeight = leagueBadge.height * scale;
-            context.drawImage(leagueBadge, -combinedWidth / 2 + (logoSize - badgeWidth) / 2, -badgeHeight / 2, badgeWidth, badgeHeight);
+            context.drawImage(leagueBadge, badgeX + (logoSize - badgeWidth) / 2, -badgeHeight / 2, badgeWidth, badgeHeight);
         }
         context.fillText(league, textX, 0, maxTextWidth);
         context.restore();
         context.save();
-        context.translate(railWidth / 2, height - 46);
+        context.translate(railWidth / 2, height - 106);
         context.rotate(-Math.PI / 2);
-        context.fillStyle = "#17271b";
-        context.font = "800 17px Segoe UI, Arial, sans-serif";
+        context.fillStyle = railTheme.text;
+        context.font = "850 22px Segoe UI, Arial, sans-serif";
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.fillText(season, 0, 0, railWidth - 18);
+        context.restore();
+        context.save();
+        context.translate(railWidth / 2, height - 38);
+        context.rotate(-Math.PI / 2);
+        context.fillStyle = railTheme.text;
+        context.font = "850 18px Segoe UI, Arial, sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(round ? `${round}-TUR` : "TUR —", 0, 0, railWidth - 18);
         context.restore();
 
         drawExportRoundRect(context, panelX, panelY, panelWidth, panelHeight, 18, "#ffffff");
@@ -394,6 +454,7 @@
         const exportLeagueCode = selectedLeague;
         const exportLeague = leagueName.textContent;
         const exportSeason = seasonLabel.textContent;
+        const exportRound = currentRound;
         downloadButton.disabled = true;
         setStatus("PNG yuklab olishga tayyorlanmoqda…");
         try {
@@ -402,7 +463,7 @@
                 loadExportLogo(new URL(leagueAssets[exportLeagueCode], document.baseURI).href),
                 ...exportRows.map(team => loadExportLogo(team.logo))
             ]);
-            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason);
+            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode);
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
             });
@@ -457,10 +518,13 @@
         activeController = controller;
         const { signal } = controller;
         const startYear = getCurrentSeasonStartYear();
+        applyLeagueRailTheme(selectedLeague);
         leagueName.textContent = leagueNames[selectedLeague];
         seasonLabel.textContent = formatSeason(startYear);
         railTitle.textContent = leagueNames[selectedLeague];
         railSeason.textContent = formatSeason(startYear);
+        currentRound = null;
+        railRound.textContent = "TUR —";
         leagueLogo.src = leagueAssets[selectedLeague];
         leagueLogo.alt = `${leagueNames[selectedLeague]} logosi`;
         downloadButton.disabled = true;
@@ -475,7 +539,10 @@
             ]);
             if (generation !== requestGeneration) return;
             const eventsById = new Map(eventGroups.flat().map(event => [event.id, event]));
-            const { rows, liveMatches } = getLiveStandings([...eventsById.values()], startYear);
+            const events = [...eventsById.values()];
+            const { rows, liveMatches } = getLiveStandings(events, startYear);
+            currentRound = getCurrentRound(rows, events, startYear, liveMatches);
+            railRound.textContent = currentRound ? `${currentRound}-TUR` : "TUR —";
             renderStandings(rows);
             lastSuccessfulUpdate = new Date();
             const updatedAt = new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit" }).format(lastSuccessfulUpdate);

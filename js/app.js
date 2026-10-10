@@ -224,6 +224,7 @@ function getClubDisplayName(name) {
         const homeView = document.getElementById("home-view");
         const templatesView = document.getElementById("templates-view");
         const liveView = document.getElementById("live-view");
+        const liveMatchesView = document.getElementById("live-matches-view");
         const editorView = document.getElementById("editor-view");
         const rowsEl = document.getElementById("match-list");
         const clubPickerDialog = document.getElementById("club-picker");
@@ -1982,6 +1983,7 @@ function getClubDisplayName(name) {
             homeView.hidden = section !== "home";
             templatesView.hidden = section !== "templates";
             liveView.hidden = section !== "live";
+            liveMatchesView.hidden = section !== "matches";
             editorView.hidden = !isEditor;
             const activeSection = isEditor ? "templates" : section;
             document.querySelectorAll("[data-app-section]").forEach(button => {
