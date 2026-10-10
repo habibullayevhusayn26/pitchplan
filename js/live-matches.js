@@ -1602,12 +1602,14 @@
         });
     }
 
-    function getRecentCompletedMatchesForPoster() {
+    function getRecentCompletedMatchesForPoster(startAt = Date.now() - 24 * 60 * 60 * 1000, endAt = Date.now()) {
         const lastDayMs = 24 * 60 * 60 * 1000;
         return matches
             .filter(match => {
                 const matchTime = Date.parse(match.date);
-                return match.isCompleted && Number.isFinite(matchTime) && Date.now() - matchTime <= lastDayMs;
+                return match.isCompleted && Number.isFinite(matchTime) &&
+                    matchTime >= startAt && matchTime <= endAt &&
+                    Date.now() - matchTime <= lastDayMs;
             })
             .slice()
             .sort((first, second) => Date.parse(second.date) - Date.parse(first.date))
@@ -1629,7 +1631,7 @@
             }));
     }
 
-    async function refreshPosterMatchFeed() {
+    async function refreshPosterMatchFeed(startAt = Date.now() - 24 * 60 * 60 * 1000, endAt = Date.now()) {
         const generation = ++requestGeneration;
         activeController?.abort();
         activeController = new AbortController();
@@ -1649,7 +1651,7 @@
                 return getMatches([...uniqueEvents.values()], league, true)
                     .filter(match => match.isLive || match.isUpcoming || match.isRecentlyCompleted);
             }));
-            if (generation !== requestGeneration) return getRecentCompletedMatchesForPoster();
+            if (generation !== requestGeneration) return getRecentCompletedMatchesForPoster(startAt, endAt);
             const successful = responses.filter(result => result.status === "fulfilled");
             if (!successful.length) throw new AggregateError(successful.map(result => result.reason), "Recent matches could not be loaded.");
             matches = successful.flatMap(result => result.value).sort((first, second) =>
@@ -1659,10 +1661,10 @@
                     : leagues.indexOf(first.league) - leagues.indexOf(second.league) ||
                         Date.parse(first.date) - Date.parse(second.date))
             );
-            return getRecentCompletedMatchesForPoster();
+            return getRecentCompletedMatchesForPoster(startAt, endAt);
         } catch (error) {
             console.error("Recent completed matches fetch failed:", error);
-            return getRecentCompletedMatchesForPoster();
+            return getRecentCompletedMatchesForPoster(startAt, endAt);
         }
     }
 
@@ -1711,6 +1713,65 @@
     }
 
     window.fetchUpcomingMatchesForPoster = fetchUpcomingMatchesForPoster;
+
+    async function fetchTodayCompletedMatchesForPoster() {
+        const today = new Date();
+        const startAt = new Date(today);
+        startAt.setHours(6, 0, 0, 0);
+        if (today.getHours() < 6) {
+            startAt.setDate(startAt.getDate() - 1);
+            startAt.setHours(0, 0, 0, 0);
+        }
+        const endAt = today.getHours() < 6
+            ? new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()
+            : today.getTime();
+        const queryDates = [];
+        const dateCursor = new Date(startAt);
+        dateCursor.setHours(0, 0, 0, 0);
+        while (dateCursor.getTime() <= endAt) {
+            queryDates.push(`${dateCursor.getFullYear()}${String(dateCursor.getMonth() + 1).padStart(2, "0")}${String(dateCursor.getDate()).padStart(2, "0")}`);
+            dateCursor.setDate(dateCursor.getDate() + 1);
+        }
+        const responses = await Promise.allSettled(leagues.map(async league => {
+            const dailyResponses = await Promise.all(queryDates.map(async date => {
+                const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=100`;
+                const response = await fetch(endpoint, { cache: "no-store" });
+                if (!response.ok) throw new Error(`${leagueNames[league]}: server ${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]}: noto‘g‘ri javob`);
+                return data.events;
+            }));
+            const uniqueEvents = new Map(dailyResponses.flat().map(event => [event.id, event]));
+            return getMatches([...uniqueEvents.values()], league, true).filter(match => {
+                const kickoff = Date.parse(match.date);
+                return match.isCompleted && Number.isFinite(kickoff) &&
+                    kickoff >= startAt.getTime() && kickoff <= endAt;
+            });
+        }));
+        const failed = responses.filter(result => result.status === "rejected");
+        if (failed.length) {
+            throw new AggregateError(failed.map(result => result.reason), "ESPN’dan barcha yakunlangan o‘yinlarni olish muvaffaqiyatsiz tugadi.");
+        }
+        return responses.flatMap(result => result.status === "fulfilled" ? result.value : [])
+            .sort((first, second) => Date.parse(second.date) - Date.parse(first.date))
+            .map(match => ({
+                id: match.id,
+                league: match.league,
+                leagueName: leagueNames[match.league] || match.league,
+                leagueLogo: match.leagueLogo || leagueAssets[match.league] || null,
+                date: match.date,
+                homeName: match.home.name,
+                awayName: match.away.name,
+                homeScore: match.home.score,
+                awayScore: match.away.score,
+                homeLogo: match.home.logo,
+                awayLogo: match.away.logo,
+                home: match.home,
+                away: match.away
+            }));
+    }
+
+    window.fetchTodayCompletedMatchesForPoster = fetchTodayCompletedMatchesForPoster;
 
     async function refreshLiveMatches() {
         if (!active) return;

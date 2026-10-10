@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=66">
+    <link rel="stylesheet" href="css/styles.css?v=68">
 </head>
 <body>
     <header class="topbar">
@@ -126,6 +126,16 @@
                     <span class="template-card-details">
                         <span class="template-card-title">MATCH RESULT</span>
                         <span class="template-card-description">Foto fonli yakuniy hisob, klublar va gol mualliflari</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+                <button type="button" class="template-card" data-template="today-results" aria-label="BUGUNGI NATIJALAR shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="600" aria-label="BUGUNGI NATIJALAR shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">BUGUNGI NATIJALAR</span>
+                        <span class="template-card-description">Har kuni 06:00 dan hozirgacha yakunlangan o‘yinlar va hisoblar</span>
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
@@ -340,6 +350,16 @@
                         <button type="button" class="matchlist-layout-option" data-columns="2" aria-pressed="false">2 ustun</button>
                     </div>
                 </div>
+                <div class="field" id="today-results-theme-controls" hidden>
+                    <span class="field-label" id="today-results-theme-label">Poster mavzusi</span>
+                    <div class="today-results-theme-options" role="group" aria-labelledby="today-results-theme-label">
+                        <button type="button" class="today-results-theme-option" data-results-theme="current" aria-pressed="true">Pushti neon</button>
+                        <button type="button" class="today-results-theme-option" data-results-theme="real-madrid" aria-pressed="false">Qirollik</button>
+                        <button type="button" class="today-results-theme-option" data-results-theme="barcelona" aria-pressed="false">Granat-ko‘k</button>
+                        <button type="button" class="today-results-theme-option" data-results-theme="man-city" aria-pressed="false">Osmonrang</button>
+                        <button type="button" class="today-results-theme-option" data-results-theme="laliga" aria-pressed="false">Ispaniya</button>
+                    </div>
+                </div>
                 <div class="field result-auto-field" id="red-star-auto-field" hidden>
                     <div class="result-auto-header">
                         <span class="field-label">Avtomatik o‘yinlar jadvali</span>
@@ -347,6 +367,15 @@
                     <div class="result-auto-row">
                         <button type="button" class="btn result-auto-button" id="auto-upcoming-matches-button">Avtomatik jadval</button>
                         <span class="hint-inline">Top-5 ligalardagi uchrashuvlarni vaqt oralig‘ini tanlab yuklaydi.</span>
+                    </div>
+                </div>
+                <div class="field result-auto-field" id="today-results-auto-field" hidden>
+                    <div class="result-auto-header">
+                        <span class="field-label">Yakunlangan uchrashuvlar</span>
+                    </div>
+                    <div class="result-auto-row">
+                        <button type="button" class="btn result-auto-button" id="auto-today-results-button">Natijalarni yangilash</button>
+                        <span class="hint-inline">06:00 dan oldin ochilsa, kechagi 06:00 dan hozirgacha bo‘lgan ESPN natijalari olinadi.</span>
                     </div>
                 </div>
                 <div class="field" id="background-opacity-field">
@@ -520,9 +549,9 @@
     </dialog>
 
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=35" defer></script>
+    <script src="js/app.js?v=54" defer></script>
+    <script src="js/live-matches.js?v=32" defer></script>
     <script src="js/standings.js?v=11" defer></script>
-    <script src="js/live-matches.js?v=28" defer></script>
 </body>
 </html>
     
