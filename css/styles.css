@@ -885,6 +885,7 @@
                     background-color: rgba(17,27,43,.98);
                 }
             }
+        }
 
             .app-shell {
                 display: block;
@@ -937,8 +938,18 @@
                 color: #6349c5;
                 box-shadow: 0 7px 18px rgba(95,77,171,.12), inset 0 1px 0 #fff;
             }
-            .app-nav-icon { font-size: 24px; line-height: 1; }
-            .app-live-icon, .live-shortcut-icon { color: #e04f72; }
+            .app-nav-icon {
+                display: block;
+                width: 24px;
+                height: 24px;
+                background-color: currentColor;
+                -webkit-mask: var(--nav-icon) center / contain no-repeat;
+                mask: var(--nav-icon) center / contain no-repeat;
+            }
+            .app-nav-home-icon { --nav-icon: url("../images/menu-icons/home-svgrepo-com.svg"); }
+            .app-nav-poster-icon { --nav-icon: url("../images/menu-icons/poster.svg"); }
+            .app-nav-standings-icon { --nav-icon: url("../images/menu-icons/turnir-jadvali.svg"); }
+            .app-nav-matches-icon { --nav-icon: url("../images/menu-icons/jonli-matchlar.svg"); }
             .home-view .intro { margin-top: clamp(42px, 10vh, 120px); margin-bottom: 34px; }
             .home-eyebrow {
                 display: inline-block;
@@ -1349,17 +1360,22 @@
                 .app-sidebar { left: 18px; }
             }
             @media (max-width: 760px) {
-                .app-content { margin-left: 76px; }
+                .app-content { margin-left: 0; }
                 .app-sidebar {
-                    left: 28px;
-                    width: 66px;
-                    height: min(370px, max(0px, calc(100vh - 118px)));
+                    position: sticky;
+                    top: 0;
+                    left: auto;
+                    width: 100%;
+                    height: auto;
+                    max-height: none;
+                    overflow: visible;
+                    margin-bottom: 12px;
                     padding: 8px 5px;
                     border-radius: 17px;
                 }
-                .app-navigation { gap: 5px; }
-                .app-nav-item { min-height: 65px; gap: 4px; padding: 6px 2px; font-size: 9px; }
-                .app-nav-icon { font-size: 21px; }
+                .app-navigation { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+                .app-nav-item { min-width: 0; min-height: 60px; gap: 4px; padding: 6px 2px; font-size: 9px; }
+                .app-nav-icon { width: 22px; height: 22px; }
                 .workspace { grid-template-columns: minmax(0, 1fr); }
                 .home-shortcuts { grid-template-columns: 1fr; }
                 .home-view .intro { margin-top: 32px; }
@@ -1396,9 +1412,9 @@
                 .standings-team img { width: 18px; height: 18px; margin-right: 5px; }
             }
             @media (max-width: 520px) {
-                .app-content { margin-left: 66px; }
-                .app-sidebar { left: 12px; width: 58px; padding-inline: 3px; }
-                .app-nav-item { font-size: 8px; }
+                .app-sidebar { padding-inline: 4px; }
+                .app-nav-item { min-height: 56px; font-size: 8px; }
+                .app-nav-icon { width: 20px; height: 20px; }
                 .home-view .intro h1 { font-size: 30px; }
                 .live-heading h1 { font-size: 29px; }
                 .standings-poster { grid-template-columns: 59px minmax(0, 1fr); }
@@ -1518,4 +1534,3 @@
                     box-shadow: 0 16px 38px rgba(0,0,0,.24), 0 3px 10px rgba(0,0,0,.16);
                 }
             }
-        }

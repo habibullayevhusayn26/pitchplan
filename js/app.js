@@ -963,7 +963,7 @@ function getClubDisplayName(name) {
             snapshot.customText.forEach(key => customTextColors.add(key));
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
             updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
-            showAppSection(snapshot.editorOpen ? "editor" : "home");
+            showAppSection("home");
             renderInputs();
             drawPoster();
         }
