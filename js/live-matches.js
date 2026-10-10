@@ -253,6 +253,41 @@
     }
 
     function getMatches(events, league, includeInactive = false) {
+        const getValidColor = candidates => {
+            const color = candidates.find(value =>
+                typeof value === "string" && /^#?[\da-f]{6}$/i.test(value.trim())
+            );
+            return color ? `#${color.trim().replace(/^#/, "")}` : "";
+        };
+        const getKitColor = competitor => getValidColor([
+            competitor.uniform?.color,
+            competitor.uniform?.primaryColor,
+            competitor.uniformColor,
+            competitor.team.uniform?.color,
+            competitor.team.uniform?.primaryColor,
+            competitor.team.color
+        ]);
+        const getAwayKitColor = competitor => {
+            const uniformEntries = [
+                competitor.uniforms,
+                competitor.team.uniforms
+            ].flatMap(uniforms => Array.isArray(uniforms) ? uniforms : []);
+            const awayUniforms = uniformEntries.filter(uniform =>
+                uniform && /away|alternate|visitor/i.test(`${uniform.homeAway || ""} ${uniform.type || ""} ${uniform.name || ""}`)
+            );
+            return getValidColor([
+                competitor.awayUniform?.color,
+                competitor.awayUniform?.primaryColor,
+                competitor.uniform?.awayColor,
+                competitor.uniform?.away?.color,
+                competitor.team.awayUniform?.color,
+                competitor.team.awayUniform?.primaryColor,
+                competitor.team.uniform?.awayColor,
+                competitor.team.uniform?.away?.color,
+                ...awayUniforms.flatMap(uniform => [uniform.color, uniform.primaryColor]),
+                competitor.team.alternateColor
+            ]);
+        };
         return events.flatMap(event => {
             const competition = event.competitions?.[0];
             const state = competition?.status?.type?.state;
@@ -282,18 +317,33 @@
                     id: home.team.id,
                     name: home.team.displayName || home.team.name || "Uy jamoasi",
                     logo: getTeamLogo(home.team),
-                    primaryColor: home.team.uniform?.color || home.team.color || "",
+                    primaryColor: getKitColor(home),
                     score: home.score
                 },
                 away: {
                     id: away.team.id,
                     name: away.team.displayName || away.team.name || "Mehmon jamoa",
                     logo: getTeamLogo(away.team),
-                    primaryColor: away.team.uniform?.color || away.team.color || "",
+                    primaryColor: getKitColor(away),
+                    awayKitColor: getAwayKitColor(away),
                     score: away.score
                 }
             }];
         });
+    }
+
+    function areKitColorsSimilar(firstColor, secondColor) {
+        const colors = [firstColor, secondColor].map(color => {
+            const hex = String(color || "").replace(/^#/, "");
+            if (!/^[\da-f]{6}$/i.test(hex)) return null;
+            return [0, 2, 4].map(offset => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255);
+        });
+        if (colors.some(color => !color)) return false;
+        const [first, second] = colors;
+        const distance = Math.sqrt(first.reduce((sum, channel, index) =>
+            sum + (channel - second[index]) ** 2, 0
+        ));
+        return distance < .36;
     }
 
     function appendImage(parent, source, alt, className) {
@@ -496,6 +546,14 @@
         const homeStats = getTeamStatistics(summary, "home");
         const awayStats = getTeamStatistics(summary, "away");
         const grid = createElement("div", "match-statistics");
+        const homeKitColor = /^#[\da-f]{6}$/i.test(match.home.primaryColor) ? match.home.primaryColor : "";
+        const awayPrimaryColor = /^#[\da-f]{6}$/i.test(match.away.primaryColor) ? match.away.primaryColor : "";
+        const awayKitColor = areKitColorsSimilar(homeKitColor, awayPrimaryColor) &&
+            /^#[\da-f]{6}$/i.test(match.away.awayKitColor)
+            ? match.away.awayKitColor
+            : awayPrimaryColor;
+        if (homeKitColor) grid.style.setProperty("--match-home-kit-color", homeKitColor);
+        if (awayKitColor) grid.style.setProperty("--match-away-kit-color", awayKitColor);
         if (match.isLive || match.isCompleted) grid.append(renderMatchEvents(summary, match));
         const heading = createElement("div", "match-statistics-heading");
         heading.append(

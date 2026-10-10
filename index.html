@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=60">
+    <link rel="stylesheet" href="css/styles.css?v=63">
 </head>
 <body>
     <header class="topbar">
@@ -17,14 +17,38 @@
             <img class="brand-icon" src="./images/pitchplan.png" alt="PitchPlan">
         </a>
         <span class="top-note">Sport jadvalingizni bir necha daqiqada yarating</span>
-        <label class="theme-switcher">
-            <span>Mavzu</span>
-            <select id="theme-select" aria-label="Sayt mavzusi">
-                <option value="light">Kunduzgi</option>
-                <option value="dark">Tungi</option>
-                <option value="auto">Avtomatik</option>
-            </select>
-        </label>
+        <div class="theme-switcher">
+            <span class="theme-switcher-label">Mavzu</span>
+            <div class="theme-picker" id="theme-picker">
+                <select id="theme-select" class="theme-select-native" tabindex="-1" aria-hidden="true">
+                    <option value="light">Kunduzgi</option>
+                    <option value="dark">Tungi</option>
+                    <option value="auto">Avtomatik</option>
+                </select>
+                <button class="theme-picker-trigger" id="theme-picker-trigger" type="button" aria-label="Sayt mavzusini tanlash" aria-haspopup="listbox" aria-expanded="false" aria-controls="theme-picker-options">
+                    <span class="theme-picker-current-icon" aria-hidden="true">☼</span>
+                    <span class="theme-picker-current-label">Kunduzgi</span>
+                    <span class="theme-picker-chevron" aria-hidden="true"></span>
+                </button>
+                <div class="theme-picker-options" id="theme-picker-options" role="listbox" aria-label="Sayt mavzusi" hidden>
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="light" aria-selected="true">
+                        <span class="theme-picker-option-icon" aria-hidden="true">☼</span>
+                        <span class="theme-picker-option-copy"><strong>Kunduzgi</strong><small>Yorug‘ va tiniq ko‘rinish</small></span>
+                        <span class="theme-picker-check" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="dark" aria-selected="false">
+                        <span class="theme-picker-option-icon" aria-hidden="true">☾</span>
+                        <span class="theme-picker-option-copy"><strong>Tungi</strong><small>Ko‘zga qulay qorong‘i rejim</small></span>
+                        <span class="theme-picker-check" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="auto" aria-selected="false">
+                        <span class="theme-picker-option-icon" aria-hidden="true">◐</span>
+                        <span class="theme-picker-option-copy"><strong>Avtomatik</strong><small>Qurilma sozlamasiga moslashadi</small></span>
+                        <span class="theme-picker-check" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </header>
 
     <main class="app-shell">
@@ -410,7 +434,7 @@
     <script src="js/image-download.js?v=2" defer></script>
     <script src="js/app.js?v=23" defer></script>
     <script src="js/standings.js?v=11" defer></script>
-    <script src="js/live-matches.js?v=25" defer></script>
+    <script src="js/live-matches.js?v=27" defer></script>
 </body>
 </html>
     
