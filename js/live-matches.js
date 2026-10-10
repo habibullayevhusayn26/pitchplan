@@ -22,6 +22,8 @@
     const clubProfileView = document.getElementById("club-profile-view");
     const clubProfileHeading = document.getElementById("club-profile-heading");
     const clubProfileContent = document.getElementById("club-profile-content");
+    const clubSearchToggle = document.getElementById("club-search-toggle");
+    const clubSearchPanel = document.getElementById("club-search-panel");
     const clubSearchInput = document.getElementById("club-search-input");
     const clubSearchStatus = document.getElementById("club-search-status");
     const clubSearchResults = document.getElementById("club-search-results");
@@ -29,13 +31,16 @@
     const statusText = document.getElementById("live-matches-status-text");
     const refreshButton = document.getElementById("live-matches-refresh");
     const filters = [...document.querySelectorAll(".live-match-filter")];
+    const stateFilters = [...document.querySelectorAll(".live-match-state-filter")];
     if (!matchView || !matchList || !refreshButton || !filters.length || !clubProfileView ||
+        !clubSearchToggle || !clubSearchPanel ||
         !clubProfileHeading || !clubProfileContent || !clubSearchInput || !clubSearchStatus || !clubSearchResults) return;
 
     const detailsCache = new Map();
     const clubRosterCache = new Map();
     const clubEventsCache = new Map();
     let selectedLeague = "all";
+    let selectedMatchState = "live";
     let matches = [];
     let active = false;
     let refreshTimer = 0;
@@ -1416,21 +1421,37 @@
     }
 
     function renderMatches() {
-        const visibleMatches = selectedLeague === "all" ? matches : matches.filter(match => match.league === selectedLeague);
+        const leagueMatches = selectedLeague === "all" ? matches : matches.filter(match => match.league === selectedLeague);
+        const visibleMatches = selectedMatchState === "live"
+            ? leagueMatches.filter(match => match.isLive)
+            : selectedMatchState === "upcoming"
+                ? leagueMatches.filter(match => match.isUpcoming)
+                : leagueMatches;
         matchList.replaceChildren();
         if (!visibleMatches.length) {
             const empty = createElement("div", "live-match-empty");
+            const emptyMessage = selectedMatchState === "live"
+                ? selectedLeague === "all"
+                    ? "Hozir jonli o‘yin yo‘q"
+                    : `${leagueNames[selectedLeague]}da hozir jonli o‘yin yo‘q`
+                : selectedMatchState === "upcoming"
+                    ? selectedLeague === "all"
+                        ? "Kelasi 24 soat ichida o‘yin yo‘q"
+                        : `${leagueNames[selectedLeague]}da kelasi 24 soat ichida o‘yin yo‘q`
+                    : selectedLeague === "all"
+                        ? "Jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q"
+                        : `${leagueNames[selectedLeague]}da jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q`;
             empty.append(
                 createElement("span", "live-match-empty-icon", "◷"),
-                createElement("strong", "", selectedLeague === "all"
-                    ? "Jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q"
-                    : `${leagueNames[selectedLeague]}da jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q`),
-                createElement("span", "", "Uchrashuvlar jadvali yangilanganda bu yerda avtomatik ko‘rinadi.")
+                createElement("strong", "", emptyMessage),
+                createElement("span", "", selectedMatchState === "live"
+                    ? "Jonli uchrashuv boshlansa, shu yerda darhol ko‘rinadi. Kelasi o‘yinlarni yuqoridagi filtrdan tanlang."
+                    : "Uchrashuvlar jadvali yangilanganda bu yerda avtomatik ko‘rinadi.")
             );
             matchList.append(empty);
             return;
         }
-        const liveMatches = visibleMatches.filter(match => !match.isUpcoming);
+        const liveMatches = visibleMatches.filter(match => match.isLive);
         const upcomingMatches = visibleMatches.filter(match => match.isUpcoming);
         [
             { title: "Jonli uchrashuvlar", items: liveMatches, className: "is-live" },
@@ -1516,6 +1537,30 @@
         });
     });
 
+    stateFilters.forEach(button => {
+        button.addEventListener("click", () => {
+            selectedMatchState = button.dataset.matchState || "live";
+            stateFilters.forEach(filter => {
+                const selected = filter === button;
+                filter.classList.toggle("is-active", selected);
+                filter.setAttribute("aria-pressed", String(selected));
+            });
+            renderMatches();
+        });
+    });
+
+    clubSearchToggle.addEventListener("click", () => {
+        const isOpening = clubSearchPanel.hidden;
+        clubSearchPanel.hidden = !isOpening;
+        clubSearchToggle.setAttribute("aria-expanded", String(isOpening));
+        if (isOpening) clubSearchInput.focus();
+    });
+    clubSearchPanel.addEventListener("keydown", event => {
+        if (event.key !== "Escape") return;
+        clubSearchPanel.hidden = true;
+        clubSearchToggle.setAttribute("aria-expanded", "false");
+        clubSearchToggle.focus();
+    });
     clubSearchInput.addEventListener("input", renderClubSearch);
     refreshButton.addEventListener("click", refreshLiveMatches);
     window.addEventListener("pitchplan:sectionchange", event => {

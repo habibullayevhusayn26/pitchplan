@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#173b45"/><stop offset="1" stop-color="#101d32"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe18b"/><stop offset="1" stop-color="#d88b32"/></linearGradient>
+  </defs>
+  <path fill="url(#bg)" d="M0 0h1200v360H0z"/>
+  <circle cx="957" cy="170" r="215" fill="#34bf91" fill-opacity=".12"/>
+  <path stroke="#81ddbb" stroke-opacity=".18" stroke-width="2" d="M700 38h470v282H700zM935 38v282m-141-141a141 141 0 1 0 282 0 141 141 0 0 0-282 0"/>
+  <path fill="url(#gold)" d="M877 67h115v22c0 49-19 83-47 96v35h38v26H886v-26h38v-35c-28-13-47-47-47-96V67z"/>
+  <path stroke="#fce6aa" stroke-linecap="round" stroke-width="10" d="M877 83h-39c0 37 16 58 52 62m102-62h39c0 37-16 58-52 62"/>
+  <path fill="#2e4955" d="M822 271h77v49h-77zm96-37h77v86h-77zm96 24h77v62h-77z"/>
+  <path fill="#54d6a3" fill-opacity=".8" d="M822 271h77v7h-77zm96-37h77v7h-77zm96 24h77v7h-77z"/>
+</svg>

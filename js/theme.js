@@ -2,7 +2,7 @@
     const storageKey = "pitchplan-theme";
     const themes = ["light", "dark", "auto"];
     const media = window.matchMedia("(prefers-color-scheme: dark)");
-    let selectedTheme = "auto";
+    let selectedTheme = "light";
 
     try {
         const savedTheme = window.localStorage.getItem(storageKey);

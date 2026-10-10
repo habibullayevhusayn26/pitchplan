@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" fill="none">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#16b979"/><stop offset="1" stop-color="#087a64"/></linearGradient>
+    <linearGradient id="stands" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#34417c"/><stop offset="1" stop-color="#18233d"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#b5ffe7" stop-opacity=".9"/><stop offset="1" stop-color="#72ddc4" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path fill="url(#stands)" d="M0 0h1200v360H0z"/>
+  <path fill="#6271a2" fill-opacity=".28" d="M0 87 1200 30v46L0 145zm0 76 1200-57v39L0 201zm0 67 1200-43v36L0 266z"/>
+  <path fill="url(#field)" d="M0 247h1200v113H0z"/>
+  <path stroke="#d4ffed" stroke-opacity=".55" stroke-width="3" d="M0 247h1200M690 247v113m-86-33a86 86 0 1 0 172 0 86 86 0 0 0-172 0m-1 0h174"/>
+  <circle cx="900" cy="105" r="155" fill="url(#glow)"/>
+  <path stroke="#dffbf1" stroke-opacity=".72" stroke-width="3" d="M840 46h130v85H840zM840 46l65-37 65 37"/>
+  <g fill="#edfff8" fill-opacity=".7"><circle cx="914" cy="63" r="4"/><circle cx="942" cy="63" r="4"/><circle cx="970" cy="63" r="4"/><circle cx="998" cy="63" r="4"/><circle cx="1026" cy="63" r="4"/></g>
+</svg>

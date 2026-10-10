@@ -8,8 +8,8 @@
     <title>PitchPlan — futbol jadvali dizayneri</title>
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
-    <script src="js/theme.js?v=1"></script>
-    <link rel="stylesheet" href="css/styles.css?v=44">
+    <script src="js/theme.js?v=2"></script>
+    <link rel="stylesheet" href="css/styles.css?v=51">
 </head>
 <body>
     <header class="topbar">
@@ -31,22 +31,22 @@
         <aside class="app-sidebar" aria-label="Asosiy menyu">
             <nav class="app-navigation">
                 <a class="app-nav-item is-active" href="#/home" data-app-section="home" aria-current="page">
-                    <span class="app-nav-icon app-nav-home-icon" aria-hidden="true"></span><span>Bosh sahifa</span>
+                    <img class="app-nav-icon" src="./images/menu-icons/home-svgrepo-com.svg" alt=""><span>Bosh sahifa</span>
                 </a>
                 <a class="app-nav-item" href="#/poster" data-app-section="templates">
-                    <span class="app-nav-icon app-nav-poster-icon" aria-hidden="true"></span><span>Poster yaratish</span>
+                    <img class="app-nav-icon" src="./images/menu-icons/poster.svg" alt=""><span>Poster yaratish</span>
                 </a>
                 <a class="app-nav-item" href="#/standings" data-app-section="live">
-                    <span class="app-nav-icon app-nav-standings-icon" aria-hidden="true"></span><span>Turnir jadvallari</span>
+                    <img class="app-nav-icon" src="./images/menu-icons/turnir-jadvali.svg" alt=""><span>Turnir jadvallari</span>
                 </a>
                 <a class="app-nav-item" href="#/matches" data-app-section="matches">
-                    <span class="app-nav-icon app-nav-matches-icon" aria-hidden="true"></span><span>O‘yinlar</span>
+                    <img class="app-nav-icon" src="./images/menu-icons/jonli-matchlar.svg" alt=""><span>O‘yinlar</span>
                 </a>
             </nav>
         </aside>
         <div class="app-content">
         <section class="home-view" id="home-view" aria-labelledby="home-heading">
-            <div class="intro">
+            <div class="intro section-banner section-banner--home">
                 <span class="home-eyebrow">PITCHPLAN STUDIO</span>
                 <h1 id="home-heading">Futbol dizayningiz shu yerdan boshlanadi</h1>
                 <p>Uchrashuv posterini yarating, jonli turnir jadvalini yoki Top-5 ligadagi o‘yinlarni kuzating.</p>
@@ -70,7 +70,7 @@
             </div>
         </section>
         <section class="home-view templates-view" id="templates-view" aria-labelledby="templates-heading" hidden>
-            <div class="intro">
+            <div class="intro section-banner section-banner--templates">
                 <h1 id="templates-heading">Poster shablonlari</h1>
                 <p>Tayyor dizaynni tanlang, so‘ng matnlar, ranglar va logolarni o‘zingizga moslang.</p>
             </div>
@@ -138,23 +138,25 @@
             </div>
         </section>
         <section class="live-view" id="live-view" aria-labelledby="live-heading" hidden>
-            <div class="live-heading">
-                <div>
-                    <span class="home-eyebrow">YEVROPA · TOP-5</span>
-                    <h1 id="live-heading">Top-5 liga turnir jadvallari</h1>
-                    <p>O‘ngoing o‘yinlar natijalari jadvalga vaqtincha qo‘shiladi.</p>
+            <div class="section-banner section-banner--standings">
+                <div class="live-heading">
+                    <div>
+                        <span class="home-eyebrow">YEVROPA · TOP-5</span>
+                        <h1 id="live-heading">Top-5 liga turnir jadvallari</h1>
+                        <p>O‘ngoing o‘yinlar natijalari jadvalga vaqtincha qo‘shiladi.</p>
+                    </div>
+                    <span class="live-status" id="standings-status" role="status" aria-live="polite">
+                        <span class="live-status-dot" aria-hidden="true"></span><span id="standings-status-text">Jadval yuklanmoqda…</span>
+                    </span>
                 </div>
-                <span class="live-status" id="standings-status" role="status" aria-live="polite">
-                    <span class="live-status-dot" aria-hidden="true"></span><span id="standings-status-text">Jadval yuklanmoqda…</span>
-                </span>
+                <nav class="live-league-tabs" id="live-league-tabs" aria-label="Top-5 Yevropa ligalari">
+                    <button type="button" class="live-league-tab is-active" data-live-league="eng.1" aria-pressed="true"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+                </nav>
             </div>
-            <nav class="live-league-tabs" id="live-league-tabs" aria-label="Top-5 Yevropa ligalari">
-                <button type="button" class="live-league-tab is-active" data-live-league="eng.1" aria-pressed="true"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
-                <button type="button" class="live-league-tab" data-live-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
-                <button type="button" class="live-league-tab" data-live-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
-                <button type="button" class="live-league-tab" data-live-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
-                <button type="button" class="live-league-tab" data-live-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
-            </nav>
             <div class="standings-card-heading">
                 <div class="standings-accessible-title"><strong id="standings-league-name">Premier League</strong><span id="standings-season"></span></div>
                 <div class="standings-actions">
@@ -182,28 +184,38 @@
             </div>
         </section>
         <section class="live-matches-view" id="live-matches-view" aria-labelledby="live-matches-heading" hidden>
-            <div class="live-heading">
-                <div>
-                    <span class="home-eyebrow">PREMIER LEAGUE · LALIGA · SERIE A · BUNDESLIGA · LIGUE 1</span>
-                    <h1 id="live-matches-heading">O‘yinlar</h1>
-                    <p>Top-5 ligalardagi jonli o‘yinlar va kelasi 24 soatlik uchrashuvlar: taxminiy tarkib, o‘zaro natijalar va jamoalar formasi.</p>
+            <div class="section-banner section-banner--matches">
+                <div class="live-heading">
+                    <div>
+                        <span class="home-eyebrow">PREMIER LEAGUE · LALIGA · SERIE A · BUNDESLIGA · LIGUE 1</span>
+                        <h1 id="live-matches-heading">O‘yinlar</h1>
+                        <p>Jonli o‘yinlarni kuzating, shuningdek kelasi 24 soatdagi uchrashuvlar va jamoalar statistikasini ko‘ring.</p>
+                    </div>
+                    <div class="live-match-toolbar">
+                        <span class="live-status" id="live-matches-status" role="status" aria-live="polite">
+                            <span class="live-status-dot" aria-hidden="true"></span><span id="live-matches-status-text">Uchrashuvlar yuklanmoqda…</span>
+                        </span>
+                        <button type="button" class="btn live-match-refresh" id="live-matches-refresh">⟳ Yangilash</button>
+                        <button type="button" class="btn club-search-toggle" id="club-search-toggle" aria-expanded="false" aria-controls="club-search-panel">
+                            <span aria-hidden="true">⌕</span> Klub qidirish
+                        </button>
+                    </div>
                 </div>
-                <div class="live-match-toolbar">
-                    <span class="live-status" id="live-matches-status" role="status" aria-live="polite">
-                        <span class="live-status-dot" aria-hidden="true"></span><span id="live-matches-status-text">Uchrashuvlar yuklanmoqda…</span>
-                    </span>
-                    <button type="button" class="btn live-match-refresh" id="live-matches-refresh">⟳ Yangilash</button>
-                </div>
+                <nav class="live-match-filters" id="live-match-filters" aria-label="O‘yinlarni liga bo‘yicha saralash">
+                    <button type="button" class="live-match-filter is-active" data-match-league="all" aria-pressed="true">Barchasi</button>
+                    <button type="button" class="live-match-filter" data-match-league="eng.1" aria-pressed="false"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+                </nav>
             </div>
-            <nav class="live-match-filters" id="live-match-filters" aria-label="O‘yinlarni liga bo‘yicha saralash">
-                <button type="button" class="live-match-filter is-active" data-match-league="all" aria-pressed="true">Barchasi</button>
-                <button type="button" class="live-match-filter" data-match-league="eng.1" aria-pressed="false"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
-                <button type="button" class="live-match-filter" data-match-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
-                <button type="button" class="live-match-filter" data-match-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
-                <button type="button" class="live-match-filter" data-match-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
-                <button type="button" class="live-match-filter" data-match-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+            <nav class="live-match-state-filters" id="live-match-state-filters" aria-label="O‘yin holati bo‘yicha saralash">
+                <button type="button" class="live-match-state-filter is-active" data-match-state="live" aria-pressed="true"><span class="live-state-dot" aria-hidden="true"></span>Jonli</button>
+                <button type="button" class="live-match-state-filter" data-match-state="all" aria-pressed="false">Barcha o‘yinlar</button>
+                <button type="button" class="live-match-state-filter" data-match-state="upcoming" aria-pressed="false">Keyingi 24 soat</button>
             </nav>
-            <section class="club-search-panel" aria-labelledby="club-search-heading">
+            <section class="club-search-panel" id="club-search-panel" aria-labelledby="club-search-heading" hidden>
                 <div class="club-search-copy">
                     <h2 id="club-search-heading">Klub qidirish</h2>
                     <p>Top-5 ligadagi klubni toping va uning tarkibi, jadvali hamda o‘yin statistikasini ko‘ring.</p>
@@ -398,7 +410,7 @@
     <script src="js/image-download.js?v=2" defer></script>
     <script src="js/app.js?v=23" defer></script>
     <script src="js/standings.js?v=10" defer></script>
-    <script src="js/live-matches.js?v=19" defer></script>
+    <script src="js/live-matches.js?v=21" defer></script>
 </body>
 </html>
     
