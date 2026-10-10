@@ -225,6 +225,8 @@ function getClubDisplayName(name) {
         const templatesView = document.getElementById("templates-view");
         const liveView = document.getElementById("live-view");
         const liveMatchesView = document.getElementById("live-matches-view");
+        const liveMatchDetailView = document.getElementById("live-match-detail-view");
+        const clubProfileView = document.getElementById("club-profile-view");
         const editorView = document.getElementById("editor-view");
         const rowsEl = document.getElementById("match-list");
         const clubPickerDialog = document.getElementById("club-picker");
@@ -963,7 +965,7 @@ function getClubDisplayName(name) {
             snapshot.customText.forEach(key => customTextColors.add(key));
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
             updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
-            showAppSection("home");
+            showAppSection("home", { navigate: false });
             renderInputs();
             drawPoster();
         }
@@ -1978,14 +1980,40 @@ function getClubDisplayName(name) {
             }
         });
 
-        function showAppSection(section) {
+        let lastHandledHash = null;
+
+        function getCurrentRoute() {
+            const parts = window.location.hash.replace(/^#\/?/, "").split("/");
+            if (parts[0] === "match" && parts.length === 3) {
+                try {
+                    return { section: "match", match: { league: decodeURIComponent(parts[1]), id: decodeURIComponent(parts[2]) } };
+                } catch (error) {
+                    console.error("Invalid PitchPlan match URL:", error);
+                }
+            }
+            if (parts[0] === "club" && parts.length === 3) {
+                try {
+                    return { section: "club", club: { league: decodeURIComponent(parts[1]), id: decodeURIComponent(parts[2]) } };
+                } catch (error) {
+                    console.error("Invalid PitchPlan club URL:", error);
+                }
+            }
+            const sections = { home: "home", poster: "templates", standings: "live", matches: "matches" };
+            return { section: sections[parts[0]] || "home" };
+        }
+
+        function showAppSection(section, options = {}) {
             const isEditor = section === "editor";
+            const isMatchDetail = section === "match";
+            const isClubProfile = section === "club";
             homeView.hidden = section !== "home";
             templatesView.hidden = section !== "templates";
             liveView.hidden = section !== "live";
             liveMatchesView.hidden = section !== "matches";
+            liveMatchDetailView.hidden = !isMatchDetail;
+            clubProfileView.hidden = !isClubProfile;
             editorView.hidden = !isEditor;
-            const activeSection = isEditor ? "templates" : section;
+            const activeSection = isEditor ? "templates" : isMatchDetail || isClubProfile ? "matches" : section;
             document.querySelectorAll("[data-app-section]").forEach(button => {
                 const active = button.dataset.appSection === activeSection;
                 button.classList.toggle("is-active", active);
@@ -1994,12 +2022,41 @@ function getClubDisplayName(name) {
                     else button.removeAttribute("aria-current");
                 }
             });
+            if (options.navigate !== false && !isMatchDetail && !isClubProfile) {
+                const routes = { home: "/home", templates: "/poster", live: "/standings", matches: "/matches", editor: "/poster" };
+                const route = routes[section];
+                if (route && window.location.hash !== `#${route}`) {
+                    window.history.pushState(null, "", `#${route}`);
+                    lastHandledHash = window.location.hash;
+                }
+            }
             if (section === "templates") scheduleTemplatePreviews();
-            window.dispatchEvent(new CustomEvent("pitchplan:sectionchange", { detail: { section } }));
+            window.dispatchEvent(new CustomEvent("pitchplan:sectionchange", { detail: { section, match: options.match, club: options.club } }));
         }
 
         document.querySelectorAll(".app-nav-item, .home-shortcut").forEach(button => {
-            button.addEventListener("click", () => showAppSection(button.dataset.appSection));
+            button.addEventListener("click", event => {
+                event.preventDefault();
+                showAppSection(button.dataset.appSection);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+        });
+        function restoreRoute() {
+            if (window.location.hash === lastHandledHash) return;
+            lastHandledHash = window.location.hash;
+            const route = getCurrentRoute();
+            showAppSection(route.section, { navigate: false, match: route.match, club: route.club });
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+        window.addEventListener("popstate", restoreRoute);
+        window.addEventListener("hashchange", restoreRoute);
+        document.getElementById("back-to-matches").addEventListener("click", () => showAppSection("matches"));
+        document.getElementById("back-to-club-search").addEventListener("click", () => showAppSection("matches"));
+        document.querySelector(".brand").addEventListener("click", event => {
+            event.preventDefault();
+            showAppSection("home");
+            scheduleWorkspaceSave();
+            window.scrollTo({ top: 0, behavior: "smooth" });
         });
         document.querySelectorAll(".template-card").forEach(card => {
             card.addEventListener("click", () => {
@@ -2010,12 +2067,6 @@ function getClubDisplayName(name) {
         });
         document.getElementById("back-to-templates").addEventListener("click", () => {
             showAppSection("templates");
-            scheduleWorkspaceSave();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-        document.querySelector(".brand").addEventListener("click", event => {
-            event.preventDefault();
-            showAppSection("home");
             scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
@@ -2153,6 +2204,7 @@ function getClubDisplayName(name) {
             workspaceInitialized = true;
             drawPoster();
             scheduleTemplatePreviews();
+            restoreRoute();
         }
         window.addEventListener("pagehide", () => {
             if (!workspaceInitialized) return;

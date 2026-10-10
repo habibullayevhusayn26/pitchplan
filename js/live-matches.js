@@ -16,22 +16,41 @@
     };
     const matchView = document.getElementById("live-matches-view");
     const matchList = document.getElementById("live-match-list");
+    const matchDetailView = document.getElementById("live-match-detail-view");
+    const matchDetailHeading = document.getElementById("live-match-detail-heading");
+    const matchDetailContent = document.getElementById("live-match-detail-content");
+    const clubProfileView = document.getElementById("club-profile-view");
+    const clubProfileHeading = document.getElementById("club-profile-heading");
+    const clubProfileContent = document.getElementById("club-profile-content");
+    const clubSearchInput = document.getElementById("club-search-input");
+    const clubSearchStatus = document.getElementById("club-search-status");
+    const clubSearchResults = document.getElementById("club-search-results");
     const status = document.getElementById("live-matches-status");
     const statusText = document.getElementById("live-matches-status-text");
     const refreshButton = document.getElementById("live-matches-refresh");
     const filters = [...document.querySelectorAll(".live-match-filter")];
-    if (!matchView || !matchList || !refreshButton || !filters.length) return;
+    if (!matchView || !matchList || !refreshButton || !filters.length || !clubProfileView ||
+        !clubProfileHeading || !clubProfileContent || !clubSearchInput || !clubSearchStatus || !clubSearchResults) return;
 
     const detailsCache = new Map();
-    const detailRequests = new Map();
-    const detailControllers = new Map();
-    const expandedMatches = new Set();
+    const clubRosterCache = new Map();
+    const clubEventsCache = new Map();
     let selectedLeague = "all";
     let matches = [];
     let active = false;
     let refreshTimer = 0;
     let requestGeneration = 0;
     let activeController = null;
+    let matchPageGeneration = 0;
+    let matchPageController = null;
+    let matchPageRefreshTimer = 0;
+    let matchClockTimer = 0;
+    let currentMatchRoute = null;
+    let currentClubRoute = null;
+    let clubProfileGeneration = 0;
+    let clubProfileController = null;
+    let clubDirectoryController = null;
+    let clubDirectory = [];
     const upcomingWindowMs = 24 * 60 * 60 * 1000;
 
     const statDefinitions = [
@@ -68,14 +87,82 @@
         return element;
     }
 
-    function formatMatchDate(value, includeYear = false) {
+    function parseMatchDate(value) {
+        if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
+        if (typeof value === "number") {
+            const timestamp = value < 1e12 ? value * 1000 : value;
+            const date = new Date(timestamp);
+            return Number.isNaN(date.getTime()) ? null : date;
+        }
+        if (typeof value !== "string" || !value.trim()) return null;
+        const dateOnly = value.match(/^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/);
+        if (dateOnly) {
+            const date = new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]));
+            return date.getFullYear() === Number(dateOnly[1]) &&
+                date.getMonth() === Number(dateOnly[2]) - 1 &&
+                date.getDate() === Number(dateOnly[3]) ? date : null;
+        }
         const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) return date;
+        const normalized = new Date(value.replace(/(\d{1,2}\/\d{1,2})\s*-\s*/, "$1 "));
+        return Number.isNaN(normalized.getTime()) ? null : normalized;
+    }
+
+    function hasExactMatchTime(value) {
+        if (value instanceof Date || typeof value === "number") return true;
+        return typeof value === "string" && /(?:T|\s)\d{1,2}:\d{2}(?::\d{2})?/i.test(value);
+    }
+
+    function getMatchCalendarDate(value) {
+        if (typeof value === "string") {
+            const isoDate = value.match(/^\s*(\d{4})-(\d{1,2})-(\d{1,2})/);
+            const shortDate = value.match(/^\s*(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+            const parts = isoDate
+                ? { year: Number(isoDate[1]), month: Number(isoDate[2]), day: Number(isoDate[3]) }
+                : shortDate
+                    ? { year: shortDate[3] ? Number(shortDate[3]) : new Date().getFullYear(), month: Number(shortDate[1]), day: Number(shortDate[2]) }
+                    : null;
+            if (parts) {
+                if (parts.year < 100) parts.year += 2000;
+                const date = new Date(parts.year, parts.month - 1, parts.day);
+                if (date.getFullYear() !== parts.year || date.getMonth() !== parts.month - 1 || date.getDate() !== parts.day) return null;
+                if (!isoDate && !shortDate[3]) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (date < today) date.setFullYear(date.getFullYear() + 1);
+                }
+                return date;
+            }
+        }
+        const date = parseMatchDate(value);
+        if (!date) return null;
+        return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    }
+
+    function getDaysUntilMatch(value) {
+        const matchDate = getMatchCalendarDate(value);
+        if (!matchDate) return null;
+        const today = new Date();
+        const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+        const matchUtc = Date.UTC(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+        return Math.max(0, Math.round((matchUtc - todayUtc) / 86400000));
+    }
+
+    function formatMatchDate(value, includeYear = false) {
+        const date = parseMatchDate(value);
+        if (!date) return "Vaqt noma’lum";
         const months = ["yan", "fev", "mar", "apr", "may", "iyn", "iyl", "avg", "sen", "okt", "noy", "dek"];
         return `${date.getDate()} ${months[date.getMonth()]}${includeYear ? ` ${date.getFullYear()}` : ""}`;
     }
 
     function formatKickoff(value) {
-        const date = new Date(value);
+        const date = parseMatchDate(value);
+        if (!date) {
+            const rawTime = typeof value === "string"
+                ? value.match(/\b\d{1,2}:\d{2}\s*(?:AM|PM)?(?:\s+[A-Z]{2,5})?\b/i)?.[0]
+                : null;
+            return rawTime || "Vaqt noma’lum";
+        }
         const now = new Date();
         const sameDay = date.getFullYear() === now.getFullYear() &&
             date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
@@ -87,7 +174,80 @@
         return team.logo || team.logos?.[0]?.href || "";
     }
 
-    function getMatches(events, league) {
+    function normalizeClubSearch(value) {
+        return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase();
+    }
+
+    async function fetchClubDirectory(signal) {
+        if (clubDirectory.length) return clubDirectory;
+        const startYear = getCurrentSeasonStartYear();
+        const responses = await Promise.allSettled(leagues.map(async league => {
+            const seasonData = await fetchClubSeasonData(league, startYear, signal);
+            const clubs = new Map();
+            seasonData.events.forEach(event => {
+                (event.competitions?.[0]?.competitors || []).forEach(competitor => {
+                    const team = competitor.team;
+                    if (!team?.id) return;
+                    const id = String(team.id);
+                    if (!clubs.has(id)) {
+                        clubs.set(id, {
+                            id,
+                            league,
+                            name: team.displayName || team.name || "Noma’lum klub",
+                            logo: getTeamLogo(team)
+                        });
+                    }
+                });
+            });
+            return [...clubs.values()];
+        }));
+        const successful = responses.filter(result => result.status === "fulfilled");
+        const failed = responses.filter(result => result.status === "rejected");
+        if (!successful.length) {
+            throw new AggregateError(failed.map(result => result.reason), "Klublar ro‘yxatini yuklab bo‘lmadi.");
+        }
+        if (failed.length) {
+            failed.forEach(result => console.error("A Top-5 league club directory failed:", result.reason));
+        }
+        clubDirectory = successful.flatMap(result => result.value).sort((first, second) =>
+            first.name.localeCompare(second.name) || leagues.indexOf(first.league) - leagues.indexOf(second.league)
+        );
+        return clubDirectory;
+    }
+
+    function renderClubSearch() {
+        const query = normalizeClubSearch(clubSearchInput.value);
+        clubSearchResults.replaceChildren();
+        if (!clubDirectory.length) {
+            clubSearchStatus.textContent = "Klublar ro‘yxati hozircha mavjud emas.";
+            return;
+        }
+        if (!query) {
+            clubSearchStatus.textContent = "Klubni qidirish uchun nomini yozing.";
+            return;
+        }
+        const matchingClubs = clubDirectory.filter(club => normalizeClubSearch(club.name).includes(query));
+        const results = matchingClubs.slice(0, 12);
+        clubSearchStatus.textContent = results.length
+            ? `${matchingClubs.length} ta klub topildi${matchingClubs.length > results.length ? " (birinchi 12 tasi ko‘rsatilmoqda)" : ""}.`
+            : "Bu nom bo‘yicha klub topilmadi.";
+        results.forEach(club => {
+            const link = createElement("a", "club-search-result");
+            link.href = `#/club/${encodeURIComponent(club.league)}/${encodeURIComponent(club.id)}`;
+            link.setAttribute("role", "listitem");
+            link.setAttribute("aria-label", `${club.name}, ${leagueNames[club.league]} klub sahifasini ochish`);
+            appendImage(link, club.logo, "", "club-search-logo");
+            const text = createElement("span", "club-search-result-copy");
+            text.append(
+                createElement("strong", "", club.name),
+                createElement("small", "", leagueNames[club.league])
+            );
+            link.append(text, createElement("span", "club-search-arrow", "→"));
+            clubSearchResults.append(link);
+        });
+    }
+
+    function getMatches(events, league, includeInactive = false) {
         return events.flatMap(event => {
             const competition = event.competitions?.[0];
             const state = competition?.status?.type?.state;
@@ -95,7 +255,7 @@
             const isLive = state === "in";
             const isUpcoming = state === "pre" && Number.isFinite(kickoff) &&
                 kickoff >= Date.now() && kickoff <= Date.now() + upcomingWindowMs;
-            if (!isLive && !isUpcoming) return [];
+            if (!includeInactive && !isLive && !isUpcoming) return [];
             const competitors = competition.competitors || [];
             const home = competitors.find(team => team.homeAway === "home") || competitors[0];
             const away = competitors.find(team => team.homeAway === "away") || competitors[1];
@@ -106,7 +266,10 @@
                 name: leagueNames[league],
                 leagueLogo: leagueAssets[league],
                 date: event.date,
+                isLive,
+                isPre: state === "pre",
                 isUpcoming,
+                isCompleted: state === "post",
                 clock: competition.status.displayClock,
                 phase: competition.status.type.shortDetail || competition.status.type.detail || "Jonli",
                 venue: competition.venue?.fullName || "",
@@ -137,6 +300,73 @@
         parent.append(image);
     }
 
+    function getPlayerPosition(player) {
+        return String(player.position?.abbreviation || player.athlete?.position?.abbreviation || "").toUpperCase();
+    }
+
+    function getPlayerLine(position) {
+        if (/^(G|GK|KEEPER)$/.test(position)) return "goalkeeper";
+        if (/^(D|DF|CD|CB|LCB|RCB|LB|RB|FB|WB|LWB|RWB|SW)(-|$)/.test(position)) return "defense";
+        if (/^(AM|CAM)(-|$)/.test(position)) return "attacking-midfield";
+        if (/^(F|FW|FWD|ST|CF|LW|RW|SS|LF|RF)(-|$)/.test(position)) return "attack";
+        if (/^(M|MF|DM|CDM|CM|LCM|RCM|AM|CAM|LM|RM|LWM|RWM)(-|$)/.test(position)) return "midfield";
+        return "midfield";
+    }
+
+    function getPlayerSide(position) {
+        if (/(^|[-\s])L(?:B|M|W|F|CB|CM)?($|[-\s])|LEFT/.test(position)) return 0;
+        if (/(^|[-\s])R(?:B|M|W|F|CB|CM)?($|[-\s])|RIGHT/.test(position)) return 2;
+        return 1;
+    }
+
+    function getPlayerDisplayName(player) {
+        const athlete = player.athlete || player;
+        return athlete.displayName || athlete.fullName || athlete.name || "Noma’lum futbolchi";
+    }
+
+    function createPlayerMarker(player) {
+        const athlete = player.athlete || player;
+        const marker = createElement("div", "match-pitch-player");
+        const number = athlete.jersey || athlete.displayJersey || player.jersey || "";
+        const shirt = createElement("span", "match-pitch-shirt", number || "●");
+        shirt.setAttribute("aria-hidden", "true");
+        const name = createElement("span", "match-pitch-player-name", getPlayerDisplayName(player));
+        marker.title = `${getPlayerDisplayName(player)}${number ? ` · #${number}` : ""}`;
+        marker.append(shirt, name);
+        return marker;
+    }
+
+    function createLineupPitch(teamLineups) {
+        const pitch = createElement("div", "match-lineup-pitch");
+        pitch.setAttribute("role", "group");
+        pitch.setAttribute("aria-label", "Ikkala jamoaning asosiy tarkibi bitta futbol maydonida");
+        teamLineups.forEach(({ team, rosterData, starters, side }) => {
+            const half = createElement("section", `match-pitch-half is-${side}`);
+            half.setAttribute("aria-label", `${team.name} asosiy tarkibi`);
+            const heading = createElement("div", "match-pitch-team-label");
+            appendImage(heading, team.logo, "", "match-pitch-team-logo");
+            heading.append(createElement("strong", "", team.name));
+            if (rosterData.formation) {
+                heading.append(createElement("span", "match-pitch-formation", rosterData.formation));
+            }
+            const lines = side === "home"
+                ? ["goalkeeper", "defense", "midfield", "attacking-midfield", "attack"]
+                : ["attack", "attacking-midfield", "midfield", "defense", "goalkeeper"];
+            if (side === "home") half.append(heading);
+            lines.forEach(line => {
+                const row = createElement("div", `match-pitch-line is-${line}`);
+                starters
+                    .filter(player => getPlayerLine(getPlayerPosition(player)) === line)
+                    .sort((first, second) => getPlayerSide(getPlayerPosition(first)) - getPlayerSide(getPlayerPosition(second)))
+                    .forEach(player => row.append(createPlayerMarker(player)));
+                if (row.childElementCount) half.append(row);
+            });
+            if (side === "away") half.append(heading);
+            pitch.append(half);
+        });
+        return pitch;
+    }
+
     function getTeamStatistics(summary, homeAway) {
         return summary.boxscore?.teams?.find(team => team.homeAway === homeAway)?.statistics || [];
     }
@@ -158,13 +388,30 @@
         const heading = createElement("div", "match-statistics-heading");
         heading.append(
             createElement("span", "", match.home.name),
-            createElement("span", "", match.isUpcoming ? "O‘yinoldi statistika" : "Jonli statistika"),
+            createElement("span", "", match.isUpcoming ? "O‘yinoldi statistika" : match.isLive ? "Jonli statistika" : "Uchrashuv statistikasi"),
             createElement("span", "", match.away.name)
         );
         grid.append(heading);
 
+        const knownKeys = new Set(statDefinitions.map(definition => definition.key));
+        const additionalDefinitions = [...homeStats, ...awayStats]
+            .filter(stat => stat.name && !knownKeys.has(stat.name))
+            .reduce((definitions, stat) => {
+                if (definitions.some(definition => definition.key === stat.name)) return definitions;
+                const label = stat.displayName || stat.name
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/Pct$/, " %")
+                    .replace(/^./, character => character.toUpperCase())
+                    .trim();
+                definitions.push({
+                    key: stat.name,
+                    label,
+                    percent: stat.unit === "percent" || String(stat.displayValue || "").includes("%")
+                });
+                return definitions;
+            }, []);
         let availableStats = 0;
-        statDefinitions.forEach(definition => {
+        [...statDefinitions, ...additionalDefinitions].forEach(definition => {
             const home = getStatValue(homeStats, definition.key);
             const away = getStatValue(awayStats, definition.key);
             if (!home && !away) return;
@@ -220,7 +467,7 @@
             { side: "home", team: match.home },
             { side: "away", team: match.away }
         ];
-        let hasLineup = false;
+        const lineupData = [];
         rosterGroups.forEach(({ side, team }) => {
             const rosterData = match.isUpcoming
                 ? summary.estimatedRosters?.find(roster => roster.homeAway === side)
@@ -232,47 +479,32 @@
                 player.athlete?.starter === true ||
                 player.status?.type?.name === "Starter"
             );
-            if (!starters.length) return;
-            hasLineup = true;
-            const group = createElement("section", "match-lineup-team");
-            const heading = createElement("h4", "match-lineup-heading");
-            appendImage(heading, team.logo, "", "match-team-logo");
-            heading.append(createElement("span", "", team.name));
-            const formation = rosterData.formation ? ` · ${rosterData.formation}` : "";
-            heading.append(createElement("span", "match-lineup-formation", formation));
-            if (rosterData.sourceDate) {
-                heading.append(createElement("span", "match-lineup-source", ` · ${formatMatchDate(rosterData.sourceDate)} dagi tarkib`));
-            }
-            const list = createElement("ol", "match-lineup-list");
-            starters.forEach(player => {
-                const athlete = player.athlete || player;
-                const position = player.position?.abbreviation || athlete.position?.abbreviation || "";
-                const name = athlete.displayName || athlete.fullName || athlete.name || "Noma’lum futbolchi";
-                const item = createElement("li", "match-lineup-player");
-                item.append(createElement("span", "match-lineup-position", position), createElement("span", "match-lineup-name", name));
-                list.append(item);
-            });
-            group.append(heading, list);
+            if (starters.length) lineupData.push({ side, team, rosterData, starters });
             const substitutes = roster.filter(player =>
                 !starters.includes(player) &&
                 (player.active === true || player.athlete?.active === true || player.substitute === true)
             );
             if (substitutes.length) {
+                const group = createElement("section", `match-lineup-team is-${side}`);
+                const heading = createElement("h4", "match-lineup-heading");
+                appendImage(heading, team.logo, "", "match-team-logo");
+                heading.append(createElement("span", "", team.name));
                 const substitutesHeading = createElement("h5", "match-lineup-substitutes-heading", "Zaxira");
                 const substitutesList = createElement("ul", "match-lineup-list is-substitutes");
                 substitutes.forEach(player => {
                     const athlete = player.athlete || player;
                     const position = player.position?.abbreviation || athlete.position?.abbreviation || "";
-                    const name = athlete.displayName || athlete.fullName || athlete.name || "Noma’lum futbolchi";
+                    const name = getPlayerDisplayName(player);
                     const item = createElement("li", "match-lineup-player");
                     item.append(createElement("span", "match-lineup-position", position), createElement("span", "match-lineup-name", name));
                     substitutesList.append(item);
                 });
-                group.append(substitutesHeading, substitutesList);
+                group.append(heading, substitutesHeading, substitutesList);
+                container.append(group);
             }
-            container.append(group);
         });
-        if (!hasLineup) {
+        if (lineupData.length) container.prepend(createLineupPitch(lineupData));
+        if (!lineupData.length) {
             container.append(createElement("p", "match-detail-empty", match.isUpcoming
                 ? "Taxminiy tarkibni tuzish uchun so‘nggi tasdiqlangan tarkib topilmadi."
                 : "Boshlang‘ich tarkiblar hozircha e’lon qilinmagan."));
@@ -318,6 +550,441 @@
         return container;
     }
 
+    function getCurrentSeasonStartYear() {
+        const now = new Date();
+        return now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+    }
+
+    async function fetchClubSeasonEvents(league, year, signal) {
+        const key = `${league}:${year}`;
+        if (!clubEventsCache.has(key)) {
+            const request = (async () => {
+                const response = await fetch(
+                    `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${year}&limit=1000`,
+                    { signal, cache: "no-store" }
+                );
+                if (!response.ok) throw new Error(`${leagueNames[league]} ${year}: server ${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]} ${year}: o‘yinlar ro‘yxati noto‘g‘ri`);
+                return data.events;
+            })();
+            clubEventsCache.set(key, request);
+            request.catch(() => clubEventsCache.delete(key));
+        }
+        return clubEventsCache.get(key);
+    }
+
+    async function fetchClubSeasonData(league, startYear, signal) {
+        const results = await Promise.allSettled([
+            fetchClubSeasonEvents(league, startYear, signal),
+            fetchClubSeasonEvents(league, startYear + 1, signal)
+        ]);
+        const successful = results.filter(result => result.status === "fulfilled");
+        const failed = results.filter(result => result.status === "rejected");
+        if (!successful.length) throw new AggregateError(failed.map(result => result.reason), "Liga o‘yinlari jadvalini yuklab bo‘lmadi.");
+        return {
+            events: [...new Map(successful.flatMap(result => result.value).map(event => [event.id, event])).values()],
+            failed
+        };
+    }
+
+    async function fetchClubRoster(league, teamId, startYear, signal) {
+        const key = `${league}:${teamId}:${startYear}`;
+        if (clubRosterCache.has(key)) return clubRosterCache.get(key);
+        const response = await fetch(
+            `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/teams/${encodeURIComponent(teamId)}/roster?season=${startYear}`,
+            { signal, cache: "no-store" }
+        );
+        if (!response.ok) throw new Error(`${leagueNames[league]}: tarkib serverdan olinmadi (${response.status})`);
+        const data = await response.json();
+        if (!Array.isArray(data.athletes)) throw new Error(`${leagueNames[league]}: tarkib javobi noto‘g‘ri`);
+        clubRosterCache.set(key, data);
+        return data;
+    }
+
+    function getClubSeasonStandings(events, startYear) {
+        const seasonPrefix = `${startYear}-${String(startYear + 1).slice(-2)}`;
+        const teams = new Map();
+        events.forEach(event => {
+            const competition = event.competitions?.[0];
+            const eventYear = new Date(event.date).getFullYear();
+            if (event.season?.slug
+                ? !event.season.slug.startsWith(seasonPrefix)
+                : eventYear < startYear || eventYear > startYear + 1) return;
+            const competitors = competition?.competitors || [];
+            if (competitors.length !== 2) return;
+            competitors.forEach(({ team }) => {
+                if (!team?.id || teams.has(String(team.id))) return;
+                teams.set(String(team.id), {
+                    id: String(team.id),
+                    name: team.displayName || team.name || "Noma’lum klub",
+                    logo: getTeamLogo(team),
+                    played: 0,
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0,
+                    points: 0
+                });
+            });
+            if (!["post", "in"].includes(competition.status?.type?.state)) return;
+            const parsed = competitors.map(competitor => ({
+                competitor,
+                score: Number.parseInt(competitor.score, 10)
+            }));
+            if (parsed.some(item => !Number.isFinite(item.score))) return;
+            const home = parsed.find(item => item.competitor.homeAway === "home") || parsed[0];
+            const away = parsed.find(item => item !== home) || parsed[1];
+            const homeTeam = teams.get(String(home.competitor.team.id));
+            const awayTeam = teams.get(String(away.competitor.team.id));
+            if (!homeTeam || !awayTeam) return;
+            homeTeam.played += 1;
+            awayTeam.played += 1;
+            homeTeam.goalsFor += home.score;
+            homeTeam.goalsAgainst += away.score;
+            awayTeam.goalsFor += away.score;
+            awayTeam.goalsAgainst += home.score;
+            if (home.score > away.score) {
+                homeTeam.wins += 1;
+                homeTeam.points += 3;
+                awayTeam.losses += 1;
+            } else if (away.score > home.score) {
+                awayTeam.wins += 1;
+                awayTeam.points += 3;
+                homeTeam.losses += 1;
+            } else {
+                homeTeam.draws += 1;
+                awayTeam.draws += 1;
+                homeTeam.points += 1;
+                awayTeam.points += 1;
+            }
+        });
+        return [...teams.values()].sort((first, second) =>
+            second.points - first.points ||
+            (second.goalsFor - second.goalsAgainst) - (first.goalsFor - first.goalsAgainst) ||
+            second.goalsFor - first.goalsFor ||
+            first.name.localeCompare(second.name)
+        );
+    }
+
+    function createClubPanel(title, description = "") {
+        const panel = createElement("section", "club-profile-panel");
+        const heading = createElement("div", "club-profile-panel-heading");
+        heading.append(createElement("h2", "", title));
+        if (description) heading.append(createElement("p", "", description));
+        panel.append(heading);
+        return panel;
+    }
+
+    function getClubOpponent(event, clubId) {
+        const competitors = event.competitions?.[0]?.competitors || [];
+        return competitors.find(competitor => String(competitor.team?.id) !== String(clubId)) || null;
+    }
+
+    function getClubScore(event, competitor) {
+        const score = competitor?.score;
+        if (score && typeof score === "object") return score.displayValue || score.value || "—";
+        return score ?? "—";
+    }
+
+    function renderClubMatchCard(event, club, signal, generation) {
+        const competition = event.competitions?.[0];
+        const competitors = competition?.competitors || [];
+        const clubEntry = competitors.find(competitor => String(competitor.team?.id) === String(club.id));
+        const opponent = getClubOpponent(event, club.id);
+        const card = createElement("article", "club-match-card");
+        const link = createElement("a", "club-match-link");
+        link.href = `#/match/${encodeURIComponent(club.league)}/${encodeURIComponent(event.id)}`;
+        appendImage(link, getTeamLogo(opponent?.team || {}), "", "club-match-opponent-logo");
+        const info = createElement("span", "club-match-info");
+        const isHome = clubEntry?.homeAway === "home";
+        info.append(
+            createElement("strong", "", `${isHome ? "Uyda" : "Safarda"} · ${opponent?.team?.displayName || "Raqib"}`),
+            createElement("small", "", `${formatMatchDate(event.date, true)} · ${formatKickoff(event.date).split(" · ").pop()}`)
+        );
+        const score = competition?.status?.type?.state === "pre"
+            ? "VS"
+            : isHome
+                ? `${getClubScore(event, clubEntry)} – ${getClubScore(event, opponent)}`
+                : `${getClubScore(event, opponent)} – ${getClubScore(event, clubEntry)}`;
+        link.append(info, createElement("strong", "club-match-score", score));
+        card.append(link);
+
+        const details = createElement("details", "club-match-details");
+        const summaryLabel = createElement("summary", "", "To‘liq statistika");
+        const stats = createElement("div", "club-match-statistics");
+        details.append(summaryLabel, stats);
+        details.addEventListener("toggle", async () => {
+            if (!details.open || details.dataset.loaded) return;
+            details.dataset.loaded = "true";
+            if (competition?.status?.type?.state === "pre") {
+                stats.append(createElement("p", "match-detail-empty", "Uchrashuv boshlanmagan. Statistika o‘yin tugagach mavjud bo‘ladi."));
+                return;
+            }
+            stats.append(createElement("p", "match-detail-loading", "Uchrashuv statistikasi yuklanmoqda…"));
+            try {
+                const match = getMatches([event], club.league, true)[0];
+                if (!match) throw new Error("Uchrashuv jamoalari topilmadi.");
+                match.isUpcoming = false;
+                const summaryData = await fetchMatchSummaryData(club.league, event.id, signal);
+                if (generation !== clubProfileGeneration || signal.aborted) return;
+                stats.replaceChildren(renderStatistics(summaryData, match));
+            } catch (error) {
+                if (signal.aborted || generation !== clubProfileGeneration) return;
+                stats.replaceChildren(createElement("p", "match-detail-empty is-error", "Uchrashuv statistikasini yuklab bo‘lmadi."));
+                console.error(`Club match statistics failed for ${club.league}:${event.id}:`, error);
+            }
+        });
+        card.append(details);
+        return card;
+    }
+
+    function renderClubMatchList(events, club, signal, generation, emptyText) {
+        const list = createElement("div", "club-match-list");
+        if (!events.length) {
+            list.append(createElement("p", "match-detail-empty", emptyText));
+            return list;
+        }
+        events.forEach(event => list.append(renderClubMatchCard(event, club, signal, generation)));
+        return list;
+    }
+
+    function collectClubTopPlayers(events, summaries, clubId) {
+        const players = new Map();
+        summaries.forEach(summary => {
+            if (!summary) return;
+            const roster = summary.rosters?.find(item => String(item.team?.id) === String(clubId));
+            roster?.roster?.forEach(player => {
+                const athlete = player.athlete || player;
+                if (!athlete.id) return;
+                if (!players.has(String(athlete.id))) {
+                    players.set(String(athlete.id), {
+                        id: String(athlete.id),
+                        name: getPlayerDisplayName(player),
+                        appearances: 0,
+                        goals: 0,
+                        assists: 0
+                    });
+                }
+                const totals = players.get(String(athlete.id));
+                const stats = player.stats || [];
+                const getNumber = key => {
+                    const stat = stats.find(item => item.name === key);
+                    const value = Number.parseFloat(stat?.value);
+                    return Number.isFinite(value) ? value : 0;
+                };
+                totals.appearances += getNumber("appearances") || 1;
+                totals.goals += getNumber("totalGoals");
+                totals.assists += getNumber("goalAssists");
+            });
+        });
+        return [...players.values()].sort((first, second) =>
+            (second.goals + second.assists) - (first.goals + first.assists) ||
+            second.goals - first.goals ||
+            second.appearances - first.appearances ||
+            first.name.localeCompare(second.name)
+        ).slice(0, 8);
+    }
+
+    function renderClubTopPlayers(panel, players, failedCount) {
+        const table = createElement("div", "club-player-table-wrap");
+        if (!players.length) {
+            table.append(createElement("p", "match-detail-empty", "So‘nggi uchrashuvlar bo‘yicha futbolchi statistikasi topilmadi."));
+        } else {
+            const playerTable = createElement("table", "club-player-table");
+            const head = createElement("thead");
+            const headerRow = createElement("tr");
+            ["Futbolchi", "O‘yin", "Gol", "Assist", "Ball (G+A)"].forEach(label => headerRow.append(createElement("th", "", label)));
+            head.append(headerRow);
+            const body = createElement("tbody");
+            players.forEach(player => {
+                const row = createElement("tr");
+                row.append(
+                    createElement("th", "", player.name),
+                    createElement("td", "", String(player.appearances)),
+                    createElement("td", "", String(player.goals)),
+                    createElement("td", "", String(player.assists)),
+                    createElement("td", "club-player-points", String(player.goals + player.assists))
+                );
+                body.append(row);
+            });
+            playerTable.append(head, body);
+            table.append(playerTable);
+        }
+        if (failedCount) {
+            table.append(createElement("p", "club-profile-warning", `${failedCount} ta uchrashuv statistikasi yuklanmadi.`));
+        }
+        panel.replaceChildren(...[panel.firstElementChild, table]);
+    }
+
+    function renderClubProfile(club, rosterData, events, eventsFailed, signal, generation) {
+        const heading = createElement("header", "club-profile-header");
+        appendImage(heading, club.logo, "", "club-profile-logo");
+        const title = createElement("div", "club-profile-title-copy");
+        const clubTitle = createElement("h1", "", club.name);
+        clubTitle.id = "club-profile-title";
+        title.append(
+            createElement("span", "home-eyebrow", leagueNames[club.league]),
+            clubTitle,
+            createElement("p", "", "Klub profili · joriy mavsum")
+        );
+        heading.append(title);
+        clubProfileHeading.replaceChildren(heading);
+        clubProfileContent.replaceChildren();
+
+        const startYear = getCurrentSeasonStartYear();
+        const standings = events ? getClubSeasonStandings(events, startYear) : [];
+        const tablePosition = standings.findIndex(team => team.id === String(club.id));
+        const clubStats = tablePosition >= 0 ? standings[tablePosition] : null;
+        const clubEvents = (events || []).filter(event =>
+            (event.competitions?.[0]?.competitors || []).some(team => String(team.team?.id) === String(club.id))
+        ).sort((first, second) => Date.parse(first.date) - Date.parse(second.date));
+        const now = Date.now();
+        const previous = clubEvents.filter(event =>
+            event.competitions?.[0]?.status?.type?.state === "post" && Date.parse(event.date) <= now
+        ).slice(-5).reverse();
+        const next = clubEvents.filter(event =>
+            event.competitions?.[0]?.status?.type?.state === "pre" && Date.parse(event.date) >= now
+        ).slice(0, 5);
+
+        const overview = createElement("div", "club-profile-overview");
+        const standingsPanel = createClubPanel("Chempionatdagi o‘rni");
+        if (eventsFailed) {
+            standingsPanel.append(createElement("p", "club-profile-warning", "Liga jadvalini to‘liq yuklab bo‘lmadi; ko‘rsatilgan o‘rin mavjud ma’lumotlar asosida hisoblangan."));
+        }
+        if (clubStats) {
+            const position = createElement("div", "club-standing-position");
+            position.append(
+                createElement("strong", "", `#${tablePosition + 1}`),
+                createElement("span", "", `${clubStats.points} ochko · ${clubStats.played} o‘yin`)
+            );
+            const record = createElement("p", "club-standing-record",
+                `${clubStats.wins} g‘alaba · ${clubStats.draws} durang · ${clubStats.losses} mag‘lubiyat · to‘plar farqi ${clubStats.goalsFor - clubStats.goalsAgainst}`);
+            standingsPanel.append(position, record);
+        } else {
+            standingsPanel.append(createElement("p", "match-detail-empty", "Joriy mavsum jadvalidan klub o‘rni topilmadi."));
+        }
+        const nextPanel = createClubPanel("Keyingi o‘yini");
+        if (next.length) {
+            const nextCard = renderClubMatchCard(next[0], club, signal, generation);
+            nextPanel.append(nextCard);
+        } else if (events) {
+            nextPanel.append(createElement("p", "match-detail-empty", "Keyingi o‘yin jadvali hozircha e’lon qilinmagan."));
+        } else {
+            nextPanel.append(createElement("p", "club-profile-warning", "Keyingi o‘yinni yuklab bo‘lmadi."));
+        }
+        overview.append(standingsPanel, nextPanel);
+        clubProfileContent.append(overview);
+
+        const rosterPanel = createClubPanel("Klub tarkibi", "Joriy mavsumdagi asosiy jamoa futbolchilari");
+        if (!rosterData) {
+            rosterPanel.append(createElement("p", "club-profile-warning", "Klub tarkibini yuklab bo‘lmadi."));
+        } else if (!rosterData.athletes.length) {
+            rosterPanel.append(createElement("p", "match-detail-empty", "Klub futbolchilari ro‘yxati mavjud emas."));
+        } else {
+            const roster = createElement("div", "club-roster-grid");
+            rosterData.athletes.forEach(athlete => {
+                const player = createElement("article", "club-roster-player");
+                const nameText = athlete.displayName || athlete.fullName || "Noma’lum futbolchi";
+                const number = createElement("span", "club-roster-number", athlete.jersey || "—");
+                const info = createElement("span", "club-roster-info");
+                info.append(
+                    createElement("strong", "", nameText),
+                    createElement("small", "", `${athlete.position?.abbreviation || athlete.position?.displayName || "Pozitsiya noma’lum"}${athlete.age ? ` · ${athlete.age} yosh` : ""}`)
+                );
+                player.append(number, info);
+                roster.append(player);
+            });
+            rosterPanel.append(roster);
+        }
+        clubProfileContent.append(rosterPanel);
+
+        const topPlayersPanel = createClubPanel("Eng yaxshi futbolchilar", "Ballar so‘nggi 5 ta yakunlangan o‘yindagi gol + assist bo‘yicha hisoblanadi.");
+        topPlayersPanel.append(createElement("p", "match-detail-loading", "Futbolchilar statistikasi yuklanmoqda…"));
+        clubProfileContent.append(topPlayersPanel);
+
+        const recentPanel = createClubPanel("Avvalgi 5 ta uchrashuv", "O‘yinni tanlab, uning batafsil statistikasini oching");
+        recentPanel.append(renderClubMatchList(previous, club, signal, generation, events
+            ? "Avvalgi uchrashuvlar topilmadi."
+            : "Avvalgi uchrashuvlarni yuklab bo‘lmadi."));
+        clubProfileContent.append(recentPanel);
+
+        const upcomingPanel = createClubPanel("Keyingi 5 ta uchrashuv", "Har bir o‘yin uchun to‘liq statistika o‘yin yakunlangach ko‘rinadi");
+        upcomingPanel.append(renderClubMatchList(next, club, signal, generation, events
+            ? "Keyingi uchrashuvlar jadvali hali e’lon qilinmagan."
+            : "Keyingi uchrashuvlarni yuklab bo‘lmadi."));
+        clubProfileContent.append(upcomingPanel);
+        return { previous, topPlayersPanel };
+    }
+
+    async function openClubPage(route) {
+        currentClubRoute = route;
+        const generation = ++clubProfileGeneration;
+        clubProfileController?.abort();
+        clubProfileController = new AbortController();
+        const { signal } = clubProfileController;
+        clubProfileHeading.replaceChildren();
+        clubProfileContent.replaceChildren(createElement("p", "match-detail-loading", "Klub ma’lumotlari yuklanmoqda…"));
+        if (!leagueNames[route?.league] || !route.id) {
+            clubProfileContent.replaceChildren(createElement("p", "match-detail-empty is-error", "Klub manzili noto‘g‘ri."));
+            return;
+        }
+
+        const startYear = getCurrentSeasonStartYear();
+        const directoryTeam = clubDirectory.find(team =>
+            team.league === route.league && team.id === String(route.id)
+        );
+        const requests = await Promise.allSettled([
+            fetchClubRoster(route.league, route.id, startYear, signal),
+            fetchClubSeasonData(route.league, startYear, signal)
+        ]);
+        if (generation !== clubProfileGeneration || signal.aborted) return;
+        const rosterData = requests[0].status === "fulfilled" ? requests[0].value : null;
+        const seasonData = requests[1].status === "fulfilled" ? requests[1].value : null;
+        const clubData = rosterData?.team;
+        const club = directoryTeam || {
+            id: String(route.id),
+            league: route.league,
+            name: clubData?.displayName || clubData?.name || "Klub",
+            logo: getTeamLogo(clubData || {})
+        };
+        if (requests[0].status === "rejected" && !seasonData) {
+            clubProfileContent.replaceChildren(createElement("p", "match-detail-empty is-error",
+                "Klub ma’lumotlarini yuklab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring."));
+            console.error(`Club profile failed for ${route.league}:${route.id}:`, requests[0].reason, requests[1].reason);
+            return;
+        }
+        const profile = renderClubProfile(
+            club,
+            rosterData,
+            seasonData?.events || null,
+            Boolean(seasonData?.failed.length),
+            signal,
+            generation
+        );
+        if (requests[0].status === "rejected") {
+            console.error(`Club roster failed for ${route.league}:${route.id}:`, requests[0].reason);
+        }
+        if (requests[1].status === "rejected") {
+            console.error(`Club schedule failed for ${route.league}:${route.id}:`, requests[1].reason);
+        } else if (seasonData.failed.length) {
+            seasonData.failed.forEach(result => console.error(`Club schedule year failed for ${route.league}:${route.id}:`, result.reason));
+        }
+        const summaryResults = await Promise.allSettled(profile.previous.map(event =>
+            fetchMatchSummaryData(route.league, event.id, signal)
+        ));
+        if (generation !== clubProfileGeneration || signal.aborted) return;
+        const summaryFailures = summaryResults.filter(result => result.status === "rejected");
+        summaryFailures.forEach(result => console.error(`Club player statistics failed for ${route.league}:${route.id}:`, result.reason));
+        const topPlayers = collectClubTopPlayers(
+            profile.previous,
+            summaryResults.map(result => result.status === "fulfilled" ? result.value : null),
+            route.id
+        );
+        renderClubTopPlayers(profile.topPlayersPanel, topPlayers, summaryFailures.length);
+    }
+
     function renderHeadToHead(summary, match) {
         const container = createElement("div", "match-preview-section");
         const series = summary.seasonseries?.[0];
@@ -358,31 +1025,22 @@
         panel.replaceChildren();
         const tabs = createElement("div", "match-detail-tabs");
         const content = createElement("div", "match-detail-content");
-        const views = match.isUpcoming
-            ? {
-                lineups: renderLineups(summary, match),
-                h2h: renderHeadToHead(summary, match),
-                form: renderRecentForm(summary, match),
-                stats: renderStatistics(summary, match)
-            }
-            : {
-                stats: renderStatistics(summary, match),
-                lineups: renderLineups(summary, match)
-            };
-        const tabDefinitions = match.isUpcoming
-            ? [
-                { id: "lineups", label: "Taxminiy tarkib" },
-                { id: "h2h", label: "O‘zaro o‘yinlar" },
-                { id: "form", label: "So‘nggi forma" },
-                { id: "stats", label: "Statistika" }
-            ]
-            : [
-                { id: "stats", label: "Statistika" },
-                { id: "lineups", label: "Tarkiblar" }
-            ];
+        const views = {
+            stats: renderStatistics(summary, match),
+            lineups: renderLineups(summary, match),
+            h2h: renderHeadToHead(summary, match),
+            form: renderRecentForm(summary, match)
+        };
+        const tabDefinitions = [
+            { id: "stats", label: "Barcha statistika" },
+            { id: "lineups", label: match.isUpcoming ? "Taxminiy tarkib" : "Tarkiblar" },
+            { id: "h2h", label: "O‘zaro o‘yinlar" },
+            { id: "form", label: "So‘nggi forma" }
+        ];
         tabDefinitions.forEach(tab => {
             const button = createElement("button", "match-detail-tab", tab.label);
             button.type = "button";
+            button.dataset.matchTab = tab.id;
             button.setAttribute("aria-pressed", String(tab.id === activeTab));
             button.addEventListener("click", () => {
                 tabs.querySelectorAll("button").forEach(item => item.setAttribute("aria-pressed", String(item === button)));
@@ -394,47 +1052,191 @@
         panel.append(tabs, content);
     }
 
-    async function fetchMatchSummary(match, panel) {
-        const cacheKey = `${match.league}:${match.id}`;
-        const cached = detailsCache.get(cacheKey);
-        if (cached && Date.now() - cached.time < 25000) {
-            renderMatchDetails(panel, cached.summary, match, match.isUpcoming ? "lineups" : "stats");
-            return;
+    function renderMatchPageHeading(match) {
+        const header = createElement("header", "live-match-detail-header");
+        const league = createElement("div", "live-match-detail-league");
+        appendImage(league, match.leagueLogo, "", "live-match-league-logo");
+        league.append(createElement("span", "", match.name));
+        const phase = createElement("span", `live-match-phase${match.isUpcoming ? " is-upcoming" : ""}`,
+            match.isUpcoming ? formatKickoff(match.date) : match.clock || match.phase);
+        league.append(phase);
+
+        const scoreboard = createElement("div", "live-match-detail-scoreboard");
+        const home = createElement("div", "live-match-detail-team");
+        appendImage(home, match.home.logo, "", "live-match-detail-team-logo");
+        home.append(createElement("strong", "", match.home.name));
+        const away = createElement("div", "live-match-detail-team is-away");
+        appendImage(away, match.away.logo, "", "live-match-detail-team-logo");
+        away.append(createElement("strong", "", match.away.name));
+        const center = createElement("div", "live-match-detail-center");
+        const score = createElement("strong", "live-match-detail-score",
+            `${match.home.score ?? "0"} – ${match.away.score ?? "0"}`);
+        const clockPanel = createElement("div", `match-clock-panel${match.isLive ? " is-live" : match.isPre ? " is-countdown" : ""}`);
+        clockPanel.dataset.matchClock = "";
+        if (match.isLive) {
+            const baseClock = String(match.clock || "").match(/^(\d+)(?:\+(\d+))?(?::(\d+))?/);
+            if (baseClock) {
+                clockPanel.dataset.clockBaseSeconds = String((Number(baseClock[1]) + Number(baseClock[2] || 0)) * 60 + Number(baseClock[3] || 0));
+                clockPanel.dataset.clockStartedAt = String(Date.now());
+            }
         }
-        if (!detailRequests.has(cacheKey)) {
-            const controller = new AbortController();
-            detailControllers.set(cacheKey, controller);
-            const request = fetchMatchSummaryData(match.league, match.id, controller.signal).then(async summary => {
-                if (!summary.boxscore) throw new Error("uchrashuv statistikasi topilmadi");
-                if (match.isUpcoming) {
-                    summary.estimatedRosters = await loadEstimatedLineups(summary, match, controller.signal);
+        if (match.isLive || match.isCompleted) center.append(score);
+        center.append(clockPanel);
+        scoreboard.append(home, center, away);
+
+        const metadata = createElement("p", "live-match-detail-meta",
+            `${formatMatchDate(match.date, true)}${match.venue ? ` · ${match.venue}` : ""}`);
+        header.append(league, scoreboard, metadata);
+        matchDetailHeading.replaceChildren(header);
+        updateMatchClock(match, clockPanel);
+    }
+
+    function updateMatchClock(match, panel) {
+        panel.replaceChildren();
+        const label = createElement("span", "match-clock-label");
+        const value = createElement("strong", "match-clock-value");
+        if (match.isLive) {
+            label.textContent = "Jonli o‘yin";
+            const isPaused = /half|halftime|break|tanaffus|ht/i.test(match.phase || "");
+            const baseSeconds = Number(panel.dataset.clockBaseSeconds);
+            if (Number.isFinite(baseSeconds) && panel.dataset.clockStartedAt) {
+                const elapsedSeconds = isPaused ? 0 : Math.max(0, Math.floor((Date.now() - Number(panel.dataset.clockStartedAt)) / 1000));
+                value.textContent = `${Math.max(1, Math.floor((baseSeconds + elapsedSeconds) / 60))}′`;
+            } else {
+                value.textContent = match.phase || "Jonli";
+            }
+        } else if (match.isPre) {
+            label.textContent = "Boshlanishiga qoldi";
+            panel.dataset.kickoff = match.date;
+            if (!hasExactMatchTime(match.date)) {
+                const daysUntil = getDaysUntilMatch(match.date);
+                if (daysUntil !== null) {
+                    value.classList.add("is-days");
+                    value.textContent = daysUntil === 0 ? "Bugun" : `${daysUntil} kun qoldi`;
+                    value.setAttribute("aria-label", value.textContent);
+                    panel.append(label, value);
+                    return;
                 }
-                detailsCache.set(cacheKey, { summary, time: Date.now() });
-                return summary;
-            }).finally(() => {
-                detailRequests.delete(cacheKey);
-                detailControllers.delete(cacheKey);
-            });
-            detailRequests.set(cacheKey, request);
+            }
+            const kickoff = parseMatchDate(match.date);
+            if (!kickoff) {
+                value.textContent = formatKickoff(match.date);
+                value.setAttribute("aria-label", value.textContent);
+                panel.append(label, value);
+                return;
+            }
+            const remainingSeconds = Math.max(0, Math.floor((kickoff.getTime() - Date.now()) / 1000));
+            const days = Math.floor(remainingSeconds / 86400);
+            const hours = Math.floor((remainingSeconds % 86400) / 3600);
+            const minutes = Math.floor((remainingSeconds % 3600) / 60);
+            const seconds = remainingSeconds % 60;
+            const clock = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+            if (remainingSeconds > 172800) {
+                value.classList.add("is-days");
+                value.textContent = `${days} kun · ${clock}`;
+                value.setAttribute("aria-label", `${days} kun ${hours} soat ${minutes} daqiqa ${seconds} soniya`);
+            } else {
+                value.textContent = `${String(Math.floor(remainingSeconds / 3600)).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+                value.setAttribute("aria-label", `${Math.floor(remainingSeconds / 3600)} soat ${minutes} daqiqa ${seconds} soniya`);
+            }
+        } else if (match.isCompleted) {
+            label.textContent = "O‘yin holati";
+            value.textContent = "Yakunlangan";
+        } else {
+            label.textContent = "O‘yin vaqti";
+            value.textContent = match.phase || "Vaqt noma’lum";
         }
+        panel.append(label, value);
+    }
+
+    async function resolveMatchFromScoreboard(league, eventId, signal) {
+        const responses = await Promise.allSettled([-1, 0, 1].map(async offset => {
+            const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${getDate(offset)}&limit=100`;
+            const response = await fetch(endpoint, { signal, cache: "no-store" });
+            if (!response.ok) throw new Error(`${leagueNames[league]}: server ${response.status}`);
+            const data = await response.json();
+            if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]}: noto‘g‘ri javob`);
+            return data.events;
+        }));
+        const events = responses.flatMap(result => result.status === "fulfilled" ? result.value : []);
+        return getMatches(events, league, true).find(match => String(match.id) === String(eventId)) || null;
+    }
+
+    async function openMatchPage(route, activeTab = "stats", refresh = false) {
+        currentMatchRoute = route;
+        const generation = ++matchPageGeneration;
+        matchPageController?.abort();
+        matchPageController = new AbortController();
+        const { signal } = matchPageController;
+        window.clearInterval(matchPageRefreshTimer);
+        window.clearInterval(matchClockTimer);
+        if (!refresh) {
+            matchDetailHeading.replaceChildren();
+            matchDetailContent.replaceChildren(createElement("p", "match-detail-loading", "Uchrashuv ma’lumotlari yuklanmoqda…"));
+        }
+
         try {
-            const summary = await detailRequests.get(cacheKey);
-            if (!active || !expandedMatches.has(cacheKey) || !panel.isConnected) return;
-            renderMatchDetails(panel, summary, match, match.isUpcoming ? "lineups" : "stats");
+            if (!leagueNames[route?.league] || !route.id) {
+                throw new Error("Uchrashuv manzili noto‘g‘ri.");
+            }
+            let match = matches.find(item => item.league === route.league && String(item.id) === String(route.id));
+            if (!match || refresh) {
+                match = await resolveMatchFromScoreboard(route.league, route.id, signal) || match;
+            }
+            const cached = detailsCache.get(`${route.league}:${route.id}`);
+            let summary = !refresh && cached && Date.now() - cached.time < 25000 ? cached.summary : null;
+            if (!summary) {
+                summary = await fetchMatchSummaryData(route.league, route.id, signal);
+            }
+            if (!match && summary.header) {
+                match = getMatches([summary.header], route.league, true)
+                    .find(item => String(item.id) === String(route.id)) || null;
+            }
+            if (!match) throw new Error("Uchrashuv scoreboard ma’lumotlaridan topilmadi.");
+            if (!summary.boxscore) throw new Error("Uchrashuv statistikasi topilmadi.");
+            if (match.isUpcoming) {
+                summary.estimatedRosters = await loadEstimatedLineups(summary, match, signal);
+            }
+            if (generation !== matchPageGeneration || signal.aborted) return;
+            detailsCache.set(`${match.league}:${match.id}`, { summary, time: Date.now() });
+            renderMatchPageHeading(match);
+            renderMatchDetails(matchDetailContent, summary, match, activeTab);
+            if (match.isPre || match.isLive) {
+                matchClockTimer = window.setInterval(() => {
+                    const clockPanel = matchDetailHeading.querySelector("[data-match-clock]");
+                    if (clockPanel) updateMatchClock(match, clockPanel);
+                }, 1000);
+            }
+            if (!match.isCompleted) {
+                matchPageRefreshTimer = window.setInterval(() => {
+                    const selectedTab = matchDetailContent.querySelector(".match-detail-tab[aria-pressed='true']")?.dataset.matchTab || "stats";
+                    openMatchPage(route, selectedTab, true);
+                }, 30000);
+            }
         } catch (error) {
-            if (!active || !expandedMatches.has(cacheKey) || !panel.isConnected) return;
-            panel.replaceChildren(createElement("p", "match-detail-empty is-error", "Statistika va tarkibni yuklab bo‘lmadi. Qayta ochib urinib ko‘ring."));
-            console.error(`Live match details failed for ${match.id}:`, error);
+            if (generation !== matchPageGeneration || signal.aborted) return;
+            if (!refresh) {
+                matchDetailContent.replaceChildren(createElement("p", "match-detail-empty is-error",
+                    "Uchrashuvning to‘liq ma’lumotlarini yuklab bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring."));
+            } else if (!signal.aborted) {
+                matchPageRefreshTimer = window.setInterval(() => openMatchPage(route, activeTab, true), 30000);
+            }
+            console.error(`Live match page failed for ${route?.league}:${route?.id}:`, error);
         }
     }
 
     async function fetchMatchSummaryData(league, eventId, signal) {
+        const cacheKey = `${league}:${eventId}`;
+        const cached = detailsCache.get(cacheKey);
+        if (cached && Date.now() - cached.time < 5 * 60 * 1000) return cached.summary;
         const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/summary?event=${encodeURIComponent(eventId)}`, {
             cache: "no-store",
             signal
         });
         if (!response.ok) throw new Error(`server ${response.status}`);
-        return response.json();
+        const summary = await response.json();
+        detailsCache.set(cacheKey, { summary, time: Date.now() });
+        return summary;
     }
 
     async function loadEstimatedLineups(summary, match, signal) {
@@ -463,8 +1265,9 @@
     }
 
     function createMatchCard(match) {
-        const cacheKey = `${match.league}:${match.id}`;
-        const card = createElement("article", "live-match-card");
+        const card = createElement("a", "live-match-card");
+        card.href = `#/match/${encodeURIComponent(match.league)}/${encodeURIComponent(match.id)}`;
+        card.setAttribute("aria-label", `${match.home.name} va ${match.away.name} uchrashuvi tafsilotlari`);
         const header = createElement("div", "live-match-card-header");
         const league = createElement("div", "live-match-league");
         appendImage(league, match.leagueLogo, "", "live-match-league-logo");
@@ -483,55 +1286,20 @@
         const score = createElement("div", `live-match-score${match.isUpcoming ? " is-fixture" : ""}`, match.isUpcoming ? "VS" : `${match.home.score ?? "0"} – ${match.away.score ?? "0"}`);
         score.setAttribute("aria-label", match.isUpcoming ? `${match.home.name} va ${match.away.name} uchrashuvi` : `${match.home.name} ${match.home.score ?? 0}, ${match.away.score ?? 0} ${match.away.name}`);
         scoreboard.append(home, score, away);
-
-        const toggleLabel = match.isUpcoming ? "Tahlil va taxminiy tarkib" : "Statistika va tarkib";
-        const toggle = createElement("button", "live-match-details-toggle", expandedMatches.has(cacheKey) ? "Tahlilni yashirish" : toggleLabel);
-        toggle.type = "button";
-        toggle.setAttribute("aria-expanded", String(expandedMatches.has(cacheKey)));
-        const cardBody = createElement("div", "live-match-card-body");
-        card.append(header, scoreboard, toggle, cardBody);
-        toggle.addEventListener("click", () => {
-            const isExpanded = expandedMatches.has(cacheKey);
-            if (isExpanded) {
-                expandedMatches.delete(cacheKey);
-                card.classList.remove("is-expanded");
-                toggle.textContent = toggleLabel;
-                toggle.setAttribute("aria-expanded", "false");
-                cardBody.replaceChildren();
-                return;
-            }
-            expandedMatches.add(cacheKey);
-            card.classList.add("is-expanded");
-            toggle.textContent = "Tahlilni yashirish";
-            toggle.setAttribute("aria-expanded", "true");
-            cardBody.replaceChildren(createElement("p", "match-detail-loading", match.isUpcoming
-                ? "O‘yinoldi ma’lumotlari va taxminiy tarkib yuklanmoqda…"
-                : "Jonli statistika yuklanmoqda…"));
-            fetchMatchSummary(match, cardBody);
-        });
-        if (expandedMatches.has(cacheKey)) {
-            card.classList.add("is-expanded");
-            cardBody.replaceChildren(createElement("p", "match-detail-loading", match.isUpcoming
-                ? "O‘yinoldi ma’lumotlari yuklanmoqda…"
-                : "Jonli statistika yangilanmoqda…"));
-            fetchMatchSummary(match, cardBody);
-        }
+        card.append(header, scoreboard, createElement("span", "live-match-card-action", "Barcha ma’lumotlar →"));
         return card;
     }
 
     function renderMatches() {
         const visibleMatches = selectedLeague === "all" ? matches : matches.filter(match => match.league === selectedLeague);
-        [...expandedMatches].forEach(id => {
-            if (!matches.some(match => `${match.league}:${match.id}` === id)) expandedMatches.delete(id);
-        });
         matchList.replaceChildren();
         if (!visibleMatches.length) {
             const empty = createElement("div", "live-match-empty");
             empty.append(
                 createElement("span", "live-match-empty-icon", "◷"),
                 createElement("strong", "", selectedLeague === "all"
-                    ? "Jonli yoki kelasi 24 soatga belgilangan uchrashuv yo‘q"
-                    : `${leagueNames[selectedLeague]}da jonli yoki kelasi 24 soatga belgilangan uchrashuv yo‘q`),
+                    ? "Jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q"
+                    : `${leagueNames[selectedLeague]}da jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q`),
                 createElement("span", "", "Uchrashuvlar jadvali yangilanganda bu yerda avtomatik ko‘rinadi.")
             );
             matchList.append(empty);
@@ -573,7 +1341,7 @@
         activeController = new AbortController();
         const { signal } = activeController;
         refreshButton.disabled = true;
-        setStatus("Jonli uchrashuvlar yuklanmoqda…");
+        setStatus("O‘yinlar yuklanmoqda…");
         try {
             const dates = [getDate(), getDate(1)];
             const responses = await Promise.allSettled(leagues.map(async league => {
@@ -604,7 +1372,7 @@
             setStatus(`${liveCount} ta jonli · ${upcomingCount} ta keyingi 24 soatda · ${updatedAt} da yangilandi${failed.length ? ` · ${failed.length} liga ma’lumoti yo‘q` : ""}`, failed.length > 0);
         } catch (error) {
             if (generation !== requestGeneration) return;
-            setStatus("Jonli uchrashuvlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
+            setStatus("O‘yinlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
             console.error("Live matches refresh failed:", error);
         } finally {
             if (generation === requestGeneration) refreshButton.disabled = false;
@@ -623,23 +1391,75 @@
         });
     });
 
+    clubSearchInput.addEventListener("input", renderClubSearch);
     refreshButton.addEventListener("click", refreshLiveMatches);
     window.addEventListener("pitchplan:sectionchange", event => {
         active = event.detail.section === "matches";
         window.clearInterval(refreshTimer);
+        if (event.detail.section === "match") {
+            currentClubRoute = null;
+            clubProfileGeneration += 1;
+            clubProfileController?.abort();
+            openMatchPage(event.detail.match);
+            requestGeneration += 1;
+            activeController?.abort();
+            return;
+        }
+        if (event.detail.section === "club") {
+            currentMatchRoute = null;
+            matchPageGeneration += 1;
+            matchPageController?.abort();
+            window.clearInterval(matchPageRefreshTimer);
+            window.clearInterval(matchClockTimer);
+            currentClubRoute = event.detail.club;
+            clubProfileController?.abort();
+            requestGeneration += 1;
+            activeController?.abort();
+            clubDirectoryController?.abort();
+            openClubPage(event.detail.club);
+            return;
+        }
+        currentClubRoute = null;
+        clubProfileGeneration += 1;
+        clubProfileController?.abort();
+        clubDirectoryController?.abort();
+        currentMatchRoute = null;
+        matchPageGeneration += 1;
+        matchPageController?.abort();
+        window.clearInterval(matchPageRefreshTimer);
+        window.clearInterval(matchClockTimer);
         if (active) {
             refreshLiveMatches();
             refreshTimer = window.setInterval(refreshLiveMatches, 30000);
+            if (!clubDirectory.length) {
+                clubDirectoryController = new AbortController();
+                const { signal } = clubDirectoryController;
+                clubSearchStatus.textContent = "Klublar ro‘yxati yuklanmoqda…";
+                fetchClubDirectory(signal).then(() => {
+                    if (!signal.aborted && active) renderClubSearch();
+                }).catch(error => {
+                    if (signal.aborted) return;
+                    clubSearchStatus.textContent = "Klublar ro‘yxatini yuklab bo‘lmadi. Sahifani yangilab qayta urinib ko‘ring.";
+                    console.error("Top-5 league club directory failed:", error);
+                });
+            } else {
+                renderClubSearch();
+            }
         } else {
             requestGeneration += 1;
             activeController?.abort();
-            detailControllers.forEach(controller => controller.abort());
-            detailControllers.clear();
         }
     });
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {
             window.clearInterval(refreshTimer);
+            window.clearInterval(matchPageRefreshTimer);
+            window.clearInterval(matchClockTimer);
+        } else if (currentMatchRoute) {
+            const selectedTab = matchDetailContent.querySelector(".match-detail-tab[aria-pressed='true']")?.dataset.matchTab || "stats";
+            openMatchPage(currentMatchRoute, selectedTab, true);
+        } else if (currentClubRoute) {
+            openClubPage(currentClubRoute);
         } else if (active) {
             refreshLiveMatches();
             refreshTimer = window.setInterval(refreshLiveMatches, 30000);
