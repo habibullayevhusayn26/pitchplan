@@ -1410,6 +1410,7 @@
             .live-match-section { margin: 0 0 30px; }
             .live-match-section-heading { margin: 0 0 14px; color: #34364b; font-size: 20px; font-weight: 900; letter-spacing: -.025em; }
             .live-match-section.is-upcoming .live-match-section-heading { color: #5948ad; }
+            .live-match-section.is-completed .live-match-section-heading { color: #21835c; }
             .live-match-group-heading {
                 display: flex;
                 align-items: center;
@@ -1431,9 +1432,11 @@
                 color: #21835c;
                 font-size: 11px;
             }
-            .live-match-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+            .live-match-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: start; gap: 12px; }
             .live-match-card {
+                container-type: inline-size;
                 min-width: 0;
+                align-self: start;
                 overflow: hidden;
                 border: 1px solid rgba(255,255,255,.9);
                 border-radius: 18px;
@@ -1479,9 +1482,21 @@
             .live-match-team { display: flex; min-width: 0; align-items: center; gap: 10px; color: #36394d; font-size: 13px; font-weight: 750; }
             .live-match-team.is-away { flex-direction: row-reverse; text-align: right; }
             .live-match-team-logo { width: 34px; height: 34px; flex: 0 0 auto; object-fit: contain; }
-            .live-match-team-name { min-width: 0; overflow-wrap: anywhere; }
-            .live-match-score { color: #282c41; font-size: clamp(24px, 3vw, 32px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.06em; white-space: nowrap; }
+            .live-match-team-name { display: -webkit-box; min-width: 0; overflow: hidden; line-height: 1.2; overflow-wrap: anywhere; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+            .live-match-score { color: #282c41; font-size: clamp(20px, 2.4vw, 30px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.06em; white-space: nowrap; }
             .live-match-score.is-fixture { color: #9297a7; font-size: 13px; letter-spacing: .04em; }
+            @container (max-width: 300px) {
+                .live-match-card-header { min-height: 38px; gap: 6px; padding: 6px 9px; }
+                .live-match-league { gap: 5px; font-size: 9px; }
+                .live-match-league-logo { width: 18px; height: 18px; }
+                .live-match-phase { padding: 3px 6px; font-size: 9px; }
+                .live-match-scoreboard { gap: 5px; padding: 12px 9px 10px; }
+                .live-match-team { gap: 5px; font-size: 10px; }
+                .live-match-team-logo { width: 24px; height: 24px; }
+                .live-match-score { font-size: 21px; }
+                .live-match-score.is-fixture { font-size: 11px; }
+                .live-match-card-action { padding: 0 9px 8px; font-size: 10px; }
+            }
             .live-match-details-toggle {
                 display: block;
                 width: calc(100% - 28px);
@@ -1518,24 +1533,21 @@
             .match-statistics-heading span:first-child, .match-statistics-heading span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
             .match-statistics-heading span:last-child { text-align: right; }
             .match-statistics-heading span:nth-child(2) { text-align: center; }
-            .match-events { margin: 0 0 18px; padding: 12px; border: 1px solid rgba(116,123,151,.13); border-radius: 13px; background: rgba(255,255,255,.54); }
-            .match-events-heading { margin: 0 0 9px; color: #454a60; font-size: 13px; font-weight: 850; }
-            .match-events-list { position: relative; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+            .match-events { margin: 0 0 12px; padding: 8px; border: 1px solid rgba(116,123,151,.13); border-radius: 11px; background: rgba(255,255,255,.54); }
+            .match-events-heading { margin: 0 0 6px; color: #454a60; font-size: 11px; font-weight: 850; }
+            .match-events-list { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
             .match-events-list::before { position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: rgba(116,123,151,.16); content: ""; }
-            .match-event { display: grid; width: calc(50% - 14px); grid-template-columns: 42px 23px minmax(0, 1fr); align-items: center; gap: 6px; min-height: 43px; padding: 6px 8px; border-radius: 9px; background: rgba(105,111,138,.06); }
-            .match-event.is-away { align-self: flex-end; grid-template-columns: minmax(0, 1fr) 23px 42px; }
+            .match-event { display: grid; width: calc(50% - 10px); grid-template-columns: 34px 18px minmax(0, 1fr); align-items: center; gap: 4px; min-height: 32px; padding: 4px 6px; border-radius: 7px; background: rgba(105,111,138,.06); }
+            .match-event.is-away { align-self: flex-end; grid-template-columns: minmax(0, 1fr) 18px 34px; }
             .match-event.is-away .match-event-minute { grid-column: 3; grid-row: 1; text-align: right; }
             .match-event.is-away .match-event-marker { grid-column: 2; grid-row: 1; }
             .match-event.is-away .match-event-copy { grid-column: 1; grid-row: 1; justify-content: flex-end; text-align: right; }
             .match-event.is-neutral { align-self: center; width: 100%; }
-            .match-event-minute { color: #5e6480; font-size: 11px; font-variant-numeric: tabular-nums; font-weight: 850; white-space: nowrap; }
-            .match-event-marker { display: grid; width: 22px; height: 22px; place-items: center; border-radius: 7px; background: rgba(105,111,138,.1); font-size: 13px; }
-            .match-event-copy { display: flex; min-width: 0; flex-wrap: wrap; align-items: baseline; gap: 3px 7px; }
-            .match-event-title { color: #41465b; font-size: 10px; font-weight: 850; }
-            .match-event-team, .match-event-detail { color: #757b8f; font-size: 10px; }
-            .match-event-team { font-weight: 700; }
-            .match-event-detail.is-source-text { flex-basis: 100%; line-height: 1.4; }
-            .match-event.is-away .match-event-detail.is-source-text { text-align: right; }
+            .match-event-minute { color: #5e6480; font-size: 10px; font-variant-numeric: tabular-nums; font-weight: 850; white-space: nowrap; }
+            .match-event-marker { display: grid; width: 18px; height: 18px; place-items: center; border-radius: 5px; background: rgba(105,111,138,.1); font-size: 11px; }
+            .match-event-copy { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .match-event-detail { color: #757b8f; font-size: 9px; }
+            .match-events-empty { margin: 0; color: #858a9c; font-size: 9px; }
             .match-events-empty { margin: 0; color: #858a9c; font-size: 10px; }
             .match-stat-row { margin: 0 0 9px; }
             .match-stat-value { color: #43475b; font-size: 10px; font-variant-numeric: tabular-nums; font-weight: 800; }
@@ -1932,6 +1944,7 @@
                 }
                 .live-match-group-heading, .live-match-section-heading, .live-match-team, .live-match-score,
                 .live-match-empty strong, .match-lineup-heading { color: #e8edf6; }
+                .live-match-section.is-completed .live-match-section-heading { color: #87e2b4; }
                 .live-match-section.is-upcoming .live-match-section-heading { color: #c7baff; }
                 .live-match-card {
                     border-color: rgba(180,205,245,.18);
@@ -2007,10 +2020,10 @@
                     border-color: rgba(180,205,245,.13);
                     background: rgba(7,14,24,.35);
                 }
-                .match-events-heading, .match-event-title { color: #e1e7f0; }
+                .match-events-heading { color: #e1e7f0; }
                 .match-event { background: rgba(180,205,245,.06); }
                 .match-event-minute { color: #c7baff; }
-                .match-event-team, .match-event-detail, .match-events-empty { color: #a2b0c4; }
+                .match-event-detail, .match-events-empty { color: #a2b0c4; }
                 .match-lineup-team {
                     border-color: rgba(180,205,245,.15);
                     background: rgba(7,14,24,.35);

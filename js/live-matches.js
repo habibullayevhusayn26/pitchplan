@@ -57,6 +57,7 @@
     let clubDirectoryController = null;
     let clubDirectory = [];
     const upcomingWindowMs = 24 * 60 * 60 * 1000;
+    const completedWindowMs = 24 * 60 * 60 * 1000;
 
     const statDefinitions = [
         { key: "possessionPct", label: "To‘p nazorati", percent: true },
@@ -293,8 +294,11 @@
             const state = competition?.status?.type?.state;
             const kickoff = Date.parse(event.date);
             const isLive = state === "in";
+            const isCompleted = state === "post";
             const isUpcoming = state === "pre" && Number.isFinite(kickoff) &&
                 kickoff >= Date.now() && kickoff <= Date.now() + upcomingWindowMs;
+            const isRecentlyCompleted = isCompleted && Number.isFinite(kickoff) &&
+                kickoff <= Date.now() && kickoff >= Date.now() - completedWindowMs;
             if (!includeInactive && !isLive && !isUpcoming) return [];
             const competitors = competition.competitors || [];
             const home = competitors.find(team => team.homeAway === "home") || competitors[0];
@@ -309,7 +313,8 @@
                 isLive,
                 isPre: state === "pre",
                 isUpcoming,
-                isCompleted: state === "post",
+                isCompleted,
+                isRecentlyCompleted,
                 clock: competition.status.displayClock,
                 phase: competition.status.type.shortDetail || competition.status.type.detail || "Jonli",
                 venue: competition.venue?.fullName || "",
@@ -474,12 +479,10 @@
                 (Number.isFinite(Number(event.clock?.value)) ? `${Math.floor(Number(event.clock.value) / 60)}′` : "");
             const detail = category === "substitution"
                 ? participants.length > 1
-                    ? `Maydonga: ${participants[0]} · Maydondan: ${participants[1]}`
+                    ? `${participants[1]} → ${participants[0]}`
                     : participants[0] || event.shortText || event.text || "Almashtirish"
                 : category === "goal"
-                    ? participants.length > 1
-                        ? `Gol: ${participants[0]} · Pas: ${participants[1]}`
-                        : participants[0] || event.shortText || event.text || "Gol"
+                    ? participants[0] || event.shortText || event.text || "Gol"
                     : participants[0] || event.shortText || event.text || "Kartochka";
             const eventTeamId = event.team?.id;
             const eventTeamName = String(event.team?.displayName || event.team?.name || "").trim().toLocaleLowerCase();
@@ -508,11 +511,11 @@
     function renderMatchEvents(summary, match) {
         const section = createElement("section", "match-events");
         section.setAttribute("aria-label", "Uchrashuv voqealari");
-        const heading = createElement("h3", "match-events-heading", "O‘yin voqealari");
+        const heading = createElement("h3", "match-events-heading", "Voqealar");
         const events = getMatchEvents(summary, match);
         section.append(heading);
         if (!events.length) {
-            section.append(createElement("p", "match-events-empty", "Gol, kartochka yoki almashtirish voqealari hozircha mavjud emas."));
+            section.append(createElement("p", "match-events-empty", "Hozircha voqea yo‘q."));
             return section;
         }
         const list = createElement("ol", "match-events-list");
@@ -528,13 +531,12 @@
             const title = event.category === "goal" ? "Gol"
                 : event.category === "yellow-card" ? "Sariq kartochka"
                     : event.category === "red-card" ? "Qizil kartochka" : "Almashtirish";
-            copy.append(createElement("strong", "match-event-title", title));
-            if (event.team) copy.append(createElement("span", "match-event-team", event.team));
             copy.append(createElement("span", "match-event-detail", event.detail));
             if (event.detail === event.text && event.text) {
                 copy.querySelector(".match-event-detail").classList.add("is-source-text");
             }
             item.append(minute, marker, copy);
+            item.setAttribute("aria-label", `${event.clock}, ${title}, ${event.team || ""} ${event.detail}`.trim());
             item.dataset.eventId = String(event.id);
             list.append(item);
         });
@@ -1498,7 +1500,9 @@
         const league = createElement("div", "live-match-league");
         appendImage(league, match.leagueLogo, "", "live-match-league-logo");
         league.append(createElement("span", "", match.name));
-        const phaseText = match.isUpcoming ? formatKickoff(match.date) : match.clock || match.phase;
+        const phaseText = match.isUpcoming ? formatKickoff(match.date) :
+            match.isRecentlyCompleted ? `Yakunlandi · ${formatKickoff(match.date)}` :
+                match.clock || match.phase;
         const phase = createElement("span", `live-match-phase${match.isUpcoming ? " is-upcoming" : ""}`, phaseText);
         header.append(league, phase);
 
@@ -1522,7 +1526,9 @@
             ? leagueMatches.filter(match => match.isLive)
             : selectedMatchState === "upcoming"
                 ? leagueMatches.filter(match => match.isUpcoming)
-                : leagueMatches;
+                : selectedMatchState === "completed"
+                    ? leagueMatches.filter(match => match.isRecentlyCompleted)
+                    : leagueMatches;
         matchList.replaceChildren();
         if (!visibleMatches.length) {
             const empty = createElement("div", "live-match-empty");
@@ -1534,9 +1540,13 @@
                     ? selectedLeague === "all"
                         ? "Kelasi 24 soat ichida o‘yin yo‘q"
                         : `${leagueNames[selectedLeague]}da kelasi 24 soat ichida o‘yin yo‘q`
+                    : selectedMatchState === "completed"
+                        ? selectedLeague === "all"
+                            ? "Oxirgi 24 soatda yakunlangan o‘yin yo‘q"
+                            : `${leagueNames[selectedLeague]}da oxirgi 24 soatda yakunlangan o‘yin yo‘q`
                     : selectedLeague === "all"
-                        ? "Jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q"
-                        : `${leagueNames[selectedLeague]}da jonli yoki kelasi 24 soatga belgilangan o‘yin yo‘q`;
+                        ? "Jonli, yakunlangan yoki kelasi 24 soatga belgilangan o‘yin yo‘q"
+                        : `${leagueNames[selectedLeague]}da jonli, yakunlangan yoki kelasi 24 soatga belgilangan o‘yin yo‘q`;
             empty.append(
                 createElement("span", "live-match-empty-icon", "◷"),
                 createElement("strong", "", emptyMessage),
@@ -1547,16 +1557,20 @@
             matchList.append(empty);
             return;
         }
+        const completedMatches = visibleMatches
+            .filter(match => match.isRecentlyCompleted)
+            .sort((first, second) => Date.parse(second.date) - Date.parse(first.date));
         const liveMatches = visibleMatches.filter(match => match.isLive);
         const upcomingMatches = visibleMatches.filter(match => match.isUpcoming);
         [
             { title: "Jonli uchrashuvlar", items: liveMatches, className: "is-live" },
+            { title: "Oxirgi 24 soatda yakunlangan o‘yinlar", items: completedMatches, className: "is-completed" },
             { title: "Keyingi 24 soat", items: upcomingMatches, className: "is-upcoming" }
         ].forEach(sectionData => {
             if (!sectionData.items.length) return;
             const section = createElement("section", `live-match-section ${sectionData.className}`);
             section.append(createElement("h2", "live-match-section-heading", sectionData.title));
-            if (sectionData.className === "is-live") {
+            if (sectionData.className !== "is-upcoming") {
                 const grid = createElement("div", "live-match-grid");
                 sectionData.items.forEach(match => grid.append(createMatchCard(match)));
                 section.append(grid);
@@ -1592,7 +1606,7 @@
         refreshButton.disabled = true;
         setStatus("O‘yinlar yuklanmoqda…");
         try {
-            const dates = [getDate(), getDate(1)];
+            const dates = [getDate(-1), getDate(), getDate(1)];
             const responses = await Promise.allSettled(leagues.map(async league => {
                 const dailyResponses = await Promise.all(dates.map(async date => {
                     const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}&limit=100`;
@@ -1603,7 +1617,8 @@
                     return data.events;
                 }));
                 const uniqueEvents = new Map(dailyResponses.flat().map(event => [event.id, event]));
-                return getMatches([...uniqueEvents.values()], league);
+                return getMatches([...uniqueEvents.values()], league, true)
+                    .filter(match => match.isLive || match.isUpcoming || match.isRecentlyCompleted);
             }));
             if (generation !== requestGeneration) return;
             const successful = responses.filter(result => result.status === "fulfilled");
@@ -1611,14 +1626,18 @@
             if (!successful.length) throw new AggregateError(failed.map(result => result.reason), "Barcha ligalarning jonli o‘yinlarini olish muvaffaqiyatsiz tugadi.");
             failed.forEach(result => console.error("A Top-5 league live scoreboard failed:", result.reason));
             matches = successful.flatMap(result => result.value).sort((first, second) =>
-                leagues.indexOf(first.league) - leagues.indexOf(second.league) ||
-                new Date(first.date) - new Date(second.date)
+                second.isRecentlyCompleted - first.isRecentlyCompleted ||
+                (first.isRecentlyCompleted && second.isRecentlyCompleted
+                    ? Date.parse(second.date) - Date.parse(first.date)
+                    : leagues.indexOf(first.league) - leagues.indexOf(second.league) ||
+                        Date.parse(first.date) - Date.parse(second.date))
             );
             renderMatches();
-            const liveCount = matches.filter(match => !match.isUpcoming).length;
+            const liveCount = matches.filter(match => match.isLive).length;
             const upcomingCount = matches.filter(match => match.isUpcoming).length;
+            const completedCount = matches.filter(match => match.isRecentlyCompleted).length;
             const updatedAt = new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit" }).format(new Date());
-            setStatus(`${liveCount} ta jonli · ${upcomingCount} ta keyingi 24 soatda · ${updatedAt} da yangilandi${failed.length ? ` · ${failed.length} liga ma’lumoti yo‘q` : ""}`, failed.length > 0);
+            setStatus(`${liveCount} ta jonli · ${completedCount} ta yakunlangan · ${upcomingCount} ta keyingi 24 soatda · ${updatedAt} da yangilandi${failed.length ? ` · ${failed.length} liga ma’lumoti yo‘q` : ""}`, failed.length > 0);
         } catch (error) {
             if (generation !== requestGeneration) return;
             setStatus("O‘yinlarni yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
