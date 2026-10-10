@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="PitchPlan bilan futbol uchrashuvlari jadvalini yarating, tahrirlang va rasm sifatida yuklab oling.">
     <title>PitchPlan — futbol jadvali dizayneri</title>
     <link rel="icon" type="image/png" href="./images/pitchplan.png">
-    <link rel="stylesheet" href="css/styles.css?v=6">
+    <link rel="apple-touch-icon" href="./images/pitchplan.png">
+    <link rel="stylesheet" href="css/styles.css?v=16">
 </head>
 <body>
     <header class="topbar">
@@ -16,10 +18,43 @@
         <span class="top-note">Sport jadvalingizni bir necha daqiqada yarating</span>
     </header>
 
-    <main>
+    <main class="app-shell">
+        <aside class="app-sidebar" aria-label="Asosiy menyu">
+            <nav class="app-navigation">
+                <button type="button" class="app-nav-item is-active" data-app-section="home" aria-current="page">
+                    <span class="app-nav-icon" aria-hidden="true">⌂</span><span>Bosh sahifa</span>
+                </button>
+                <button type="button" class="app-nav-item" data-app-section="templates">
+                    <span class="app-nav-icon" aria-hidden="true">▤</span><span>Shablonlar</span>
+                </button>
+                <button type="button" class="app-nav-item" data-app-section="live">
+                    <span class="app-nav-icon app-live-icon" aria-hidden="true">●</span><span>Jonli STS</span>
+                </button>
+            </nav>
+        </aside>
+        <div class="app-content">
         <section class="home-view" id="home-view" aria-labelledby="home-heading">
             <div class="intro">
-                <h1 id="home-heading">Qaysi shablondan boshlaymiz?</h1>
+                <span class="home-eyebrow">PITCHPLAN STUDIO</span>
+                <h1 id="home-heading">Futbol dizayningiz shu yerdan boshlanadi</h1>
+                <p>Uchrashuv posterini yarating yoki Yevropaning Top-5 ligasidagi turnir jadvalini ko‘ring.</p>
+            </div>
+            <div class="home-shortcuts">
+                <button type="button" class="home-shortcut" data-app-section="templates">
+                    <span class="home-shortcut-icon" aria-hidden="true">▤</span>
+                    <span><strong>Shablonlar</strong><small>Poster yaratish uchun dizayn tanlang</small></span>
+                    <span class="home-shortcut-arrow" aria-hidden="true">→</span>
+                </button>
+                <button type="button" class="home-shortcut" data-app-section="live">
+                    <span class="home-shortcut-icon live-shortcut-icon" aria-hidden="true">●</span>
+                    <span><strong>Jonli STS</strong><small>Top-5 liga turnir jadvallarini kuzating</small></span>
+                    <span class="home-shortcut-arrow" aria-hidden="true">→</span>
+                </button>
+            </div>
+        </section>
+        <section class="home-view templates-view" id="templates-view" aria-labelledby="templates-heading" hidden>
+            <div class="intro">
+                <h1 id="templates-heading">Qaysi shablondan boshlaymiz?</h1>
                 <p>Tayyor dizaynni tanlang, so‘ng matnlar, ranglar va logolarni o‘zingizga moslang.</p>
             </div>
             <div class="template-gallery" aria-label="Tayyor shablonlar">
@@ -73,6 +108,59 @@
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
+                <button type="button" class="template-card" data-template="matchlist" aria-label="RUBY MATCHDAY shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="600" aria-label="RUBY MATCHDAY shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">RUBY MATCHDAY</span>
+                        <span class="template-card-description">Qizil-qora geometrik fon, markaziy vaqt ustuni va PitchPlan logolari</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+            </div>
+        </section>
+        <section class="live-view" id="live-view" aria-labelledby="live-heading" hidden>
+            <div class="live-heading">
+                <div>
+                    <span class="home-eyebrow">YEVROPA · TOP-5</span>
+                    <h1 id="live-heading">Jonli turnir jadvali</h1>
+                    <p>O‘ngoing o‘yinlar natijalari jadvalga vaqtincha qo‘shiladi.</p>
+                </div>
+                <span class="live-status" id="standings-status" role="status" aria-live="polite">
+                    <span class="live-status-dot" aria-hidden="true"></span><span id="standings-status-text">Jadval yuklanmoqda…</span>
+                </span>
+            </div>
+            <nav class="live-league-tabs" id="live-league-tabs" aria-label="Top-5 Yevropa ligalari">
+                <button type="button" class="live-league-tab is-active" data-live-league="eng.1" aria-pressed="true"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
+                <button type="button" class="live-league-tab" data-live-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
+                <button type="button" class="live-league-tab" data-live-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
+                <button type="button" class="live-league-tab" data-live-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
+                <button type="button" class="live-league-tab" data-live-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+            </nav>
+            <div class="standings-card-heading">
+                <div class="standings-accessible-title"><strong id="standings-league-name">Premier League</strong><span id="standings-season"></span></div>
+                <div class="standings-actions">
+                    <button type="button" class="btn standings-download" id="standings-download" disabled>↓ PNG yuklab olish</button>
+                    <button type="button" class="btn standings-refresh" id="standings-refresh" aria-label="Jadvalni yangilash">⟳ Yangilash</button>
+                </div>
+            </div>
+            <div class="standings-poster">
+                <aside class="standings-brand-rail" aria-label="PitchPlan liga va mavsum">
+                    <img src="./images/pitchplan.png" alt="PitchPlan" class="standings-brand-logo">
+                    <img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt="Liga logosi" class="standings-league-logo" id="standings-league-logo">
+                    <div class="standings-rail-title" id="standings-rail-title">Premier League</div>
+                    <div class="standings-rail-season" id="standings-rail-season"></div>
+                </aside>
+                <div class="standings-poster-main">
+                    <div class="standings-table-wrap">
+                        <table class="standings-table">
+                            <thead><tr><th>Pos</th><th>Klub</th><th>P</th><th>G</th><th>D</th><th>M</th><th>GF</th><th>GA</th><th>GD</th><th>Points</th></tr></thead>
+                            <tbody id="standings-body"><tr><td colspan="10" class="standings-placeholder">Turnir jadvali yuklanmoqda…</td></tr></tbody>
+                        </table>
+                    </div>
+                    <p class="standings-footnote">Manba: PitchPlan | Pitchplan.netlify.app</p>
+                </div>
             </div>
         </section>
         <section class="editor-view" id="editor-view" aria-label="Shablonni tahrirlash" hidden>
@@ -188,6 +276,7 @@
             </section>
         </div>
         </section>
+        </div>
     </main>
 
     <dialog class="expanded-preview" id="expanded-preview" aria-label="Posterni katta ko‘rish va tahrirlash">
@@ -213,12 +302,18 @@
             <button type="button" class="btn club-picker-close" id="club-picker-close" aria-label="Oynani yopish">×</button>
         </div>
         <nav class="league-tabs" id="league-tabs" aria-label="Futbol ligalari">
-            <button type="button" class="league-tab is-active" data-league="premier-league" aria-pressed="true">Premier Liga</button>
-            <button type="button" class="league-tab" data-league="laliga" aria-pressed="false">LaLiga</button>
-            <button type="button" class="league-tab" data-league="serie-a" aria-pressed="false">A seriya</button>
-            <button type="button" class="league-tab" data-league="ligue-1" aria-pressed="false">Liga 1</button>
-            <button type="button" class="league-tab" data-league="bundesliga" aria-pressed="false">Bundesliga</button>
-            <button type="button" class="league-tab" data-league="world-cup" aria-pressed="false">Jahon chempionati</button>
+            <button type="button" class="league-tab is-active" data-league="all" aria-pressed="true"><span class="league-tab-mark">★</span><span>Barcha</span></button>
+            <button type="button" class="league-tab" data-league="premier-league" aria-pressed="false"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier Liga</span></button>
+            <button type="button" class="league-tab" data-league="laliga" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
+            <button type="button" class="league-tab" data-league="serie-a" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>A seriya</span></button>
+            <button type="button" class="league-tab" data-league="ligue-1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Liga 1</span></button>
+            <button type="button" class="league-tab" data-league="bundesliga" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
+            <button type="button" class="league-tab" data-league="saudi-pro-league" aria-pressed="false"><span class="league-tab-mark">SPL</span><span>Saudi Pro Liga</span></button>
+            <button type="button" class="league-tab" data-league="europa-league" aria-pressed="false"><span class="league-tab-mark">UEL</span><span>Yevropa Ligasi</span></button>
+            <button type="button" class="league-tab" data-league="conference-league" aria-pressed="false"><span class="league-tab-mark">UECL</span><span>Konferensiya</span></button>
+            <button type="button" class="league-tab" data-league="turkiye-super-lig" aria-pressed="false"><span class="league-tab-mark">TSL</span><span>Turkiya Ligasi</span></button>
+            <button type="button" class="league-tab" data-league="ucl" aria-pressed="false"><span class="league-tab-mark">UCL</span><span>UCL</span></button>
+            <button type="button" class="league-tab" data-league="world-cup" aria-pressed="false"><span class="league-tab-mark">WC</span><span>Jahon chempionati</span></button>
         </nav>
         <div class="club-picker-content">
             <div class="club-picker-tools">
@@ -234,7 +329,8 @@
         </div>
     </dialog>
 
-    <script src="js/app.js?v=9" defer></script>
+    <script src="js/app.js?v=17" defer></script>
+    <script src="js/standings.js?v=6" defer></script>
 </body>
 </html>
     

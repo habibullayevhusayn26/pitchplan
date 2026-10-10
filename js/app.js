@@ -58,6 +58,22 @@ const examples = {
         rows: [
             ["MANCHESTER CITY", "16:00", "ARSENAL"]
         ]
+    },
+    matchlist: {
+        title: "BUNDESLIGA UCHRASHUVLARI",
+        date: "10–11 OKTABR · MATCHDAY",
+        caption: "PITCHPLAN",
+        logoPlacement: "Standart PitchPlan logosi sarlavha va poster pastida ko‘rinadi.",
+        rows: [
+            ["DORTMUND", "18:30", "LEVERKUSEN"],
+            ["BAYERN", "18:30", "AUGSBURG"],
+            ["FRAYBURG", "20:30", "MAINZ"],
+            ["GAMBURG", "21:30", "STUTTGART"],
+            ["BREMEN", "16:30", "HOFFENHEIM"],
+            ["UNION BERLIN", "18:30", "VOLFSBURG"],
+            ["LEYPSIG", "20:30", "KOLN"],
+            ["FRANKFURT", "21:30", "BORUSSIYA M."]
+        ]
     }
 };
 const themes = {
@@ -65,7 +81,8 @@ const themes = {
     sf: { bg: "#740000", row: "#f7f2ed", timeBg: "#b50b05", accent: "#e8b7b7", textColors: { title: "#ffffff", date: "#ffd6d6", team: "#262329", time: "#ffffff", brand: "#ffffff" } },
     pro: { bg: "#f3f6fa", row: "#ffffff", timeBg: "#e3f3f1", accent: "#248b83", textColors: { title: "#172b3d", date: "#64798d", team: "#23384a", time: "#18786f", brand: "#18786f" } },
     result: { bg: "#111722", row: "#121721", timeBg: "#d8e449", accent: "#d8e449", textColors: { title: "#ffffff", date: "#e2e6eb", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
-    matchday: { bg: "#10171b", row: "#141a20", timeBg: "#f0d84a", accent: "#f0d84a", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#17191d", brand: "#ffffff" } }
+    matchday: { bg: "#10171b", row: "#141a20", timeBg: "#f0d84a", accent: "#f0d84a", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#17191d", brand: "#ffffff" } },
+    matchlist: { bg: "#670b0d", row: "#202020", timeBg: "#101010", accent: "#f5eeee", textColors: { title: "#ffffff", date: "#f2caca", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } }
 };
 const leagueLogoFiles = {
     "premier-league": [
@@ -113,6 +130,43 @@ const leagueLogoFiles = {
         "hoffenheim", "koln", "mainz-05", "paderborn", "rb-leipzig", "schalke-04",
         "sv-elversberg", "union-berlin", "vfb-stuttgart", "werder-bremen"
     ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "saudi-pro-league": [
+        "abha", "al-ahli", "al-ettifaq", "al-faisaly-fc", "al-fateh", "al-fayha",
+        "al-hazem", "al-hilal", "al-ittihad", "al-khaleej", "al-kholood", "al-nassr",
+        "al-qadsiah", "al-riyadh", "al-shabab", "al-taawoun", "diriyah-club", "neom"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "europa-league": [
+        "anderlecht", "ararat-armenia", "az-alkmaar", "bayer-leverkusen", "benfica",
+        "besiktas", "bournemouth", "celje", "celta", "celtic", "crystal-palace",
+        "dinamo-zagreb", "ferencvaros", "hapoel-beer-sheva", "hoffenheim", "jagiellonia",
+        "juventus", "lech-poznan", "levski", "lillestrom", "lyon", "marseille", "milan",
+        "nec-nijmegen", "ofi", "olympiacos", "omonoia", "real-sociedad", "rennes",
+        "salzburg", "sparta-praha", "sturm-graz", "sunderland", "torreense",
+        "union-saint-gilloise", "viktoria-plzen"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "conference-league": [
+        "agf", "ajax", "as-monaco", "atalanta", "borac", "brann", "brighton",
+        "copenhagen", "crvena-zvezda", "cska-sofia", "egnatia", "freiburg", "gent",
+        "getafe", "hajduk-split", "hearts", "iberia", "inter-escaldes", "jablonec",
+        "kairat", "kauno-zalgiris", "kups", "lincoln-red-imps", "lugano", "midtjylland",
+        "mjallby", "nordsjaelland", "pafos", "panathinaikos", "riga", "sc-braga",
+        "sint-truidense", "thun", "trabzonspor", "twente", "u-craiova"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    "turkiye-super-lig": [
+        "alanyaspor", "amed", "basaksehir", "besiktas", "corum", "erzurumspor",
+        "eyupspor", "fenerbahce", "galatasaray", "gaziantep", "genclerbirligi",
+        "goztepe-izmir", "kasimpasa", "kocaelispor", "konyaspor", "rizespor",
+        "samsunspor", "trabzonspor"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
+    ucl: [
+        "aek-athens", "arsenal", "aston-villa", "atletico-madrid", "barcelona",
+        "bayern-munchen", "bodo-glimt", "borussia-dortmund", "club-brugge", "como-1907",
+        "fc-porto", "fenerbahce", "feyenoord", "galatasaray", "inter", "lask", "lille",
+        "liverpool", "manchester-city", "manchester-united", "napoli", "paris-saint-germain",
+        "psv", "rb-leipzig", "rc-lens", "real-betis", "real-madrid", "roma",
+        "s-bratislava", "sabah", "shakhtar", "slavia-praha", "sporting-cp", "vfb-stuttgart",
+        "viking", "villarreal"
+    ].map(name => [name, `${name}.football-logos.cc.png`]),
     "world-cup": [
         "algeria", "argentina", "australia", "austria", "belgium", "bosnia-and-herzegovina",
         "brazil", "cabo-verde", "canada", "colombia", "congo-dr", "cote-d-ivoire",
@@ -131,6 +185,11 @@ const leagueLogoFolders = {
     "serie-a": "a-seria",
     "ligue-1": "liga1",
     bundesliga: "bundesliga",
+    "saudi-pro-league": "Saudia-Pro-Liga",
+    "europa-league": "yevropa-liga",
+    "conference-league": "Konferensiya",
+    "turkiye-super-lig": "Turkiya Ligasi",
+    ucl: "UCL",
     "world-cup": "WorldCup"
 };
 function getClubDisplayName(name) {
@@ -163,10 +222,13 @@ function getClubDisplayName(name) {
         const expandedCanvasStage = document.getElementById("expanded-canvas-stage");
         const inlineEditor = document.getElementById("canvas-inline-editor");
         const homeView = document.getElementById("home-view");
+        const templatesView = document.getElementById("templates-view");
+        const liveView = document.getElementById("live-view");
         const editorView = document.getElementById("editor-view");
         const rowsEl = document.getElementById("match-list");
         const clubPickerDialog = document.getElementById("club-picker");
         const clubLogoGrid = document.getElementById("club-logo-grid");
+        const clubPickerContent = document.querySelector(".club-picker-content");
         const clubSearchInput = document.getElementById("club-search");
         const clubPickerNote = document.getElementById("club-picker-note");
         const deviceLogoInput = document.getElementById("device-logo-input");
@@ -212,8 +274,29 @@ function getClubDisplayName(name) {
         let workspaceSaveQueue = Promise.resolve();
         let workspaceDatabasePromise = null;
         let activeLogoPickerTarget = null;
-        let selectedLeague = "premier-league";
+        let selectedLeague = "all";
         const defaultBrandLogo = new Image();
+        let clubRenderTimer = 0;
+        let clubRenderGeneration = 0;
+        let templatePreviewsRendered = false;
+        let templatePreviewRenderScheduled = false;
+        const clubBatchCallbacks = new WeakMap();
+        const clubLogoObserver = "IntersectionObserver" in window ? new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const loadNextBatch = clubBatchCallbacks.get(entry.target);
+                if (loadNextBatch) {
+                    clubLogoObserver.unobserve(entry.target);
+                    entry.target.remove();
+                    loadNextBatch();
+                    return;
+                }
+                const image = entry.target;
+                image.src = image.dataset.src;
+                image.removeAttribute("data-src");
+                clubLogoObserver.unobserve(image);
+            });
+        }, { root: clubPickerContent, rootMargin: "900px 0px" }) : null;
         defaultBrandLogo.onload = () => {
             if (!customBrandLogo) brandLogo = defaultBrandLogo;
             rows.forEach(row => {
@@ -222,7 +305,8 @@ function getClubDisplayName(name) {
             });
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
             if (workspaceInitialized) {
-                renderTemplatePreviews();
+                templatePreviewsRendered = false;
+                scheduleTemplatePreviews();
                 drawPoster();
             }
         };
@@ -249,7 +333,7 @@ function getClubDisplayName(name) {
             canvas.height = photoTemplate ? 1000 : 1200;
             canvas.style.aspectRatio = photoTemplate ? "1 / 1" : "5 / 6";
             document.getElementById("preview-dimensions").textContent = photoTemplate ?
-                "PNG · 1000 × 1000 px · 1:1" : "PNG · 1000 × 1200 px · 5:6";
+                "PNG · 2160 × 2160 px · 1:1" : "PNG · 2160 × 2592 px · 5:6";
             const templatePreview = document.querySelector(`[data-template="${name}"] .template-preview`);
             if (templatePreview) {
                 templatePreview.width = 500;
@@ -371,52 +455,87 @@ function getClubDisplayName(name) {
         }
 
         function renderClubLogoChoices() {
+            window.clearTimeout(clubRenderTimer);
+            clubLogoObserver?.disconnect();
+            const generation = ++clubRenderGeneration;
             clubLogoGrid.replaceChildren();
             const query = clubSearchInput.value.trim().toLocaleLowerCase();
-            const clubs = leagueLogoFiles[selectedLeague] || [];
-            const folder = leagueLogoFolders[selectedLeague];
-            const filteredClubs = clubs
-                .map(([name, file]) => ({ name: selectedLeague === "premier-league" ? name : getClubDisplayName(name), file }))
-                .filter(club => club.name.toLocaleLowerCase().includes(query));
-            filteredClubs.forEach(club => {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.className = "club-logo-choice";
-                button.setAttribute("aria-label", `${club.name} logosini tanlash`);
-                const image = document.createElement("img");
-                image.src = new URL(`./images/${folder}/${encodeURIComponent(club.file)}`, document.baseURI).href;
-                image.alt = "";
-                image.loading = "lazy";
-                image.addEventListener("error", () => {
-                    button.remove();
-                    if (!clubLogoGrid.childElementCount) {
-                        clubPickerNote.textContent = "Bu bo‘limdagi logolarni yuklab bo‘lmadi. Qurilmangizdan rasm tanlab ko‘ring.";
-                    }
-                }, { once: true });
-                const name = document.createElement("span");
-                name.textContent = club.name;
-                button.append(image, name);
-                button.addEventListener("click", () => {
-                    const target = activeLogoPickerTarget;
-                    if (!target) return;
-                    loadImageSource(image.src).then(selectedImage => {
-                        applyTeamLogo(target, selectedImage);
-                        clubPickerDialog.close();
-                    }).catch(error => {
-                        clubPickerNote.textContent = `${club.name} logosini yuklab bo‘lmadi. Boshqa logo tanlang yoki qurilmangizdan yuklang.`;
-                        console.error("Club logo load failed:", error);
-                    });
-                });
-                clubLogoGrid.append(button);
+            const clubGroups = selectedLeague === "all" ?
+                Object.entries(leagueLogoFiles) :
+                [[selectedLeague, leagueLogoFiles[selectedLeague] || []]];
+            const clubs = clubGroups.flatMap(([league, entries]) => entries.map(([name, file]) => ({
+                name: league === "premier-league" ? name : getClubDisplayName(name),
+                file,
+                folder: leagueLogoFolders[league]
+            })));
+            const seenClubNames = new Set();
+            const filteredClubs = clubs.filter(club => {
+                if (!club.name.toLocaleLowerCase().includes(query)) return false;
+                const normalizedName = club.name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+                if (seenClubNames.has(normalizedName)) return false;
+                seenClubNames.add(normalizedName);
+                return true;
             });
+            const renderBatch = startIndex => {
+                if (generation !== clubRenderGeneration) return;
+                const batchEnd = Math.min(startIndex + 24, filteredClubs.length);
+                for (let index = startIndex; index < batchEnd; index += 1) {
+                    const club = filteredClubs[index];
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.className = "club-logo-choice";
+                    button.setAttribute("aria-label", `${club.name} logosini tanlash`);
+                    const image = document.createElement("img");
+                    image.dataset.src = new URL(`./images/${club.folder}/${encodeURIComponent(club.file)}`, document.baseURI).href;
+                    image.alt = "";
+                    image.loading = "lazy";
+                    image.decoding = "async";
+                    image.addEventListener("error", () => {
+                        button.remove();
+                        if (!clubLogoGrid.childElementCount) {
+                            clubPickerNote.textContent = "Bu bo‘limdagi logolarni yuklab bo‘lmadi. Qurilmangizdan rasm tanlab ko‘ring.";
+                        }
+                    }, { once: true });
+                    const name = document.createElement("span");
+                    name.textContent = club.name;
+                    button.append(image, name);
+                    button.addEventListener("click", () => {
+                        const target = activeLogoPickerTarget;
+                        if (!target) return;
+                        loadImageSource(image.dataset.src || image.src).then(selectedImage => {
+                            applyTeamLogo(target, selectedImage);
+                            clubPickerDialog.close();
+                        }).catch(error => {
+                            clubPickerNote.textContent = `${club.name} logosini yuklab bo‘lmadi. Boshqa logo tanlang yoki qurilmangizdan yuklang.`;
+                            console.error("Club logo load failed:", error);
+                        });
+                    });
+                    clubLogoGrid.append(button);
+                    if (clubLogoObserver) clubLogoObserver.observe(image);
+                    else image.src = image.dataset.src;
+                }
+                if (batchEnd < filteredClubs.length) {
+                    if (clubLogoObserver) {
+                        const sentinel = document.createElement("div");
+                        sentinel.className = "club-logo-load-sentinel";
+                        sentinel.setAttribute("aria-hidden", "true");
+                        clubBatchCallbacks.set(sentinel, () => renderBatch(batchEnd));
+                        clubLogoGrid.append(sentinel);
+                        clubLogoObserver.observe(sentinel);
+                    } else {
+                        clubRenderTimer = window.setTimeout(() => renderBatch(batchEnd), 50);
+                    }
+                }
+            };
+            renderBatch(0);
             clubPickerNote.textContent = filteredClubs.length ? "" :
-                clubs.length ? "Qidiruv bo‘yicha klub topilmadi." : "Bu bo‘limda logo fayllari mavjud emas. Qurilmangizdan rasm tanlashingiz mumkin.";
+                clubs.length ? "Qidiruv bo‘yicha logo topilmadi." : "Bu bo‘limda logo fayllari mavjud emas. Qurilmangizdan rasm tanlashingiz mumkin.";
         }
 
         function openClubLogoPicker(row, key, label) {
             activeLogoPickerTarget = { row, key, label };
             clubSearchInput.value = "";
-            selectedLeague = "premier-league";
+            selectedLeague = "all";
             document.querySelectorAll(".league-tab").forEach(tab => {
                 const active = tab.dataset.league === selectedLeague;
                 tab.classList.toggle("is-active", active);
@@ -690,6 +809,7 @@ function getClubDisplayName(name) {
             else if (currentTemplate === "pro") drawProPoster(theme, width, height);
             else if (currentTemplate === "result") drawResultPoster(theme, width, height);
             else if (currentTemplate === "matchday") drawMatchdayPoster(theme, width, height);
+            else if (currentTemplate === "matchlist") drawMatchListPoster(theme, width, height);
             else drawJfPoster(theme, width, height);
             const thumbnail = document.querySelector(`[data-template="${currentTemplate}"] .template-preview`);
             if (thumbnail) {
@@ -842,8 +962,7 @@ function getClubDisplayName(name) {
             snapshot.customText.forEach(key => customTextColors.add(key));
             updateLogoPreview(brandLogoPreview, brandLogo, "PP");
             updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
-            homeView.hidden = Boolean(snapshot.editorOpen);
-            editorView.hidden = !snapshot.editorOpen;
+            showAppSection(snapshot.editorOpen ? "editor" : "home");
             renderInputs();
             drawPoster();
         }
@@ -1052,6 +1171,124 @@ function getClubDisplayName(name) {
             const rowHeight = Math.min(maxRowHeight, (available - rowGap * (count - 1)) / count);
             const usedHeight = count * rowHeight + (count - 1) * rowGap;
             return { columns, margin, cardWidth, rowHeight, rowGap, startY: top + Math.max(0, (available - usedHeight) / 2) };
+        }
+
+        function drawMatchListPoster(theme, width, height) {
+            const background = ctx.createLinearGradient(0, 0, width, height);
+            background.addColorStop(0, "#b10c12");
+            background.addColorStop(.46, "#420609");
+            background.addColorStop(1, "#08090c");
+            ctx.fillStyle = background;
+            ctx.fillRect(0, 0, width, height);
+
+            ctx.save();
+            ctx.globalAlpha = .2;
+            [[0, 0, 520, 0, 0, 540], [width, 70, width, 640, width - 500, 430],
+                [0, height - 420, 470, height, 0, height], [width, height - 540, width, height, width - 480, height]]
+                .forEach(points => {
+                    ctx.fillStyle = "#f32931";
+                    ctx.beginPath();
+                    ctx.moveTo(points[0], points[1]);
+                    ctx.lineTo(points[2], points[3]);
+                    ctx.lineTo(points[4], points[5]);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+            ctx.restore();
+
+            const title = titleInput.value.trim().toUpperCase() || "UCHRASHUVLAR";
+            const logoSize = 48;
+            const headerY = 56;
+            drawBrandLogo(166, headerY, logoSize);
+            addPosterHitRegion("brandLogo", 166 - logoSize / 2, headerY, logoSize, logoSize);
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = textColorInputs.title.value;
+            const titleSize = fitText(title, width - 300, 43, 900, 18);
+            ctx.font = `900 ${titleSize}px "Arial Narrow", "Segoe UI", sans-serif`;
+            ctx.fillText(title, 215, headerY + 19, width - 290);
+            addPosterHitRegion("title", 205, headerY - 5, width - 255, 54);
+            ctx.fillStyle = textColorInputs.date.value;
+            ctx.font = `600 ${fitText(dateInput.value.toUpperCase(), width - 300, 21, 600, 12)}px "Arial Narrow", "Segoe UI", sans-serif`;
+            ctx.fillText(dateInput.value.toUpperCase(), 218, headerY + 54, width - 300);
+            addPosterHitRegion("date", 205, headerY + 39, width - 255, 32);
+
+            const cardX = 74;
+            const cardY = 174;
+            const cardWidth = width - cardX * 2;
+            const footerSpace = 132;
+            const availableHeight = height - cardY - footerSpace - 22;
+            const rowHeight = Math.min(82, availableHeight / Math.max(rows.length, 1));
+            const cardHeight = rowHeight * Math.max(rows.length, 1);
+            const centerWidth = Math.min(132, cardWidth * .19);
+            const sideWidth = (cardWidth - centerWidth) / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(cardX, cardY, cardWidth, cardHeight, 28);
+            ctx.clip();
+            rows.forEach((row, index) => {
+                const y = cardY + index * rowHeight;
+                ctx.fillStyle = index % 2 ? "#343434" : "#1d1e20";
+                ctx.fillRect(cardX, y, cardWidth, rowHeight);
+                ctx.fillStyle = "#111214";
+                ctx.fillRect(cardX + sideWidth, y, centerWidth, rowHeight);
+
+                const logoSide = Math.min(50, rowHeight * .65);
+                const logoY = y + (rowHeight - logoSide) / 2;
+                const homeLogoX = cardX + sideWidth - logoSide - 18;
+                const awayLogoX = cardX + sideWidth + centerWidth + 18;
+                drawLogo(row.homeLogo, row.home, homeLogoX, logoY, logoSide, "#ffffff", true, textColorInputs.team.value);
+                drawLogo(row.awayLogo, row.away, awayLogoX, logoY, logoSide, "#ffffff", true, textColorInputs.team.value);
+                addPosterHitRegion("homeLogo", homeLogoX, logoY, logoSide, logoSide, index);
+                addPosterHitRegion("awayLogo", awayLogoX, logoY, logoSide, logoSide, index);
+
+                const nameSize = Math.min(31, rowHeight * .38);
+                const homeMaxWidth = Math.max(10, sideWidth - logoSide - 40);
+                const homeX = cardX + sideWidth - logoSide - 30;
+                ctx.fillStyle = textColorInputs.team.value;
+                ctx.textBaseline = "middle";
+                ctx.textAlign = "right";
+                ctx.font = `800 ${fitText(row.home.toUpperCase(), homeMaxWidth, nameSize, 800, 9)}px "Arial Narrow", "Segoe UI", sans-serif`;
+                ctx.fillText(row.home.toUpperCase(), homeX, y + rowHeight / 2, homeMaxWidth);
+                addPosterHitRegion("home", homeX - homeMaxWidth, y, homeMaxWidth, rowHeight, index);
+
+                const awayX = awayLogoX + logoSide + 18;
+                const awayMaxWidth = Math.max(10, sideWidth - logoSide - 40);
+                ctx.textAlign = "left";
+                ctx.font = `800 ${fitText(row.away.toUpperCase(), awayMaxWidth, nameSize, 800, 9)}px "Arial Narrow", "Segoe UI", sans-serif`;
+                ctx.fillText(row.away.toUpperCase(), awayX, y + rowHeight / 2, awayMaxWidth);
+                addPosterHitRegion("away", awayX, y, awayMaxWidth, rowHeight, index);
+
+                ctx.fillStyle = textColorInputs.time.value;
+                ctx.textAlign = "center";
+                ctx.font = `900 ${fitText(row.time, centerWidth - 16, Math.min(34, rowHeight * .42), 900, 11)}px "Arial Narrow", "Segoe UI", sans-serif`;
+                ctx.fillText(row.time, cardX + sideWidth + centerWidth / 2, y + rowHeight * .43, centerWidth - 12);
+                ctx.fillStyle = textColorInputs.date.value;
+                ctx.font = `500 ${fitText(dateInput.value.toUpperCase(), centerWidth - 12, Math.min(15, rowHeight * .2), 500, 8)}px "Arial Narrow", "Segoe UI", sans-serif`;
+                ctx.fillText(dateInput.value.toUpperCase(), cardX + sideWidth + centerWidth / 2, y + rowHeight * .73, centerWidth - 10);
+                addPosterHitRegion("time", cardX + sideWidth, y, centerWidth, rowHeight, index);
+            });
+            if (!rows.length) {
+                ctx.fillStyle = "#ffffff";
+                ctx.font = '700 27px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText("UCHRASHUV QO‘SHING", width / 2, cardY + rowHeight / 2);
+            }
+            ctx.restore();
+
+            const footerLogoSize = 76;
+            const footerY = height - footerSpace + 15;
+            drawBrandLogo(width / 2, footerY, footerLogoSize);
+            addPosterHitRegion("brandLogo", width / 2 - footerLogoSize / 2, footerY, footerLogoSize, footerLogoSize);
+            ctx.fillStyle = textColorInputs.brand.value;
+            ctx.font = '800 21px "Segoe UI", Arial, sans-serif';
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const caption = brandCaptionInput.value.trim().toUpperCase() || "PITCHPLAN";
+            ctx.fillText(caption, width / 2, footerY + footerLogoSize + 20, width - 100);
+            addPosterHitRegion("caption", 50, footerY + footerLogoSize + 5, width - 100, 32);
         }
 
         function drawSfPoster(theme, width, height) {
@@ -1694,6 +1931,19 @@ function getClubDisplayName(name) {
             updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
             renderInputs();
             drawPoster();
+            templatePreviewsRendered = true;
+        }
+
+        function scheduleTemplatePreviews() {
+            if (templatePreviewsRendered || templatePreviewRenderScheduled || templatesView.hidden) return;
+            templatePreviewRenderScheduled = true;
+            const render = () => {
+                templatePreviewRenderScheduled = false;
+                if (templatesView.hidden || templatePreviewsRendered) return;
+                renderTemplatePreviews();
+            };
+            if ("requestIdleCallback" in window) window.requestIdleCallback(render, { timeout: 1200 });
+            else window.setTimeout(render, 100);
         }
 
         document.getElementById("preview-expand").addEventListener("click", () => {
@@ -1727,24 +1977,43 @@ function getClubDisplayName(name) {
             }
         });
 
+        function showAppSection(section) {
+            const isEditor = section === "editor";
+            homeView.hidden = section !== "home";
+            templatesView.hidden = section !== "templates";
+            liveView.hidden = section !== "live";
+            editorView.hidden = !isEditor;
+            const activeSection = isEditor ? "templates" : section;
+            document.querySelectorAll("[data-app-section]").forEach(button => {
+                const active = button.dataset.appSection === activeSection;
+                button.classList.toggle("is-active", active);
+                if (button.matches(".app-nav-item")) {
+                    if (active) button.setAttribute("aria-current", "page");
+                    else button.removeAttribute("aria-current");
+                }
+            });
+            if (section === "templates") scheduleTemplatePreviews();
+            window.dispatchEvent(new CustomEvent("pitchplan:sectionchange", { detail: { section } }));
+        }
+
+        document.querySelectorAll(".app-nav-item, .home-shortcut").forEach(button => {
+            button.addEventListener("click", () => showAppSection(button.dataset.appSection));
+        });
         document.querySelectorAll(".template-card").forEach(card => {
             card.addEventListener("click", () => {
                 setTemplate(card.dataset.template);
-                homeView.hidden = true;
-                editorView.hidden = false;
+                showAppSection("editor");
                 window.scrollTo({ top: 0, behavior: "smooth" });
             });
         });
         document.getElementById("back-to-templates").addEventListener("click", () => {
-            editorView.hidden = true;
-            homeView.hidden = false;
+            showAppSection("templates");
             scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
         document.querySelector(".brand").addEventListener("click", event => {
             event.preventDefault();
-            editorView.hidden = true;
-            homeView.hidden = false;
+            showAppSection("home");
             scheduleWorkspaceSave();
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
@@ -1825,9 +2094,29 @@ function getClubDisplayName(name) {
             renderInputs();
             drawPoster();
         });
+        function isTelegramInAppBrowser() {
+            const userAgent = navigator.userAgent || "";
+            return userAgent.includes("Telegram") || (window?.Telegram && typeof window.Telegram.WebView !== "undefined");
+        }
+
         document.getElementById("download").addEventListener("click", () => {
+            const originalWidth = canvas.width;
+            const originalHeight = canvas.height;
+            let canvasRestored = false;
+            const restoreCanvas = () => {
+                if (canvasRestored) return;
+                canvasRestored = true;
+                canvas.width = originalWidth;
+                canvas.height = originalHeight;
+                drawPoster();
+            };
             try {
+                const exportScale = 2.16;
+                canvas.width = Math.round(originalWidth * exportScale);
+                canvas.height = Math.round(originalHeight * exportScale);
+                drawPoster();
                 canvas.toBlob(blob => {
+                    restoreCanvas();
                     if (!blob) {
                         statusEl.textContent = "PNG yaratilmadi. Iltimos, qayta urinib ko‘ring.";
                         return;
@@ -1835,21 +2124,40 @@ function getClubDisplayName(name) {
                     const url = URL.createObjectURL(blob);
                     const link = document.createElement("a");
                     link.href = url;
-                    link.download = "sportposter.png";
-                    document.body.append(link);
-                    link.click();
-                    link.remove();
-                    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    statusEl.textContent = "Poster PNG formatida yuklab olindi.";
+                    link.rel = "noopener";
+                    link.style.display = "none";
+
+                    const useTabFallback = isTelegramInAppBrowser();
+
+                    if (useTabFallback) {
+                        document.body.append(link);
+                        const newTab = window.open(url, "_blank", "noopener,noreferrer");
+                        if (newTab) {
+                            statusEl.textContent = "Rasm yangi tabda ochildi. Long-press qilib saqlang yoki saqlashni tanlang.";
+                        } else {
+                            link.target = "_blank";
+                            link.click();
+                            statusEl.textContent = "Brauzer rasmni avtomatik yuklab olishni blokladi. Rasm yangi tabda ochildi.";
+                        }
+                        link.remove();
+                    } else {
+                        link.download = "sportposter.png";
+                        document.body.append(link);
+                        link.click();
+                        link.remove();
+                        statusEl.textContent = "Poster PNG formatida yuklab olindi.";
+                    }
+
+                    window.setTimeout(() => URL.revokeObjectURL(url), 1500);
                 }, "image/png");
             } catch (error) {
+                restoreCanvas();
                 statusEl.textContent = "Rasmni saqlashda xatolik yuz berdi. Qayta urinib ko‘ring.";
                 console.error("Poster export failed:", error);
             }
         });
         async function initializeWorkspace() {
             setTemplate("jf");
-            renderTemplatePreviews();
             try {
                 const savedWorkspace = await readWorkspaceSnapshot();
                 if (savedWorkspace) {
@@ -1862,6 +2170,7 @@ function getClubDisplayName(name) {
             }
             workspaceInitialized = true;
             drawPoster();
+            scheduleTemplatePreviews();
         }
         window.addEventListener("pagehide", () => {
             if (!workspaceInitialized) return;
