@@ -277,12 +277,14 @@
                     id: home.team.id,
                     name: home.team.displayName || home.team.name || "Uy jamoasi",
                     logo: getTeamLogo(home.team),
+                    primaryColor: home.team.uniform?.color || home.team.color || "",
                     score: home.score
                 },
                 away: {
                     id: away.team.id,
                     name: away.team.displayName || away.team.name || "Mehmon jamoa",
                     logo: getTeamLogo(away.team),
+                    primaryColor: away.team.uniform?.color || away.team.color || "",
                     score: away.score
                 }
             }];
@@ -324,11 +326,20 @@
         return athlete.displayName || athlete.fullName || athlete.name || "Noma’lum futbolchi";
     }
 
-    function createPlayerMarker(player) {
+    function createPlayerMarker(player, team) {
         const athlete = player.athlete || player;
         const marker = createElement("div", "match-pitch-player");
         const number = athlete.jersey || athlete.displayJersey || player.jersey || "";
         const shirt = createElement("span", "match-pitch-shirt", number || "●");
+        const kitColor = String(team.primaryColor || "").replace(/^#/, "");
+        if (/^[\da-f]{6}$/i.test(kitColor)) {
+            const red = Number.parseInt(kitColor.slice(0, 2), 16);
+            const green = Number.parseInt(kitColor.slice(2, 4), 16);
+            const blue = Number.parseInt(kitColor.slice(4, 6), 16);
+            const textColor = red * 299 + green * 587 + blue * 114 >= 150000 ? "#202536" : "#fff";
+            shirt.style.setProperty("--match-kit-color", `#${kitColor}`);
+            shirt.style.setProperty("--match-kit-text-color", textColor);
+        }
         shirt.setAttribute("aria-hidden", "true");
         const name = createElement("span", "match-pitch-player-name", getPlayerDisplayName(player));
         marker.title = `${getPlayerDisplayName(player)}${number ? ` · #${number}` : ""}`;
@@ -358,7 +369,7 @@
                 starters
                     .filter(player => getPlayerLine(getPlayerPosition(player)) === line)
                     .sort((first, second) => getPlayerSide(getPlayerPosition(first)) - getPlayerSide(getPlayerPosition(second)))
-                    .forEach(player => row.append(createPlayerMarker(player)));
+                    .forEach(player => row.append(createPlayerMarker(player, team)));
                 if (row.childElementCount) half.append(row);
             });
             if (side === "away") half.append(heading);
@@ -381,10 +392,93 @@
         };
     }
 
+    function getMatchEvents(summary) {
+        const keyEvents = Array.isArray(summary.keyEvents) ? summary.keyEvents : [];
+        const commentaryEvents = Array.isArray(summary.commentary)
+            ? summary.commentary.map(item => item.play || item)
+            : [];
+        const source = keyEvents.length ? keyEvents : commentaryEvents;
+        return source.flatMap((event, index) => {
+            const eventType = String(event.type?.type || event.type?.text || "").toLowerCase();
+            const eventLabel = String(event.type?.text || "").toLowerCase();
+            let category = "";
+            if (/red.?card|second.?yellow/.test(eventType) || /red card|second yellow/.test(eventLabel)) {
+                category = "red-card";
+            } else if (/yellow.?card/.test(eventType) || /yellow card/.test(eventLabel)) {
+                category = "yellow-card";
+            } else if (/substitution/.test(eventType) || /substitution/.test(eventLabel)) {
+                category = "substitution";
+            } else if (/goal/.test(eventType) || /goal/.test(eventLabel) || event.scoringPlay) {
+                category = "goal";
+            }
+            if (!category) return [];
+            const participants = (Array.isArray(event.participants) ? event.participants : [])
+                .map(participant => participant.athlete?.displayName || participant.athlete?.fullName || "")
+                .filter(Boolean);
+            const clock = event.clock?.displayValue || event.time?.displayValue ||
+                (Number.isFinite(Number(event.clock?.value)) ? `${Math.floor(Number(event.clock.value) / 60)}′` : "");
+            const detail = category === "substitution"
+                ? participants.length > 1
+                    ? `Maydonga: ${participants[0]} · Maydondan: ${participants[1]}`
+                    : participants[0] || event.shortText || event.text || "Almashtirish"
+                : category === "goal"
+                    ? participants.length > 1
+                        ? `Gol: ${participants[0]} · Pas: ${participants[1]}`
+                        : participants[0] || event.shortText || event.text || "Gol"
+                    : participants[0] || event.shortText || event.text || "Kartochka";
+            return [{
+                id: event.id || `${category}-${clock}-${index}`,
+                category,
+                clock: clock || "—",
+                team: event.team?.displayName || event.team?.name || "",
+                detail,
+                text: event.text || ""
+            }];
+        });
+    }
+
+    function renderMatchEvents(summary) {
+        const section = createElement("section", "match-events");
+        section.setAttribute("aria-label", "Uchrashuv voqealari");
+        const heading = createElement("h3", "match-events-heading", "O‘yin voqealari");
+        const events = getMatchEvents(summary);
+        section.append(heading);
+        if (!events.length) {
+            section.append(createElement("p", "match-events-empty", "Gol, kartochka yoki almashtirish voqealari hozircha mavjud emas."));
+            return section;
+        }
+        const list = createElement("ol", "match-events-list");
+        events.forEach(event => {
+            const item = createElement("li", `match-event is-${event.category}`);
+            const minute = createElement("time", "match-event-minute", event.clock);
+            const markerText = event.category === "goal" ? "⚽"
+                : event.category === "yellow-card" ? "🟨"
+                    : event.category === "red-card" ? "🟥" : "↔";
+            const marker = createElement("span", "match-event-marker", markerText);
+            marker.setAttribute("aria-hidden", "true");
+            const copy = createElement("div", "match-event-copy");
+            const title = event.category === "goal" ? "Gol"
+                : event.category === "yellow-card" ? "Sariq kartochka"
+                    : event.category === "red-card" ? "Qizil kartochka" : "Almashtirish";
+            copy.append(createElement("strong", "match-event-title", title));
+            if (event.team) copy.append(createElement("span", "match-event-team", event.team));
+            copy.append(createElement("span", "match-event-detail", event.detail));
+            if (event.detail === event.text && event.text) {
+                copy.querySelector(".match-event-detail").classList.add("is-source-text");
+            }
+            item.append(minute, marker, copy);
+            item.dataset.eventId = String(event.id);
+            list.append(item);
+        });
+        section.append(list);
+        return section;
+    }
+
     function renderStatistics(summary, match) {
         const homeStats = getTeamStatistics(summary, "home");
         const awayStats = getTeamStatistics(summary, "away");
         const grid = createElement("div", "match-statistics");
+        if (match.isLive || match.isCompleted) grid.append(renderMatchEvents(summary));
         const heading = createElement("div", "match-statistics-heading");
         heading.append(
             createElement("span", "", match.home.name),
@@ -459,9 +553,15 @@
 
     function renderLineups(summary, match) {
         const container = createElement("div", "match-lineups");
-        if (match.isUpcoming && Array.isArray(summary.estimatedRosters)) {
+        const officialRosters = match.isUpcoming
+            ? summary.officialRosters
+            : getOfficialLineups(summary, match, false);
+        const lineupRosters = officialRosters || (match.isUpcoming ? summary.estimatedRosters : summary.rosters) || [];
+        if (match.isUpcoming && !officialRosters && Array.isArray(summary.estimatedRosters)) {
             const sourceNote = createElement("p", "match-detail-note", "Taxminlar jamoalarning eng so‘nggi e’lon qilingan boshlang‘ich tarkiblariga asoslangan; rasmiy tarkib emas.");
             container.append(sourceNote);
+        } else if (officialRosters) {
+            container.append(createElement("p", "match-detail-note", "Rasmiy asosiy tarkiblar e’lon qilindi."));
         }
         const rosterGroups = [
             { side: "home", team: match.home },
@@ -469,16 +569,9 @@
         ];
         const lineupData = [];
         rosterGroups.forEach(({ side, team }) => {
-            const rosterData = match.isUpcoming
-                ? summary.estimatedRosters?.find(roster => roster.homeAway === side)
-                : summary.rosters?.find(roster => roster.homeAway === side);
+            const rosterData = lineupRosters.find(roster => roster.homeAway === side);
             const roster = Array.isArray(rosterData?.roster) ? rosterData.roster : [];
-            const starters = roster.filter(player =>
-                player.starter === true ||
-                player.starter === "true" ||
-                player.athlete?.starter === true ||
-                player.status?.type?.name === "Starter"
-            );
+            const starters = getStartingPlayers(rosterData);
             if (starters.length) lineupData.push({ side, team, rosterData, starters });
             const substitutes = roster.filter(player =>
                 !starters.includes(player) &&
@@ -506,10 +599,37 @@
         if (lineupData.length) container.prepend(createLineupPitch(lineupData));
         if (!lineupData.length) {
             container.append(createElement("p", "match-detail-empty", match.isUpcoming
-                ? "Taxminiy tarkibni tuzish uchun so‘nggi tasdiqlangan tarkib topilmadi."
+                ? "Asosiy tarkib e’lon qilinishini kuting. Hozircha taxminiy tarkib topilmadi."
                 : "Boshlang‘ich tarkiblar hozircha e’lon qilinmagan."));
         }
         return container;
+    }
+
+    function getStartingPlayers(rosterData) {
+        const roster = Array.isArray(rosterData?.roster) ? rosterData.roster : [];
+        return roster.filter(player =>
+            player.starter === true ||
+            player.starter === "true" ||
+            player.athlete?.starter === true ||
+            player.status?.type?.name === "Starter"
+        );
+    }
+
+    function getOfficialLineups(summary, match, enforceAnnouncementWindow = true) {
+        if (enforceAnnouncementWindow) {
+            const kickoff = parseMatchDate(match.date);
+            if (!kickoff || kickoff.getTime() - Date.now() > 60 * 60 * 1000) return null;
+        }
+        const rosters = [match.home, match.away].map((team, index) => {
+            const homeAway = index === 0 ? "home" : "away";
+            const roster = summary.rosters?.find(item =>
+                String(item.team?.id) === String(team.id) ||
+                item.homeAway === homeAway
+            );
+            if (getStartingPlayers(roster).length < 11) return null;
+            return { ...roster, homeAway };
+        });
+        return rosters.every(Boolean) ? rosters : null;
     }
 
     function getTeamRecentGames(summary, team) {
@@ -1033,7 +1153,9 @@
         };
         const tabDefinitions = [
             { id: "stats", label: "Barcha statistika" },
-            { id: "lineups", label: match.isUpcoming ? "Taxminiy tarkib" : "Tarkiblar" },
+            { id: "lineups", label: match.isUpcoming
+                ? summary.officialRosters ? "Asosiy tarkiblar" : "Taxminiy tarkib"
+                : "Asosiy tarkiblar" },
             { id: "h2h", label: "O‘zaro o‘yinlar" },
             { id: "form", label: "So‘nggi forma" }
         ];
@@ -1186,7 +1308,7 @@
             const cached = detailsCache.get(`${route.league}:${route.id}`);
             let summary = !refresh && cached && Date.now() - cached.time < 25000 ? cached.summary : null;
             if (!summary) {
-                summary = await fetchMatchSummaryData(route.league, route.id, signal);
+                summary = await fetchMatchSummaryData(route.league, route.id, signal, refresh);
             }
             if (!match && summary.header) {
                 match = getMatches([summary.header], route.league, true)
@@ -1194,7 +1316,10 @@
             }
             if (!match) throw new Error("Uchrashuv scoreboard ma’lumotlaridan topilmadi.");
             if (!summary.boxscore) throw new Error("Uchrashuv statistikasi topilmadi.");
-            if (match.isUpcoming) {
+            summary.officialRosters = match.isUpcoming
+                ? getOfficialLineups(summary, match)
+                : null;
+            if (match.isUpcoming && !summary.officialRosters) {
                 summary.estimatedRosters = await loadEstimatedLineups(summary, match, signal);
             }
             if (generation !== matchPageGeneration || signal.aborted) return;
@@ -1225,10 +1350,10 @@
         }
     }
 
-    async function fetchMatchSummaryData(league, eventId, signal) {
+    async function fetchMatchSummaryData(league, eventId, signal, forceRefresh = false) {
         const cacheKey = `${league}:${eventId}`;
         const cached = detailsCache.get(cacheKey);
-        if (cached && Date.now() - cached.time < 5 * 60 * 1000) return cached.summary;
+        if (!forceRefresh && cached && Date.now() - cached.time < 5 * 60 * 1000) return cached.summary;
         const response = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/summary?event=${encodeURIComponent(eventId)}`, {
             cache: "no-store",
             signal
