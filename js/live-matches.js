@@ -14,6 +14,20 @@
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
         "fra.1": "./images/ligalar/ligue-1.webp"
     };
+    const monthlyCupCompetitions = [
+        { id: "uefa.champions", name: "UEFA Champions League", shortName: "UCL", logo: "./images/ligalar/UEFA_Champions_League-ucl.svg" },
+        { id: "uefa.europa", name: "UEFA Europa League", shortName: "UEL", logo: "" },
+        { id: "uefa.europa.conf", name: "UEFA Conference League", shortName: "UECL", logo: "" },
+        { id: "eng.fa", name: "FA Cup", shortName: "FA CUP", logo: "" },
+        { id: "eng.league_cup", name: "EFL Cup", shortName: "EFL", logo: "" },
+        { id: "esp.copa_del_rey", name: "Copa del Rey", shortName: "COPA", logo: "" },
+        { id: "ita.coppa_italia", name: "Coppa Italia", shortName: "COPPA", logo: "" },
+        { id: "ger.dfb_pokal", name: "DFB-Pokal", shortName: "POKAL", logo: "" },
+        { id: "fra.coupe_de_france", name: "Coupe de France", shortName: "COUPE", logo: "" }
+    ];
+    const monthlyCupById = new Map(monthlyCupCompetitions.map(competition => [competition.id, competition]));
+    const getCompetitionName = competitionId =>
+        leagueNames[competitionId] || monthlyCupById.get(competitionId)?.name || competitionId;
     const matchView = document.getElementById("live-matches-view");
     const matchList = document.getElementById("live-match-list");
     const matchDetailView = document.getElementById("live-match-detail-view");
@@ -56,6 +70,7 @@
     let clubProfileController = null;
     let clubDirectoryController = null;
     let clubDirectory = [];
+    let clubDirectoryPartial = false;
     const upcomingWindowMs = 24 * 60 * 60 * 1000;
     const completedWindowMs = 24 * 60 * 60 * 1000;
 
@@ -184,6 +199,14 @@
         return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase();
     }
 
+    function normalizeClubFixtureName(value) {
+        return normalizeClubSearch(value)
+            .replace(/[.'’]/g, "")
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/^(?:fc|cf|afc|sc|fk|ac)\s+|\s+(?:fc|cf|afc|sc|fk|ac)$/g, "")
+            .trim();
+    }
+
     async function fetchClubDirectory(signal) {
         if (clubDirectory.length) return clubDirectory;
         const startYear = getCurrentSeasonStartYear();
@@ -213,6 +236,7 @@
             throw new AggregateError(failed.map(result => result.reason), "Klublar ro‘yxatini yuklab bo‘lmadi.");
         }
         if (failed.length) {
+            clubDirectoryPartial = true;
             failed.forEach(result => console.error("A Top-5 league club directory failed:", result.reason));
         }
         clubDirectory = successful.flatMap(result => result.value).sort((first, second) =>
@@ -220,6 +244,86 @@
         );
         return clubDirectory;
     }
+
+    async function searchMonthlyPosterClubs(query) {
+        const normalizedQuery = normalizeClubSearch(query);
+        const clubs = await fetchClubDirectory();
+        if (!normalizedQuery) return { clubs: [], partial: clubDirectoryPartial };
+        return {
+            clubs: clubs
+                .filter(club => normalizeClubSearch(club.name).includes(normalizedQuery))
+                .slice(0, 12)
+                .map(club => ({ ...club, leagueName: leagueNames[club.league] })),
+            partial: clubDirectoryPartial
+        };
+    }
+
+    async function fetchMonthlyPosterFixtures(club, year, month, signal) {
+        const competitions = [
+            ...leagues.map(id => ({ id, name: leagueNames[id], logo: leagueAssets[id] })),
+            ...monthlyCupCompetitions
+        ];
+        const results = await Promise.allSettled(competitions.map(async competition => {
+            const league = competition.id;
+            const season = await fetchClubSeasonData(league, getCurrentSeasonStartYear(), signal);
+            return { ...competition, ...season };
+        }));
+        const events = [];
+        const failed = [];
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                failed.push({ league: competitions[index].id, error: result.reason });
+                return;
+            }
+            result.value.failed.forEach(failure => failed.push({
+                league: competitions[index].id,
+                error: failure.reason
+            }));
+            events.push(...result.value.events.map(event => ({ event, competition: result.value })));
+        });
+        if (!events.length && results.every(result => result.status === "rejected")) {
+            throw new AggregateError(results.map(result => result.reason), "Oylik uchrashuvlar jadvallarini yuklab bo‘lmadi.");
+        }
+
+        const selectedName = normalizeClubSearch(club.name);
+        const uniqueFixtures = new Map();
+        events.forEach(({ event, competition }) => {
+            const date = new Date(event.date);
+            if (Number.isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() !== month) return;
+            const competitors = event.competitions?.[0]?.competitors || [];
+            const clubEntry = competitors.find(competitor =>
+                String(competitor.team?.id) === String(club.id) ||
+                normalizeClubFixtureName(competitor.team?.displayName || competitor.team?.name || "") === normalizeClubFixtureName(selectedName)
+            );
+            if (!clubEntry) return;
+            const opponent = competitors.find(competitor => competitor !== clubEntry);
+            if (!opponent?.team) return;
+            const key = `${competition.id}:${event.id}`;
+            if (uniqueFixtures.has(key)) return;
+            uniqueFixtures.set(key, {
+                date: event.date,
+                weekday: new Intl.DateTimeFormat("uz-UZ", { weekday: "short" }).format(date),
+                time: new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date),
+                homeAway: clubEntry.homeAway,
+                opponent: opponent.team.displayName || opponent.team.name || "Raqib",
+                opponentLogo: getTeamLogo(opponent.team),
+                league: competition.name,
+                leagueShortName: competition.shortName || competition.name,
+                leagueLogo: competition.logo || ""
+            });
+        });
+        return {
+            fixtures: [...uniqueFixtures.values()].sort((first, second) =>
+                new Date(first.date) - new Date(second.date)
+            ),
+            failed
+        };
+    }
+
+    window.pitchPlanClubFixtures = Object.freeze({
+        searchClubs: searchMonthlyPosterClubs,
+        getMonthlyFixtures: fetchMonthlyPosterFixtures
+    });
 
     function renderClubSearch() {
         const query = normalizeClubSearch(clubSearchInput.value);
@@ -779,9 +883,9 @@
                     `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${year}&limit=1000`,
                     { signal, cache: "no-store" }
                 );
-                if (!response.ok) throw new Error(`${leagueNames[league]} ${year}: server ${response.status}`);
+                if (!response.ok) throw new Error(`${getCompetitionName(league)} ${year}: server ${response.status}`);
                 const data = await response.json();
-                if (!Array.isArray(data.events)) throw new Error(`${leagueNames[league]} ${year}: o‘yinlar ro‘yxati noto‘g‘ri`);
+                if (!Array.isArray(data.events)) throw new Error(`${getCompetitionName(league)} ${year}: o‘yinlar ro‘yxati noto‘g‘ri`);
                 return data.events;
             })();
             clubEventsCache.set(key, request);

@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=68">
+    <link rel="stylesheet" href="css/styles.css?v=70">
 </head>
 <body>
     <header class="topbar">
@@ -176,6 +176,16 @@
                     <span class="template-card-details">
                         <span class="template-card-title">SPORT UZ MATCHDAY</span>
                         <span class="template-card-description">APL o‘yini uchun futbolchilar, klublar va matchday tafsilotlari</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+                <button type="button" class="template-card" data-template="monthly-club-fixtures" aria-label="Oylik klub uchrashuvlari shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="625" aria-label="Oylik klub uchrashuvlari shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">OYLIK UCHRASHUVLAR</span>
+                        <span class="template-card-description">Klubni tanlang va shu oy ligalar hamda kuboklardagi uchrashuvlarini ko‘rsating</span>
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
@@ -367,6 +377,17 @@
                     <div class="field"><label for="matchday-league">Liga nomi</label><input id="matchday-league" type="text" maxlength="32" value="APL"></div>
                     <div class="field"><label for="matchday-round">Tur raqami</label><input id="matchday-round" type="text" maxlength="16" value="6-tur"></div>
                     <div class="field"><label for="matchday-stadium">Stadion nomi</label><input id="matchday-stadium" type="text" maxlength="40" value="Enfild stadioni"></div>
+                </div>
+                <div class="monthly-fixtures-controls" id="monthly-fixtures-controls" hidden>
+                    <span class="field-label monthly-channel-heading">Kanal brendi</span>
+                    <p class="hint-inline monthly-channel-hint">Pastki qismda ko‘rinadigan kanal logosi va nomini sozlang.</p>
+                    <div class="field">
+                        <label for="monthly-club-search">Klubni qidiring va tanlang</label>
+                        <input id="monthly-club-search" type="search" autocomplete="off" placeholder="Klub nomini yozing…" aria-controls="monthly-club-results">
+                    </div>
+                    <p class="monthly-club-status" id="monthly-club-status" role="status" aria-live="polite">Klublar ro‘yxati yuklanmoqda…</p>
+                    <div class="monthly-club-results" id="monthly-club-results" role="list"></div>
+                    <button type="button" class="btn monthly-fixtures-refresh" id="monthly-fixtures-refresh" disabled>⟳ Uchrashuvlarni yangilash</button>
                 </div>
                 <div class="field" id="matchlist-layout-controls" hidden>
                     <span class="field-label" id="matchlist-layout-label">Jadval ustunlari</span>
@@ -574,8 +595,8 @@
     </dialog>
 
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=61" defer></script>
-    <script src="js/live-matches.js?v=32" defer></script>
+    <script src="js/app.js?v=66" defer></script>
+    <script src="js/live-matches.js?v=34" defer></script>
     <script src="js/standings.js?v=11" defer></script>
 </body>
 </html>

@@ -195,6 +195,20 @@
         }
         .field input:focus { border-color: #6485ff; box-shadow: 0 0 0 3px rgba(100,133,255,.13); }
         .field textarea:focus { border-color: #6485ff; box-shadow: 0 0 0 3px rgba(100,133,255,.13); }
+        .monthly-fixtures-controls { display: grid; gap: 4px; margin: 4px 0 15px; }
+        .monthly-channel-heading { margin-top: 4px; }
+        .monthly-channel-hint { margin: -3px 0 7px; }
+        .monthly-fixtures-controls .field { margin-bottom: 0; }
+        .monthly-club-status { min-height: 18px; margin: 0; color: var(--muted); font-size: 11px; }
+        .monthly-club-results { display: grid; gap: 7px; max-height: 240px; overflow-y: auto; }
+        .monthly-club-result {
+            display: flex; min-width: 0; align-items: center; gap: 10px; padding: 8px 10px;
+            border: 1px solid var(--line); border-radius: 10px; background: var(--panel);
+            color: var(--text); text-align: left; font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .monthly-club-result img { flex: 0 0 32px; width: 32px; height: 32px; object-fit: contain; }
+        .monthly-club-result:hover, .monthly-club-result:focus-visible { border-color: var(--blue); }
+        .monthly-fixtures-refresh { justify-self: start; min-height: 36px; padding: 0 12px; font-size: 11px; }
         .field input[type="color"] {
             display: block; width: 100%; max-width: 112px; min-height: 32px; padding: 0; border: 1px solid rgba(132,151,191,.45);
             border-radius: 10px; background: linear-gradient(135deg, rgba(255,255,255,.85), rgba(241,245,255,.88));
