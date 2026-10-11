@@ -69,6 +69,22 @@ const examples = {
         logoPlacement: "Kanal logosi postering yuqori chap burchagida joylashadi.",
         rows: []
     },
+    "telegram-promo": {
+        title: "",
+        date: "",
+        caption: "@pitchplan",
+        logoPlacement: "Logo postering yuqori o‘ng burchagida joylashadi.",
+        rows: []
+    },
+    "matchday-poster": {
+        title: "",
+        date: "",
+        caption: "",
+        logoPlacement: "Kanal logosi posterning yuqori markazida joylashadi.",
+        rows: [
+            ["LIVERPOOL", "20:30", "MANCHESTER CITY"]
+        ]
+    },
     matchlist: {
         title: "BUNDESLIGA UCHRASHUVLARI",
         date: "10–11 OKTABR · MATCHDAY",
@@ -94,6 +110,8 @@ const themes = {
     "today-results": { bg: "#101827", row: "#202b3b", timeBg: "#182334", accent: "#d7a84b", textColors: { title: "#ffffff", date: "#e9bd68", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     "football-news": { bg: "#050505", row: "#ffffff", timeBg: "#ffffff", accent: "#c91625", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     "football-lux": { bg: "#080b0d", row: "#ffffff", timeBg: "#ffffff", accent: "#e50914", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
+    "telegram-promo": { bg: "#111827", row: "#ffffff", timeBg: "#ffffff", accent: "#229ed9", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
+    "matchday-poster": { bg: "#10151e", row: "#ffffff", timeBg: "#ffffff", accent: "#22b8f0", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     matchlist: { bg: "#670b0d", row: "#202020", timeBg: "#101010", accent: "#f5eeee", textColors: { title: "#ffffff", date: "#f2caca", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } }
 };
 const footballNewsRatios = {
@@ -102,7 +120,7 @@ const footballNewsRatios = {
     "5:6": { width: 1000, height: 1200 },
     "7:5": { width: 1400, height: 1000 }
 };
-const photoPosterTemplates = new Set(["result", "football-news", "football-lux"]);
+const photoPosterTemplates = new Set(["result", "football-news", "football-lux", "telegram-promo", "matchday-poster"]);
 const leagueLogoFiles = {
     "premier-league": [
         ["AFC Bournemouth", "AFC_Bournemouth_(2013).svg.webp"],
@@ -296,6 +314,10 @@ function getClubDisplayName(name) {
         const photoTextSizeInput = document.getElementById("photo-text-size");
         const photoTextSizeLabel = document.getElementById("photo-text-size-label");
         const photoTextSizeValue = document.getElementById("photo-text-size-value");
+        const matchdayPosterControls = document.getElementById("matchday-poster-controls");
+        const matchdayLeagueInput = document.getElementById("matchday-league");
+        const matchdayRoundInput = document.getElementById("matchday-round");
+        const matchdayStadiumInput = document.getElementById("matchday-stadium");
         const textColorInputs = {
             title: document.getElementById("title-color"),
             date: document.getElementById("date-color"),
@@ -309,6 +331,10 @@ function getClubDisplayName(name) {
         let backgroundImagesByTemplate = new Map();
         const defaultPosterBackground = new Image();
         const todayResultsBackground = new Image();
+        const telegramPosterLogo = new Image();
+        const matchdayHomeLogo = new Image();
+        const matchdayAwayLogo = new Image();
+        const matchdayPremierLeagueLogo = new Image();
         let footballNewsEffectColor = footballNewsEffectColorInput.value;
         let footballNewsRatio = "5:6";
         let footballLuxLogoSize = 80;
@@ -386,13 +412,53 @@ function getClubDisplayName(name) {
             }
         };
         todayResultsBackground.src = "./images/bg.jpg?v=2";
+        telegramPosterLogo.onload = () => {
+            if (currentTemplate === "telegram-promo" && workspaceInitialized) drawPoster();
+            templatePreviewsRendered = false;
+            scheduleTemplatePreviews();
+        };
+        telegramPosterLogo.onerror = () => {
+            console.error("Telegram poster logo images/Telegram_logo.svg.webp could not be loaded.");
+            if (currentTemplate === "telegram-promo") {
+                statusEl.textContent = "Telegram logosi images/Telegram_logo.svg.webp faylidan yuklanmadi.";
+            }
+        };
+        telegramPosterLogo.src = "./images/Telegram_logo.svg.webp";
+        matchdayHomeLogo.onload = () => {
+            const row = rows[0];
+            if (currentTemplate === "matchday-poster" && row && !row.homeEdited && !row.homeLogoEdited) {
+                row.homeLogo = matchdayHomeLogo;
+                renderInputs();
+                drawPoster();
+            }
+        };
+        matchdayAwayLogo.onload = () => {
+            const row = rows[0];
+            if (currentTemplate === "matchday-poster" && row && !row.awayEdited && !row.awayLogoEdited) {
+                row.awayLogo = matchdayAwayLogo;
+                renderInputs();
+                drawPoster();
+            }
+        };
+        matchdayHomeLogo.src = "./images/epl/Liverpool-FC-logo-PNG-transparent-1024x1871.png";
+        matchdayAwayLogo.src = "./images/epl/Manchester_City_FC_badge.svg.webp";
+        matchdayPremierLeagueLogo.onload = () => {
+            if (currentTemplate === "matchday-poster" && !customBrandLogo) {
+                updateLogoPreview(brandLogoPreview, matchdayPremierLeagueLogo, "APL");
+                drawPoster();
+            }
+        };
+        matchdayPremierLeagueLogo.src = "./images/ligalar/english-premier-league.ee1e9b08.png";
         defaultBrandLogo.onload = () => {
-            if (!customBrandLogo && currentTemplate !== "football-lux") brandLogo = defaultBrandLogo;
+            if (!customBrandLogo && !["football-lux", "matchday-poster"].includes(currentTemplate)) brandLogo = defaultBrandLogo;
             rows.forEach(row => {
                 if (!row.homeLogo) row.homeLogo = defaultBrandLogo;
                 if (!row.awayLogo) row.awayLogo = defaultBrandLogo;
             });
-            updateLogoPreview(brandLogoPreview, brandLogo, currentTemplate === "football-lux" ? "KL" : "PP");
+            updateLogoPreview(brandLogoPreview,
+                currentTemplate === "matchday-poster" && !customBrandLogo &&
+                    matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ? matchdayPremierLeagueLogo : brandLogo,
+                currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" : "PP");
             if (workspaceInitialized) {
                 templatePreviewsRendered = false;
                 scheduleTemplatePreviews();
@@ -435,8 +501,10 @@ function getClubDisplayName(name) {
             }
             const newsTemplate = name === "football-news";
             const luxTemplate = name === "football-lux";
-            const photoTemplate = photoPosterTemplates.has(name);
-            const previousPhotoTemplate = previousTemplate === "result" || previousTemplate === "football-news" || previousTemplate === "football-lux";
+            const telegramTemplate = name === "telegram-promo";
+            const matchdayTemplate = name === "matchday-poster";
+            const photoTemplate = photoPosterTemplates.has(name) && !matchdayTemplate;
+            const previousPhotoTemplate = photoPosterTemplates.has(previousTemplate);
             if (photoTemplate && !previousPhotoTemplate) {
                 nonResultBackgroundOpacity = backgroundOpacityInput.value;
             }
@@ -445,7 +513,11 @@ function getClubDisplayName(name) {
                 opacityValue.textContent = `${nonResultBackgroundOpacity}%`;
             }
             currentTemplate = name;
-            if (photoPosterTemplates.has(name)) {
+            if (matchdayTemplate) {
+                backgroundOpacityInput.value = "100";
+                opacityValue.textContent = "100%";
+            }
+            if (photoPosterTemplates.has(name) && !telegramTemplate && !matchdayTemplate) {
                 photoTextSizeInput.value = String(photoTextSizes[name]);
                 photoTextSizeValue.textContent = `${photoTextSizes[name]}%`;
                 photoTextSizeLabel.textContent = name === "result" ? "Hisob o‘lchami" : "Asosiy matn o‘lchami";
@@ -455,10 +527,13 @@ function getClubDisplayName(name) {
                     defaultPosterBackground : null);
             backgroundImageInput.value = "";
             brandLogo = brandLogosByTemplate.get(name) ||
-                (name !== "football-lux" && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
+                (name !== "football-lux" && !matchdayTemplate && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
             customBrandLogo = brandLogosByTemplate.has(name);
             brandLogoInput.value = "";
-            updateLogoPreview(brandLogoPreview, brandLogo, luxTemplate ? "KL" : "PP");
+            updateLogoPreview(brandLogoPreview,
+                matchdayTemplate && !customBrandLogo && matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ?
+                    matchdayPremierLeagueLogo : brandLogo,
+                matchdayTemplate ? "APL" : luxTemplate ? "KL" : "PP");
             const example = examples[name];
             if (!example) return;
             applyTemplateDimensions(name);
@@ -471,15 +546,19 @@ function getClubDisplayName(name) {
                 home,
                 time,
                 away,
-                homeLogo: defaultTeamLogo,
-                awayLogo: defaultTeamLogo
+                homeLogo: matchdayTemplate && matchdayHomeLogo.complete && matchdayHomeLogo.naturalWidth ? matchdayHomeLogo : defaultTeamLogo,
+                awayLogo: matchdayTemplate && matchdayAwayLogo.complete && matchdayAwayLogo.naturalWidth ? matchdayAwayLogo : defaultTeamLogo
             }));
             brandCaptionInput.value = example.caption;
+            matchdayLeagueInput.value = "APL";
+            matchdayRoundInput.value = "6-tur";
+            matchdayStadiumInput.value = "Enfild stadioni";
             const resultTemplate = name === "result";
             const matchlistTemplate = name === "matchlist" || name === "today-results";
             footballNewsControls.hidden = !newsTemplate;
             matchlistLayoutControls.hidden = !matchlistTemplate;
             todayResultsThemeControls.hidden = name !== "today-results";
+            matchdayPosterControls.hidden = !matchdayTemplate;
             updateTodayResultsThemeOptions();
             document.getElementById("red-star-auto-field").hidden = name !== "sf";
             document.getElementById("today-results-auto-field").hidden = name !== "today-results";
@@ -488,33 +567,37 @@ function getClubDisplayName(name) {
             document.getElementById("result-auto-field").hidden = !resultTemplate;
             document.getElementById("poster-appearance-heading").hidden = newsTemplate;
             document.getElementById("poster-brand-logo-field").hidden = false;
+            document.getElementById("brand-logo-shape-field").hidden = matchdayTemplate;
             document.getElementById("poster-appearance-fields").hidden = false;
-            document.getElementById("background-opacity-field").hidden = photoTemplate;
-            document.getElementById("text-colors-heading").hidden = newsTemplate || luxTemplate;
-            document.querySelector(".color-fields").hidden = newsTemplate || luxTemplate;
-            photoTextSizeField.hidden = !photoTemplate;
-            document.getElementById("brand-logo-preview").title = luxTemplate ? "Kanal logotipini yuklang" :
-                newsTemplate ? "Pastki logoni yuklang" : "Shaxsiy logoni yuklang";
+            document.getElementById("background-opacity-field").hidden = photoTemplate || matchdayTemplate;
+            document.getElementById("text-colors-heading").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
+            document.querySelector(".color-fields").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
+            photoTextSizeField.hidden = !photoTemplate || telegramTemplate;
+            document.getElementById("brand-logo-preview").title = luxTemplate || matchdayTemplate ? "Kanal logotipini yuklang" :
+                newsTemplate ? "Pastki logoni yuklang" : telegramTemplate ? "Yuqori o‘ng burchakdagi logoni yuklang" : "Shaxsiy logoni yuklang";
             document.getElementById("poster-brand-logo-field").querySelector("label").textContent =
-                luxTemplate ? "Kanal logosi" : newsTemplate ? "Pastki logo" : "Poster logosi (shablonda alohida joylashadi)";
+                luxTemplate || matchdayTemplate ? "Kanal logosi" : newsTemplate ? "Pastki logo" :
+                    telegramTemplate ? "Yuqori o‘ng burchakdagi logo" : "Poster logosi (shablonda alohida joylashadi)";
             document.getElementById("clear-brand-logo").textContent =
-                luxTemplate ? "Logoni olib tashlash" : "Asl logoni tiklash";
+                "Asl logoni tiklash";
             document.getElementById("background-image-field").querySelector("label").textContent =
-                luxTemplate ? "Asosiy rasm" : "Fon rasmi";
+                luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : "Fon rasmi";
             document.getElementById("matches-hint").textContent = resultTemplate || name === "today-results" ? "Klub nomi, hisob va logo — o‘zingiz ham tahrirlang" : "Jamoa nomi, vaqt va logo";
-            document.getElementById("add-row").hidden = photoTemplate;
+            document.getElementById("matches-section-label").hidden = photoTemplate && !matchdayTemplate;
+            rowsEl.hidden = photoTemplate && !matchdayTemplate;
+            document.querySelector(".editor-actions").hidden = photoTemplate || matchdayTemplate;
             ["row-color-field", "time-background-field"].forEach(id => {
-                document.getElementById(id).hidden = photoTemplate;
+                document.getElementById(id).hidden = photoTemplate || matchdayTemplate;
             });
-            document.getElementById("time-color-field").hidden = resultTemplate || newsTemplate || luxTemplate;
-            document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate;
-            document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate;
-            document.getElementById("brand-logo-size-field").hidden = false;
+            document.getElementById("time-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
+            document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
+            document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate || matchdayTemplate;
+            document.getElementById("brand-logo-size-field").hidden = telegramTemplate || matchdayTemplate;
             document.getElementById("brand-logo-size-field").querySelector("label").childNodes[0].textContent =
                 luxTemplate ? "Kanal logosi o‘lchami " : "Logo o‘lchami ";
-            document.getElementById("editor-hint").hidden = photoTemplate;
-            document.getElementById("title-field").hidden = resultTemplate;
-            document.getElementById("date-field").hidden = resultTemplate || luxTemplate;
+            document.getElementById("editor-hint").hidden = photoTemplate || matchdayTemplate;
+            document.getElementById("title-field").hidden = resultTemplate || telegramTemplate || matchdayTemplate;
+            document.getElementById("date-field").hidden = resultTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
             document.getElementById("date-field").style.gridColumn = "";
             document.getElementById("editor-hint").textContent = matchlistTemplate
                 ? "Jadval ko‘rinishini 1 yoki 2 ustun qilib tanlang."
@@ -545,11 +628,26 @@ function getClubDisplayName(name) {
             }
             document.getElementById("matches-section-label").hidden = photoTemplate;
             rowsEl.hidden = photoTemplate;
-            document.querySelector(".editor-actions").hidden = photoTemplate;
+            document.querySelector(".editor-actions").hidden = photoTemplate || matchdayTemplate;
             document.getElementById("background-image-field").hidden = false;
-            backgroundColorInput.closest(".field").hidden = newsTemplate || luxTemplate;
-            document.getElementById("brand-logo-hint").textContent = newsTemplate || luxTemplate ? example.logoPlacement :
+            backgroundColorInput.closest(".field").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate;
+            document.getElementById("brand-logo-shape-field").hidden = matchdayTemplate;
+            document.getElementById("brand-logo-size-field").hidden = telegramTemplate || matchdayTemplate;
+            document.getElementById("brand-caption-field").querySelector("label").textContent =
+                telegramTemplate ? "Telegram manzili" : "Logo yonidagi yozuv";
+            document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate || matchdayTemplate;
+            document.getElementById("background-image-field").querySelector("label").textContent =
+                telegramTemplate ? "Orqa fon rasmi" : luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : "Fon rasmi";
+            document.getElementById("brand-logo-hint").textContent = newsTemplate || luxTemplate || matchdayTemplate ? example.logoPlacement :
                 resultTemplate ? "PitchPlan logosi suratdagi 433 belgisi o‘rnida chiqadi." : example.logoPlacement;
+            if (telegramTemplate) {
+                document.getElementById("brand-logo-hint").textContent =
+                    "O‘zingizning logongizni tanlang. U posterning yuqori o‘ng burchagida chiqadi.";
+            }
+            if (matchdayTemplate) {
+                document.getElementById("brand-logo-hint").textContent =
+                        "Kanal logotipi yuqori markazda joylashadi; yuklangan logo Premier League belgisining o‘rnini egallaydi.";
+            }
             customTextColors.clear();
             Object.entries(themes[name].textColors).forEach(([key, color]) => {
                 textColorInputs[key].value = color;
@@ -575,7 +673,7 @@ function getClubDisplayName(name) {
                 brandLogoSizeInput.value = "80";
                 brandLogoSizeValue.textContent = "80%";
             }
-            if (photoPosterTemplates.has(template)) {
+            if (photoPosterTemplates.has(template) && template !== "telegram-promo") {
                 photoTextSizes[template] = 100;
                 photoTextSizeInput.value = "100";
                 photoTextSizeValue.textContent = "100%";
@@ -599,9 +697,10 @@ function getClubDisplayName(name) {
         function applyTemplateDimensions(name) {
             const isNews = name === "football-news";
             const isLux = name === "football-lux";
-            const dimensions = isLux ? { width: 1000, height: 1000 } : isNews ? footballNewsRatios[footballNewsRatio] :
+            const isMatchday = name === "matchday-poster";
+            const dimensions = isMatchday ? { width: 900, height: 1200 } : isLux ? { width: 1000, height: 1000 } : isNews ? footballNewsRatios[footballNewsRatio] :
                 name === "result" ? { width: 1000, height: 1000 } : { width: 1000, height: 1200 };
-            const aspectRatio = isLux || name === "result" ? "1:1" : isNews ? footballNewsRatio : "5:6";
+            const aspectRatio = isMatchday ? "3:4" : isLux || name === "result" ? "1:1" : isNews ? footballNewsRatio : "5:6";
             const separator = aspectRatio.indexOf(":");
             const aspectStyle = `${aspectRatio.slice(0, separator)} / ${aspectRatio.slice(separator + 1)}`;
             canvas.width = dimensions.width;
@@ -663,7 +762,7 @@ function getClubDisplayName(name) {
                 const awayInput = item.querySelector(".away-team input[type='text']");
                 const homeLogoLabel = item.querySelector(".home-logo");
                 const awayLogoLabel = item.querySelector(".away-logo");
-                item.querySelector(".remove-row").hidden = resultTemplate;
+                item.querySelector(".remove-row").hidden = resultTemplate || currentTemplate === "matchday-poster";
                 homeInput.addEventListener("input", event => {
                     row.home = event.target.value;
                     row.homeEdited = true;
@@ -1109,6 +1208,7 @@ function getClubDisplayName(name) {
             if (!target || !image) return;
             target.row[target.key] = image;
             target.row[`${target.key}Custom`] = true;
+            target.row[target.key === "homeLogo" ? "homeLogoEdited" : "awayLogoEdited"] = true;
             updateLogoPreview(target.label, image, target.key === "homeLogo" ? target.row.home : target.row.away);
             drawPoster();
             statusEl.textContent = "Jamoa logosi posterga qo‘shildi.";
@@ -1313,6 +1413,8 @@ function getClubDisplayName(name) {
                 const row = rows[target.rowIndex];
                 if (!row) return;
                 row[target.type] = value;
+                if (target.type === "home") row.homeEdited = true;
+                if (target.type === "away") row.awayEdited = true;
                 const rowElement = rowsEl.children[target.rowIndex];
                 if (rowElement) {
                     const selector = target.type === "home" ? ".home-team input[type='text']" :
@@ -1417,6 +1519,8 @@ function getClubDisplayName(name) {
             else if (currentTemplate === "result") drawResultPoster(theme, width, height);
             else if (currentTemplate === "football-news") drawFootballNewsPoster(width, height);
             else if (currentTemplate === "football-lux") drawFootballLuxPoster(width, height);
+            else if (currentTemplate === "telegram-promo") drawTelegramPromoPoster(width, height);
+            else if (currentTemplate === "matchday-poster") drawMatchdayPoster(width, height);
             else if (currentTemplate === "today-results") drawTodayResultsPoster(width, height);
             else if (currentTemplate === "matchlist") drawMatchListPoster(theme, width, height);
             else drawJfPoster(theme, width, height);
@@ -1649,6 +1753,371 @@ function getClubDisplayName(name) {
             addPosterHitRegion("title", width * .08, startY, width * .9, lineHeight * lines.length);
         }
 
+        function drawTelegramPromoPoster(width, height) {
+            const scale = width / 1000;
+            const logoSize = 75.6 * scale;
+            const logoX = width - 24 * scale - logoSize;
+            const logoY = 24 * scale;
+            if (brandLogo) {
+                drawImageWithLogoShape(brandLogo, logoX, logoY, logoSize, logoSize);
+            } else {
+                drawBrandLogo(logoX + logoSize / 2, logoY, logoSize);
+            }
+            addPosterHitRegion("brandLogo", logoX, logoY, logoSize, logoSize);
+
+            const iconSize = 52 * scale;
+            const iconTextGap = 10 * scale;
+            const footerY = height - 94 * scale;
+            const address = (brandCaptionInput.value.trim() || "@telegram").toLocaleUpperCase("uz-UZ");
+            const maxTextWidth = width * .68;
+            ctx.font = `650 ${29 * scale}px "Segoe UI Variable", "Segoe UI", Arial, sans-serif`;
+            const textWidth = Math.min(ctx.measureText(address).width, maxTextWidth);
+            const groupWidth = iconSize + iconTextGap + textWidth;
+            const iconX = (width - groupWidth) / 2;
+            const iconY = footerY - iconSize / 2;
+            const textX = iconX + iconSize + iconTextGap;
+            ctx.save();
+            ctx.globalAlpha = .4;
+            if (telegramPosterLogo.complete && telegramPosterLogo.naturalWidth) {
+                drawImageContain(telegramPosterLogo, iconX, iconY, iconSize, iconSize);
+            }
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = `650 ${29 * scale}px "Segoe UI Variable", "Segoe UI", Arial, sans-serif`;
+            ctx.letterSpacing = `${.35 * scale}px`;
+            ctx.shadowColor = "rgba(0,0,0,.72)";
+            ctx.shadowBlur = 5 * scale;
+            ctx.fillText(address, textX, footerY, maxTextWidth);
+            ctx.restore();
+            addPosterHitRegion("caption", textX - 4 * scale, footerY - iconSize / 2,
+                textWidth + 8 * scale, iconSize);
+        }
+
+        function drawMatchdayPoster(width, height) {
+            const scale = width / 900;
+            const row = rows[0] || { home: "", away: "", time: "", homeLogo: null, awayLogo: null };
+            const center = width / 2;
+            const league = matchdayLeagueInput.value.trim().toLocaleUpperCase("uz-UZ") || "APL";
+            const round = matchdayRoundInput.value.trim() || "6-tur";
+            const homeName = row.home.trim().toLocaleUpperCase("uz-UZ");
+            const awayName = row.away.trim().toLocaleUpperCase("uz-UZ");
+
+            const split = ctx.createLinearGradient(0, 0, width, 0);
+            split.addColorStop(0, "rgba(230,0,18,.56)");
+            split.addColorStop(.46, "rgba(230,0,18,.1)");
+            split.addColorStop(.5, "rgba(0,98,202,.1)");
+            split.addColorStop(1, "rgba(0,98,202,.58)");
+            ctx.fillStyle = split;
+            ctx.fillRect(0, 0, width, height * .75);
+
+            ctx.save();
+            ctx.lineJoin = "round";
+            [
+                { color: "rgba(255,37,52,.78)", points: [[0, 64], [82, 108], [106, 79], [142, 161], [177, 136], [226, 244], [274, 220], [308, 329]] },
+                { color: "rgba(48,177,255,.82)", points: [[900, 52], [824, 102], [790, 79], [751, 170], [713, 144], [675, 249], [634, 228], [598, 336]] }
+            ].forEach(bolt => {
+                ctx.strokeStyle = bolt.color;
+                ctx.shadowColor = bolt.color;
+                ctx.shadowBlur = 18 * scale;
+                ctx.lineWidth = 6 * scale;
+                ctx.beginPath();
+                bolt.points.forEach(([x, y], index) => {
+                    if (index === 0) ctx.moveTo(x * scale, y * scale);
+                    else ctx.lineTo(x * scale, y * scale);
+                });
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = "rgba(255,255,255,.92)";
+                ctx.lineWidth = 1.5 * scale;
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            const topShade = ctx.createLinearGradient(0, 0, 0, height * .35);
+            topShade.addColorStop(0, "rgba(0,0,0,.68)");
+            topShade.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = topShade;
+            ctx.fillRect(0, 0, width, height * .35);
+
+            const playerFade = ctx.createLinearGradient(0, height * .3, 0, height * .76);
+            playerFade.addColorStop(0, "rgba(0,0,0,0)");
+            playerFade.addColorStop(.4, "rgba(0,0,0,.28)");
+            playerFade.addColorStop(.8, "rgba(0,0,0,.72)");
+            playerFade.addColorStop(1, "rgba(0,0,0,.94)");
+            ctx.fillStyle = playerFade;
+            ctx.fillRect(0, height * .3, width, height * .46);
+
+            const watermarkY = 128 * scale;
+            ctx.save();
+            ctx.globalAlpha = .18;
+            if (row.homeLogo && row.homeLogo.complete !== false) {
+                drawImageContain(row.homeLogo, -72 * scale, watermarkY, 270 * scale, 270 * scale);
+            }
+            if (row.awayLogo && row.awayLogo.complete !== false) {
+                drawImageContain(row.awayLogo, width - 198 * scale, watermarkY, 270 * scale, 270 * scale);
+            }
+            ctx.restore();
+
+            ctx.save();
+            ctx.globalAlpha = .3;
+            ctx.fillStyle = "#ffffff";
+            for (let index = 0; index < 11; index += 1) {
+                const x = (index * 91 + 13) * scale;
+                const y = (index % 3 === 0 ? 71 : 208) * scale;
+                ctx.fillRect(x, y, 2 * scale, 22 * scale);
+                ctx.beginPath();
+                ctx.arc(x + 1 * scale, y, 11 * scale, Math.PI, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+
+            const markX = center - 56 * scale;
+            const markY = 22 * scale;
+            if (customBrandLogo && brandLogo) {
+                drawImageContain(brandLogo, markX, markY, 112 * scale, 96 * scale);
+            } else if (matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth) {
+                ctx.save();
+                ctx.filter = "brightness(0) invert(1)";
+                drawImageContain(matchdayPremierLeagueLogo, markX, markY, 112 * scale, 96 * scale);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = "#ffffff";
+                ctx.font = `900 ${32 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(league, center, 64 * scale);
+            }
+            addPosterHitRegion("brandLogo", markX, markY, 112 * scale, 96 * scale);
+            if (customBrandLogo && brandLogo) {
+                ctx.fillStyle = "rgba(255,255,255,.91)";
+                ctx.font = `750 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                ctx.fillText(league, center, 119 * scale, width * .5);
+            } else {
+                ctx.fillStyle = "#ffffff";
+                ctx.font = `800 ${20 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "top";
+                ctx.fillText("Premier", center, 116 * scale);
+                ctx.fillText("League", center, 138 * scale);
+            }
+
+            ctx.save();
+            ctx.globalAlpha = .96;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(0,0,0,.7)";
+            ctx.shadowBlur = 12 * scale;
+            ctx.font = `italic 900 ${133 * scale}px "Arial Black", Impact, "Bebas Neue", sans-serif`;
+            ctx.letterSpacing = `${-5 * scale}px`;
+            ctx.translate(center, 493 * scale);
+            ctx.rotate(-.035);
+            ctx.fillText("MATCHDAY", 0, 0, width * .96);
+            ctx.restore();
+
+            ctx.save();
+            ctx.globalAlpha = .78;
+            ctx.strokeStyle = "rgba(255,255,255,.82)";
+            ctx.lineCap = "round";
+            ctx.lineWidth = 4 * scale;
+            [-52, 38, 82].forEach((offset, index) => {
+                ctx.beginPath();
+                ctx.moveTo((78 + index * 9) * scale, (494 + offset) * scale);
+                ctx.lineTo((333 + index * 7) * scale, (470 + offset) * scale);
+                ctx.stroke();
+            });
+            ctx.restore();
+
+            const crestSize = 128 * scale;
+            const crestY = 650 * scale;
+            const leftCrestX = 292 * scale - crestSize / 2;
+            const rightCrestX = 608 * scale - crestSize / 2;
+            [leftCrestX, rightCrestX].forEach((x, index) => {
+                ctx.save();
+                ctx.shadowColor = index === 0 ? "rgba(247,25,38,.8)" : "rgba(0,135,255,.8)";
+                ctx.shadowBlur = 25 * scale;
+                ctx.fillStyle = "rgba(0,0,0,.34)";
+                ctx.beginPath();
+                ctx.arc(x + crestSize / 2, crestY + crestSize / 2, crestSize * .58, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+            if (row.homeLogo && row.homeLogo.complete !== false) drawImageContain(row.homeLogo, leftCrestX, crestY, crestSize, crestSize);
+            if (row.awayLogo && row.awayLogo.complete !== false) drawImageContain(row.awayLogo, rightCrestX, crestY, crestSize, crestSize);
+            addPosterHitRegion("homeLogo", leftCrestX, crestY, crestSize, crestSize, 0);
+            addPosterHitRegion("awayLogo", rightCrestX, crestY, crestSize, crestSize, 0);
+
+            const brushY = 827 * scale;
+            ctx.save();
+            ctx.fillStyle = "#ef101d";
+            ctx.beginPath();
+            ctx.moveTo(107 * scale, brushY);
+            ctx.lineTo(156 * scale, (brushY - 12 * scale));
+            ctx.lineTo(730 * scale, (brushY - 3 * scale));
+            ctx.lineTo(785 * scale, (brushY + 24 * scale));
+            ctx.lineTo(744 * scale, (brushY + 59 * scale));
+            ctx.lineTo(157 * scale, (brushY + 51 * scale));
+            ctx.lineTo(96 * scale, (brushY + 29 * scale));
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "rgba(15,0,0,.35)";
+            ctx.fillRect(112 * scale, (brushY + 46 * scale), 640 * scale, 3 * scale);
+            ctx.restore();
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `italic 900 ${31 * scale}px "Arial Black", Impact, "Bebas Neue", sans-serif`;
+            ctx.fillText(`${homeName}  —  ${awayName}`, center, brushY + 26 * scale, 620 * scale);
+            addPosterHitRegion("home", 125 * scale, brushY - 10 * scale, 286 * scale, 72 * scale, 0);
+            addPosterHitRegion("away", 443 * scale, brushY - 10 * scale, 345 * scale, 72 * scale, 0);
+
+            const lowerShade = ctx.createLinearGradient(0, 884 * scale, 0, height);
+            lowerShade.addColorStop(0, "rgba(7,5,13,.72)");
+            lowerShade.addColorStop(1, "rgba(4,4,10,.9)");
+            ctx.fillStyle = lowerShade;
+            ctx.fillRect(0, 884 * scale, width, height - 884 * scale);
+
+            const detailY = 920 * scale;
+            const iconColor = "#ffffff";
+            ctx.save();
+            ctx.strokeStyle = iconColor;
+            ctx.fillStyle = iconColor;
+            ctx.lineWidth = 3.5 * scale;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+            ctx.beginPath();
+            ctx.moveTo(216 * scale, (detailY - 14 * scale));
+            ctx.lineTo(235 * scale, (detailY - 14 * scale));
+            ctx.lineTo(231 * scale, (detailY + 1 * scale));
+            ctx.quadraticCurveTo(225 * scale, detailY + 10 * scale, 220 * scale, detailY + 1 * scale);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(215 * scale, (detailY - 11 * scale));
+            ctx.lineTo(209 * scale, (detailY - 11 * scale));
+            ctx.lineTo(210 * scale, (detailY - 4 * scale));
+            ctx.quadraticCurveTo(212 * scale, detailY, 219 * scale, detailY);
+            ctx.moveTo(236 * scale, (detailY - 11 * scale));
+            ctx.lineTo(242 * scale, (detailY - 11 * scale));
+            ctx.lineTo(241 * scale, (detailY - 4 * scale));
+            ctx.quadraticCurveTo(239 * scale, detailY, 232 * scale, detailY);
+            ctx.moveTo(224 * scale, (detailY + 8 * scale));
+            ctx.lineTo(224 * scale, (detailY + 15 * scale));
+            ctx.moveTo(217 * scale, (detailY + 15 * scale));
+            ctx.lineTo(231 * scale, (detailY + 15 * scale));
+            ctx.stroke();
+            ctx.restore();
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `750 ${22 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(league, 252 * scale, detailY, 110 * scale);
+            ctx.fillStyle = "rgba(255,255,255,.48)";
+            ctx.fillRect(365 * scale, (detailY - 17 * scale), 2 * scale, 34 * scale);
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `650 ${22 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(round, 383 * scale, detailY, 110 * scale);
+
+            const stadiumX = 445 * scale;
+            const stadiumY = detailY;
+            ctx.save();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3 * scale;
+            ctx.lineJoin = "round";
+            ctx.beginPath();
+            ctx.moveTo(stadiumX, (stadiumY + 10 * scale));
+            ctx.lineTo(stadiumX, (stadiumY - 4 * scale));
+            ctx.lineTo(stadiumX + 25 * scale, (stadiumY - 16 * scale));
+            ctx.lineTo(stadiumX + 50 * scale, (stadiumY - 4 * scale));
+            ctx.lineTo(stadiumX + 50 * scale, (stadiumY + 10 * scale));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(stadiumX + 8 * scale, (stadiumY + 9 * scale));
+            ctx.lineTo(stadiumX + 8 * scale, (stadiumY - 2 * scale));
+            ctx.lineTo(stadiumX + 42 * scale, (stadiumY - 2 * scale));
+            ctx.lineTo(stadiumX + 42 * scale, (stadiumY + 9 * scale));
+            ctx.stroke();
+            ctx.restore();
+            ctx.textAlign = "left";
+            ctx.font = `650 ${20 * scale}px "Segoe UI", Arial, sans-serif`;
+            const stadiumText = matchdayStadiumInput.value.trim() || "Stadion nomi";
+            const stadiumMatch = stadiumText.match(/^(.*?)(\s+stadioni)$/i);
+            const stadiumLabel = stadiumMatch ?
+                `"${stadiumMatch[1]}"${stadiumMatch[2]}` : `"${stadiumText}"`;
+            ctx.fillText(stadiumLabel, 510 * scale, stadiumY, 340 * scale);
+
+            ctx.save();
+            ctx.fillStyle = "rgba(9,5,12,.94)";
+            ctx.beginPath();
+            ctx.moveTo(0, 1070 * scale);
+            ctx.lineTo(width, 1070 * scale);
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "rgba(206,12,28,.9)";
+            for (let index = 0; index < 8; index += 1) {
+                const x = (35 + index * 126) * scale;
+                const y = (1055 + (index % 3) * 24) * scale;
+                ctx.fillRect(x, y, 2 * scale, 73 * scale);
+                ctx.beginPath();
+                ctx.moveTo(x + 2 * scale, y + 4 * scale);
+                ctx.lineTo(x + 44 * scale, y + 13 * scale);
+                ctx.lineTo(x + 36 * scale, y + 40 * scale);
+                ctx.lineTo(x + 2 * scale, y + 32 * scale);
+                ctx.closePath();
+                ctx.fill();
+            }
+            ctx.fillStyle = "#050509";
+            for (let index = 0; index < 54; index += 1) {
+                const x = (index * 19) * scale;
+                const y = (1135 + (index % 5) * 7) * scale;
+                const radius = (5 + index % 5) * scale;
+                ctx.beginPath();
+                ctx.arc(x, y, radius, Math.PI, 0);
+                ctx.fill();
+                ctx.fillRect(x - radius, y, radius * 2, 90 * scale);
+            }
+            ctx.restore();
+
+            const time = row.time.trim() || "20:30";
+            const timeText = `Bugun, ${time} da`;
+            const timeY = 1005 * scale;
+            ctx.save();
+            ctx.fillStyle = "#f7f7f7";
+            ctx.beginPath();
+            ctx.moveTo(252 * scale, (timeY - 29 * scale));
+            ctx.lineTo(655 * scale, (timeY - 31 * scale));
+            ctx.lineTo(706 * scale, (timeY - 11 * scale));
+            ctx.lineTo(682 * scale, (timeY + 27 * scale));
+            ctx.lineTo(270 * scale, (timeY + 31 * scale));
+            ctx.lineTo(238 * scale, (timeY + 7 * scale));
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillStyle = "#0a111a";
+            ctx.beginPath();
+            ctx.arc(292 * scale, timeY, 22 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 3 * scale;
+            ctx.beginPath();
+            ctx.arc(292 * scale, timeY, 11 * scale, 0, Math.PI * 2);
+            ctx.moveTo(292 * scale, (timeY - 7 * scale));
+            ctx.lineTo(292 * scale, timeY);
+            ctx.lineTo(299 * scale, (timeY + 4 * scale));
+            ctx.stroke();
+            ctx.restore();
+            ctx.fillStyle = "#111820";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = `italic 850 ${30 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillText(timeText, 476 * scale, timeY, 330 * scale);
+            addPosterHitRegion("time", 315 * scale, (timeY - 34 * scale), 390 * scale, 70 * scale, 0);
+        }
+
         function openWorkspaceDatabase() {
             if (!window.indexedDB) return Promise.reject(new Error("Bu brauzerda avtomatik saqlash qo‘llab-quvvatlanmaydi."));
             if (!workspaceDatabasePromise) {
@@ -1695,6 +2164,9 @@ function getClubDisplayName(name) {
                 title: titleInput.value,
                 date: dateInput.value,
                 caption: brandCaptionInput.value,
+                matchdayLeague: matchdayLeagueInput.value,
+                matchdayRound: matchdayRoundInput.value,
+                matchdayStadium: matchdayStadiumInput.value,
                 goals: goalScorersInput.value,
                 rows: rows.map(row => ({
                     home: row.home,
@@ -1818,13 +2290,20 @@ function getClubDisplayName(name) {
             titleInput.value = snapshot.title;
             dateInput.value = snapshot.date;
             brandCaptionInput.value = snapshot.caption;
+            matchdayLeagueInput.value = snapshot.matchdayLeague || "APL";
+            matchdayRoundInput.value = snapshot.matchdayRound || "6-tur";
+            matchdayStadiumInput.value = snapshot.matchdayStadium || "Enfild stadioni";
             goalScorersInput.value = snapshot.goals;
             rows = snapshot.rows.map((row, index) => ({
                 home: row.home,
                 time: row.time,
                 away: row.away,
                 homeLogo: rowLogos[index * 2],
-                awayLogo: rowLogos[index * 2 + 1]
+                awayLogo: rowLogos[index * 2 + 1],
+                homeEdited: true,
+                awayEdited: true,
+                homeLogoEdited: true,
+                awayLogoEdited: true
             }));
             backgroundImage = savedBackground ||
                 (photoPosterTemplates.has(currentTemplate) && defaultPosterBackground.complete && defaultPosterBackground.naturalWidth ?
@@ -1833,7 +2312,8 @@ function getClubDisplayName(name) {
             else backgroundImagesByTemplate.delete(currentTemplate);
             backgroundImageInput.value = "";
             brandLogo = snapshot.customBrandLogo ? savedBrand :
-                snapshot.template !== "football-lux" && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
+                snapshot.template !== "football-lux" && snapshot.template !== "matchday-poster" &&
+                defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
             customBrandLogo = Boolean(snapshot.customBrandLogo);
             brandLogoShape = snapshot.brandLogoShape === "circle" ? "circle" : "square";
             updateBrandLogoShapeOptions();
@@ -1859,7 +2339,10 @@ function getClubDisplayName(name) {
             customBackgroundColor = Boolean(snapshot.customBackground);
             customTextColors.clear();
             snapshot.customText.forEach(key => customTextColors.add(key));
-            updateLogoPreview(brandLogoPreview, brandLogo, currentTemplate === "football-lux" ? "KL" : "PP");
+            updateLogoPreview(brandLogoPreview,
+                currentTemplate === "matchday-poster" && !customBrandLogo && matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ?
+                    matchdayPremierLeagueLogo : brandLogo,
+                currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" : "PP");
             updateLogoPreview(leagueLogoPreview, leagueLogo, "PL");
             showAppSection("home", { navigate: false });
             renderInputs();
@@ -2889,6 +3372,9 @@ function getClubDisplayName(name) {
                 title: titleInput.value,
                 date: dateInput.value,
                 caption: brandCaptionInput.value,
+                matchdayLeague: matchdayLeagueInput.value,
+                matchdayRound: matchdayRoundInput.value,
+                matchdayStadium: matchdayStadiumInput.value,
                 goals: goalScorersInput.value,
                 leagueLogo,
                 background: backgroundColorInput.value,
@@ -2909,6 +3395,9 @@ function getClubDisplayName(name) {
             titleInput.value = state.title;
             dateInput.value = state.date;
             brandCaptionInput.value = state.caption;
+            matchdayLeagueInput.value = state.matchdayLeague;
+            matchdayRoundInput.value = state.matchdayRound;
+            matchdayStadiumInput.value = state.matchdayStadium;
             goalScorersInput.value = state.goals;
             leagueLogo = state.leagueLogo;
             backgroundColorInput.value = state.background;
@@ -3136,6 +3625,9 @@ function getClubDisplayName(name) {
         titleInput.addEventListener("input", drawPoster);
         dateInput.addEventListener("input", drawPoster);
         brandCaptionInput.addEventListener("input", drawPoster);
+        [matchdayLeagueInput, matchdayRoundInput, matchdayStadiumInput].forEach(input =>
+            input.addEventListener("input", drawPoster)
+        );
         goalScorersInput.addEventListener("input", drawPoster);
         autoResultButton?.addEventListener("click", async () => {
             const matches = await getRecentCompletedResultMatches();
@@ -3345,9 +3837,10 @@ function getClubDisplayName(name) {
                 brandLogo = image;
                 customBrandLogo = true;
                 brandLogosByTemplate.set(currentTemplate, image);
-                updateLogoPreview(brandLogoPreview, image, currentTemplate === "football-lux" ? "KL" : "PP");
+                updateLogoPreview(brandLogoPreview, image,
+                        currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" : "PP");
                 drawPoster();
-                statusEl.textContent = currentTemplate === "football-lux" ?
+                statusEl.textContent = ["football-lux", "matchday-poster"].includes(currentTemplate) ?
                     `Kanal logosi posterga ${brandLogoShape === "circle" ? "doira shaklida" : "kvadrat shaklida"} qo‘shildi.` :
                     `Shaxsiy logo posterga ${brandLogoShape === "circle" ? "doira shaklida" : "kvadrat shaklida"} qo‘shildi.`;
             }, event.target);
@@ -3372,13 +3865,18 @@ function getClubDisplayName(name) {
         document.getElementById("clear-brand-logo").addEventListener("click", () => {
             customBrandLogo = false;
             brandLogosByTemplate.delete(currentTemplate);
-            brandLogo = currentTemplate !== "football-lux" && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ?
+            brandLogo = currentTemplate !== "football-lux" && currentTemplate !== "matchday-poster" &&
+                defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ?
                 defaultBrandLogo : null;
             brandLogoInput.value = "";
-            updateLogoPreview(brandLogoPreview, brandLogo, currentTemplate === "football-lux" ? "KL" : "PP");
+            updateLogoPreview(brandLogoPreview,
+                currentTemplate === "matchday-poster" && matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ?
+                    matchdayPremierLeagueLogo : brandLogo,
+                currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" : "PP");
             drawPoster();
             statusEl.textContent = currentTemplate === "football-lux" ?
-                "Kanal logosi olib tashlandi." : "PitchPlan standart logosi tiklandi.";
+                "Kanal logosi olib tashlandi." : currentTemplate === "matchday-poster" ?
+                    "Premier League belgisi tiklandi." : "PitchPlan standart logosi tiklandi.";
         });
         brandLogoSizeInput.addEventListener("input", () => {
             brandLogoSizeValue.textContent = `${brandLogoSizeInput.value}%`;

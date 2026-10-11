@@ -159,6 +159,26 @@
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
+                <button type="button" class="template-card" data-template="telegram-promo" aria-label="TELEGRAM POSTER shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="600" aria-label="TELEGRAM POSTER shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">TELEGRAM POSTER</span>
+                        <span class="template-card-description">Fon rasmi, yuqori o‘ngda logo va pastda Telegram manzili</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
+                <button type="button" class="template-card" data-template="matchday-poster" aria-label="SPORT UZ MATCHDAY shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="667" aria-label="SPORT UZ MATCHDAY shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">SPORT UZ MATCHDAY</span>
+                        <span class="template-card-description">APL o‘yini uchun futbolchilar, klublar va matchday tafsilotlari</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
                 <button type="button" class="template-card" data-template="matchlist" aria-label="RUBY MATCHDAY shablonini tanlash va tahrirlash">
                     <span class="template-card-image">
                         <canvas class="template-preview" width="500" height="600" aria-label="RUBY MATCHDAY shabloni ko‘rinishi"></canvas>
@@ -342,6 +362,11 @@
                             <button type="button" class="football-news-ratio-option" data-ratio="7:5" aria-label="7:5 nisbat" aria-pressed="false">7:5</button>
                         </div>
                     </div>
+                </div>
+                <div class="field-grid" id="matchday-poster-controls" hidden>
+                    <div class="field"><label for="matchday-league">Liga nomi</label><input id="matchday-league" type="text" maxlength="32" value="APL"></div>
+                    <div class="field"><label for="matchday-round">Tur raqami</label><input id="matchday-round" type="text" maxlength="16" value="6-tur"></div>
+                    <div class="field"><label for="matchday-stadium">Stadion nomi</label><input id="matchday-stadium" type="text" maxlength="40" value="Enfild stadioni"></div>
                 </div>
                 <div class="field" id="matchlist-layout-controls" hidden>
                     <span class="field-label" id="matchlist-layout-label">Jadval ustunlari</span>
@@ -549,7 +574,7 @@
     </dialog>
 
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=54" defer></script>
+    <script src="js/app.js?v=61" defer></script>
     <script src="js/live-matches.js?v=32" defer></script>
     <script src="js/standings.js?v=11" defer></script>
 </body>
