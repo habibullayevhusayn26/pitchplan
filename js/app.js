@@ -1941,16 +1941,22 @@ function getClubDisplayName(name) {
             }
             if (playerStatsWatermarkEnabled) {
                 if (defaultBrandLogo.complete && defaultBrandLogo.naturalWidth) {
-                    ctx.save();
-                    ctx.globalAlpha = 0.28;
                     const watermarkWidth = 104 * scale;
                     const watermarkHeight = 66 * scale;
-                    drawImageContain(
+                    const watermarkX = width - watermarkWidth - 18 * scale;
+                    const watermarkY = (height - watermarkHeight) / 2;
+                    drawLiquidGlassBox(watermarkX, watermarkY, watermarkWidth, watermarkHeight, 18 * scale);
+                    ctx.save();
+                    ctx.globalAlpha = 1;
+                    const logoInsetX = watermarkWidth * 0.08;
+                    const logoInsetY = watermarkHeight * 0.08;
+                    drawImageContainWithOutline(
                         defaultBrandLogo,
-                        width - watermarkWidth - 18 * scale,
-                        (height - watermarkHeight) / 2,
-                        watermarkWidth,
-                        watermarkHeight
+                        watermarkX + logoInsetX,
+                        watermarkY + logoInsetY,
+                        watermarkWidth - logoInsetX * 2,
+                        watermarkHeight - logoInsetY * 2,
+                        1.5 * scale
                     );
                     ctx.restore();
                 }
