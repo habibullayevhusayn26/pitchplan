@@ -1,3 +1,12 @@
+const defaultPlayerStatsRows = [
+    ["100ta", "to‘pga teginish", ""],
+    ["71ta", "aniq pas", ""],
+    ["8ta", "fol ishlatishga majbur qilish", ""],
+    ["6ta", "to‘pni qaytarib olish", ""],
+    ["2ta", "vaziyat yaratish", ""],
+    ["1ta", "golli uzatma", ""]
+];
+
 const examples = {
     jf: {
         title: "BUGUN BO'LIB O'TADIGAN ASOSIY UCHRASHUVLAR RO'YXATI",
@@ -85,6 +94,13 @@ const examples = {
             ["LIVERPOOL", "20:30", "MANCHESTER CITY"]
         ]
     },
+    "football-stats": {
+        title: "Elliot Anderson",
+        date: "Liverpool'ga qarshi",
+        caption: "FUTGOL",
+        logoPlacement: "Yuqori chap burchakdagi logo, markaziy matn va pastki ishonch logosi.",
+        rows: defaultPlayerStatsRows
+    },
     "monthly-club-fixtures": {
         title: "MATCH SCHEDULE",
         date: "",
@@ -119,6 +135,7 @@ const themes = {
     "football-lux": { bg: "#080b0d", row: "#ffffff", timeBg: "#ffffff", accent: "#e50914", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     "telegram-promo": { bg: "#111827", row: "#ffffff", timeBg: "#ffffff", accent: "#229ed9", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     "matchday-poster": { bg: "#10151e", row: "#ffffff", timeBg: "#ffffff", accent: "#22b8f0", textColors: { title: "#ffffff", date: "#ffffff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
+    "football-stats": { bg: "#0d1117", row: "#1c222d", timeBg: "#1a2633", accent: "#8cc7ff", textColors: { title: "#ffffff", date: "#d6e7ff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     "monthly-club-fixtures": { bg: "#07101c", row: "#101d2b", timeBg: "#101d2b", accent: "#39a9ff", textColors: { title: "#ffffff", date: "#a9d8ff", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } },
     matchlist: { bg: "#670b0d", row: "#202020", timeBg: "#101010", accent: "#f5eeee", textColors: { title: "#ffffff", date: "#f2caca", team: "#ffffff", time: "#ffffff", brand: "#ffffff" } }
 };
@@ -128,7 +145,7 @@ const footballNewsRatios = {
     "5:6": { width: 1000, height: 1200 },
     "7:5": { width: 1400, height: 1000 }
 };
-const photoPosterTemplates = new Set(["result", "football-news", "football-lux", "telegram-promo", "matchday-poster", "monthly-club-fixtures"]);
+const photoPosterTemplates = new Set(["result", "football-news", "football-lux", "football-stats", "telegram-promo", "matchday-poster", "monthly-club-fixtures"]);
 const leagueLogoFiles = {
     "premier-league": [
         ["AFC Bournemouth", "AFC_Bournemouth_(2013).svg.webp"],
@@ -296,6 +313,8 @@ function getClubDisplayName(name) {
         const matchlistLayoutOptions = document.querySelectorAll(".matchlist-layout-option");
         const todayResultsThemeControls = document.getElementById("today-results-theme-controls");
         const todayResultsThemeOptions = document.querySelectorAll(".today-results-theme-option");
+        const redStarThemeControls = document.getElementById("red-star-theme-controls");
+        const redStarThemeOptions = document.querySelectorAll(".red-star-theme-option");
         const brandLogoInput = document.getElementById("brand-logo");
         const brandLogoPreview = document.getElementById("brand-logo-preview");
         const leagueLogoInput = document.getElementById("league-logo");
@@ -358,9 +377,36 @@ function getClubDisplayName(name) {
         let footballNewsRatio = "5:6";
         let footballLuxLogoSize = 80;
         let nonLuxBrandLogoSize = brandLogoSizeInput.value;
-        let photoTextSizes = { result: 100, "football-news": 100, "football-lux": 100 };
+        let photoTextSizes = { result: 100, "football-news": 100, "football-lux": 100, "football-stats": 100 };
         let matchlistColumns = 1;
         let todayResultsTheme = "current";
+        let redStarTheme = "current";
+        const redStarThemes = {
+            current: {
+                background: themes.sf.bg,
+                row: themes.sf.row,
+                timeBackground: themes.sf.timeBg,
+                colors: themes.sf.textColors
+            },
+            green: {
+                background: "#071400",
+                row: "#f7f2ed",
+                timeBackground: "#99F400",
+                colors: { title: "#ffffff", date: "#99F400", team: "#171717", time: "#071400", brand: "#99F400" }
+            },
+            "white-blue": {
+                background: "#f5f9ff",
+                row: "#ffffff",
+                timeBackground: "#03529D",
+                colors: { title: "#03529D", date: "#03529D", team: "#10243a", time: "#ffffff", brand: "#03529D" }
+            },
+            "blue-red": {
+                background: "#030C2E",
+                row: "#0c1942",
+                timeBackground: "#D90429",
+                colors: { title: "#ffffff", date: "#D90429", team: "#ffffff", time: "#ffffff", brand: "#D90429" }
+            }
+        };
         const todayResultsThemes = {
             current: { accent: "#ff168b", overlay: "rgba(35, 0, 42, .34)", background: ["#390044", "#21002c", "#110018"], card: "rgba(43, 0, 51, .82)", score: "rgba(19, 0, 27, .9)", text: "#fff2fa", muted: "#f1b6d4" },
             "real-madrid": { accent: "#febe10", background: ["#00529f", "#074a8b", "#003b7a"], card: "rgba(255, 255, 255, .96)", score: "#00529f", text: "#003b7a", muted: "#febe10" },
@@ -563,13 +609,17 @@ function getClubDisplayName(name) {
             titleInput.value = example.title;
             dateInput.value = example.date;
             const defaultTeamLogo = defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
-            rows = example.rows.map(([home, time, away]) => ({
-                home,
-                time,
-                away,
-                homeLogo: matchdayTemplate && matchdayHomeLogo.complete && matchdayHomeLogo.naturalWidth ? matchdayHomeLogo : defaultTeamLogo,
-                awayLogo: matchdayTemplate && matchdayAwayLogo.complete && matchdayAwayLogo.naturalWidth ? matchdayAwayLogo : defaultTeamLogo
-            }));
+            if (name === "football-stats") {
+                rows = example.rows.map(([value, label]) => [String(value || ""), String(label || "")]);
+            } else {
+                rows = example.rows.map(([home, time, away]) => ({
+                    home,
+                    time,
+                    away,
+                    homeLogo: matchdayTemplate && matchdayHomeLogo.complete && matchdayHomeLogo.naturalWidth ? matchdayHomeLogo : defaultTeamLogo,
+                    awayLogo: matchdayTemplate && matchdayAwayLogo.complete && matchdayAwayLogo.naturalWidth ? matchdayAwayLogo : defaultTeamLogo
+                }));
+            }
             brandCaptionInput.value = example.caption;
             matchdayLeagueInput.value = "APL";
             matchdayRoundInput.value = "6-tur";
@@ -579,6 +629,7 @@ function getClubDisplayName(name) {
             footballNewsControls.hidden = !newsTemplate;
             matchlistLayoutControls.hidden = !matchlistTemplate;
             todayResultsThemeControls.hidden = name !== "today-results";
+            redStarThemeControls.hidden = name !== "sf";
             matchdayPosterControls.hidden = !matchdayTemplate;
             monthlyFixturesControls.hidden = !monthlyTemplate;
             updateTodayResultsThemeOptions();
@@ -587,13 +638,14 @@ function getClubDisplayName(name) {
             updateMatchlistLayoutOptions();
             document.getElementById("result-controls").hidden = !resultTemplate;
             document.getElementById("result-auto-field").hidden = !resultTemplate;
+            const statsEditorTemplate = name === "football-stats";
             document.getElementById("poster-appearance-heading").hidden = newsTemplate || monthlyTemplate;
             document.getElementById("poster-brand-logo-field").hidden = false;
             document.getElementById("brand-logo-shape-field").hidden = matchdayTemplate;
             document.getElementById("poster-appearance-fields").hidden = false;
             document.getElementById("background-opacity-field").hidden = photoTemplate || matchdayTemplate;
-            document.getElementById("text-colors-heading").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
-            document.querySelector(".color-fields").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
+            document.getElementById("text-colors-heading").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate || statsEditorTemplate;
+            document.querySelector(".color-fields").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate || statsEditorTemplate;
             photoTextSizeField.hidden = !photoTemplate || telegramTemplate || monthlyTemplate;
             document.getElementById("brand-logo-preview").title = luxTemplate || matchdayTemplate || monthlyTemplate ? "Kanal logotipini yuklang" :
                 newsTemplate ? "Pastki logoni yuklang" : telegramTemplate ? "Yuqori o‘ng burchakdagi logoni yuklang" : "Shaxsiy logoni yuklang";
@@ -605,14 +657,14 @@ function getClubDisplayName(name) {
             document.getElementById("background-image-field").querySelector("label").textContent =
                 luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : monthlyTemplate ? "Poster foni" : "Fon rasmi";
             document.getElementById("matches-hint").textContent = resultTemplate || name === "today-results" ? "Klub nomi, hisob va logo — o‘zingiz ham tahrirlang" : "Jamoa nomi, vaqt va logo";
-            document.getElementById("matches-section-label").hidden = photoTemplate && !matchdayTemplate;
-            rowsEl.hidden = photoTemplate && !matchdayTemplate;
-            document.querySelector(".editor-actions").hidden = photoTemplate || matchdayTemplate || monthlyTemplate;
+            document.getElementById("matches-section-label").hidden = photoTemplate && !statsEditorTemplate;
+            rowsEl.hidden = photoTemplate && !statsEditorTemplate;
+            document.querySelector(".editor-actions").hidden = (photoTemplate && !statsEditorTemplate) || matchdayTemplate || monthlyTemplate;
             ["row-color-field", "time-background-field"].forEach(id => {
                 document.getElementById(id).hidden = photoTemplate || matchdayTemplate || monthlyTemplate;
             });
-            document.getElementById("time-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
-            document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
+            document.getElementById("time-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate || statsEditorTemplate;
+            document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate || statsEditorTemplate;
             document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate || matchdayTemplate;
             document.getElementById("brand-caption-field").querySelector("label").textContent =
                 monthlyTemplate ? "Kanal nomi" : "Logo yonidagi yozuv";
@@ -624,7 +676,7 @@ function getClubDisplayName(name) {
             document.getElementById("brand-logo-size-field").hidden = telegramTemplate || matchdayTemplate || monthlyTemplate;
             document.getElementById("brand-logo-size-field").querySelector("label").childNodes[0].textContent =
                 luxTemplate ? "Kanal logosi o‘lchami " : "Logo o‘lchami ";
-            document.getElementById("editor-hint").hidden = photoTemplate || matchdayTemplate || monthlyTemplate;
+            document.getElementById("editor-hint").hidden = (photoTemplate && !statsEditorTemplate) || matchdayTemplate || monthlyTemplate;
             document.getElementById("title-field").hidden = resultTemplate || telegramTemplate || matchdayTemplate;
             document.getElementById("date-field").hidden = resultTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
             document.getElementById("date-field").style.gridColumn = "";
@@ -655,36 +707,11 @@ function getClubDisplayName(name) {
                 backgroundOpacityInput.value = "100";
                 opacityValue.textContent = "100%";
             }
-            document.getElementById("matches-section-label").hidden = photoTemplate;
-            rowsEl.hidden = photoTemplate;
-            document.querySelector(".editor-actions").hidden = photoTemplate || matchdayTemplate || monthlyTemplate;
-            document.getElementById("background-image-field").hidden = false;
-            backgroundColorInput.closest(".field").hidden = newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate;
-            document.getElementById("brand-logo-shape-field").hidden = matchdayTemplate;
-            document.getElementById("brand-logo-size-field").hidden = telegramTemplate || matchdayTemplate || monthlyTemplate;
-            document.getElementById("brand-caption-field").querySelector("label").textContent =
-                monthlyTemplate ? "Kanal nomi" : telegramTemplate ? "Telegram manzili" : "Logo yonidagi yozuv";
-            document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate || matchdayTemplate;
-            document.getElementById("background-image-field").querySelector("label").textContent =
-                telegramTemplate ? "Orqa fon rasmi" : luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : monthlyTemplate ? "Poster foni" : "Fon rasmi";
-            document.getElementById("brand-logo-hint").textContent = newsTemplate || luxTemplate || matchdayTemplate || monthlyTemplate ? example.logoPlacement :
-                resultTemplate ? "PitchPlan logosi suratdagi 433 belgisi o‘rnida chiqadi." : example.logoPlacement;
-            if (telegramTemplate) {
-                document.getElementById("brand-logo-hint").textContent =
-                    "O‘zingizning logongizni tanlang. U posterning yuqori o‘ng burchagida chiqadi.";
-            }
-            if (matchdayTemplate) {
-                document.getElementById("brand-logo-hint").textContent =
-                        "Kanal logotipi yuqori markazda joylashadi; yuklangan logo Premier League belgisining o‘rnini egallaydi.";
-            }
-            if (monthlyTemplate) {
-                document.getElementById("brand-logo-hint").textContent =
-                    "Kanal logosi va nomi posterning eng pastki qismida chiqadi.";
-            }
             customTextColors.clear();
             Object.entries(themes[name].textColors).forEach(([key, color]) => {
                 textColorInputs[key].value = color;
             });
+            if (name === "sf") applyRedStarTheme();
             renderInputs();
             drawPoster();
         }
@@ -711,6 +738,7 @@ function getClubDisplayName(name) {
                 footballNewsEffectColor = "#000000";
                 footballNewsRatio = "5:6";
             }
+            if (template === "sf") redStarTheme = "current";
             if (template === "football-lux") {
                 footballLuxLogoSize = 80;
                 brandLogoSizeInput.value = "80";
@@ -741,15 +769,17 @@ function getClubDisplayName(name) {
             const isNews = name === "football-news";
             const isLux = name === "football-lux";
             const isMatchday = name === "matchday-poster";
+            const isStats = name === "football-stats";
             const dimensions = isMatchday ? { width: 900, height: 1200 } :
                 name === "monthly-club-fixtures" ? {
                     width: 1000,
                     height: Math.max(1100, Math.ceil(monthlyFixtures.length / 3) * 190 + 500)
                 } :
                     isLux ? { width: 1000, height: 1000 } : isNews ? footballNewsRatios[footballNewsRatio] :
+                isStats ? { width: 900, height: 1200 } :
                 name === "result" ? { width: 1000, height: 1000 } : { width: 1000, height: 1200 };
             const aspectRatio = isMatchday ? "3:4" : name === "monthly-club-fixtures" ? `1000:${dimensions.height}` :
-                isLux || name === "result" ? "1:1" : isNews ? footballNewsRatio : "5:6";
+                isLux || name === "result" ? "1:1" : isNews ? footballNewsRatio : isStats ? "3:4" : "5:6";
             const separator = aspectRatio.indexOf(":");
             const aspectStyle = `${aspectRatio.slice(0, separator)} / ${aspectRatio.slice(separator + 1)}`;
             canvas.width = dimensions.width;
@@ -785,8 +815,51 @@ function getClubDisplayName(name) {
             });
         }
 
+        function applyRedStarTheme() {
+            const palette = redStarThemes[redStarTheme] || redStarThemes.current;
+            backgroundColorInput.value = palette.background;
+            rowColorInput.value = palette.row;
+            timeBackgroundColorInput.value = palette.timeBackground;
+            customTextColors.clear();
+            Object.entries(palette.colors).forEach(([key, color]) => {
+                textColorInputs[key].value = color;
+            });
+            redStarThemeOptions.forEach(button => {
+                button.setAttribute("aria-pressed", String(button.dataset.sfTheme === redStarTheme));
+            });
+        }
+
         function renderInputs() {
             rowsEl.replaceChildren();
+            if (currentTemplate === "football-stats") {
+                rows.forEach((row, index) => {
+                    const item = document.createElement("div");
+                    item.className = "match-row stat-editor-row";
+                    const value = Array.isArray(row) ? row[0] : row.value || "";
+                    const label = Array.isArray(row) ? row[1] : row.label || "";
+                    item.innerHTML = `
+                        <label class="stat-editor-field">
+                            <span>Raqam ${index + 1}</span>
+                            <input type="text" maxlength="20" value="${escapeHtml(value)}" aria-label="${index + 1}-statistik raqam">
+                        </label>
+                        <label class="stat-editor-field">
+                            <span>Izoh ${index + 1}</span>
+                            <input type="text" maxlength="30" value="${escapeHtml(label)}" aria-label="${index + 1}-statistik izoh">
+                        </label>`;
+                    const valueInput = item.querySelectorAll("input")[0];
+                    const labelInput = item.querySelectorAll("input")[1];
+                    valueInput.addEventListener("input", event => {
+                        row[0] = event.target.value;
+                        drawPoster();
+                    });
+                    labelInput.addEventListener("input", event => {
+                        row[1] = event.target.value;
+                        drawPoster();
+                    });
+                    rowsEl.append(item);
+                });
+                return;
+            }
             rows.forEach((row, index) => {
                 const item = document.createElement("div");
                 item.className = "match-row";
@@ -1607,6 +1680,7 @@ function getClubDisplayName(name) {
             else if (currentTemplate === "result") drawResultPoster(theme, width, height);
             else if (currentTemplate === "football-news") drawFootballNewsPoster(width, height);
             else if (currentTemplate === "football-lux") drawFootballLuxPoster(width, height);
+            else if (currentTemplate === "football-stats") drawPlayerStatsPoster(width, height);
             else if (currentTemplate === "telegram-promo") drawTelegramPromoPoster(width, height);
             else if (currentTemplate === "matchday-poster") drawMatchdayPoster(width, height);
             else if (currentTemplate === "monthly-club-fixtures") drawMonthlyClubFixturesPoster(width, height);
@@ -1620,6 +1694,159 @@ function getClubDisplayName(name) {
                 thumbnailContext.drawImage(canvas, 0, 0, thumbnail.width, thumbnail.height);
             }
             scheduleWorkspaceSave();
+        }
+
+        function drawPlayerStatsPoster(width, height) {
+            const scale = width / 1000;
+            const imageFade = ctx.createLinearGradient(0, height * 0.38, 0, height);
+            imageFade.addColorStop(0, "rgba(7, 10, 15, 0.00)");
+            imageFade.addColorStop(0.28, "rgba(7, 10, 15, 0.10)");
+            imageFade.addColorStop(0.7, "rgba(7, 10, 15, 0.55)");
+            imageFade.addColorStop(1, "rgba(7, 10, 15, 0.96)");
+            if (backgroundImage && backgroundImage.complete && backgroundImage.naturalWidth) {
+                ctx.save();
+                ctx.globalAlpha = 0.92;
+                drawImageCover(backgroundImage, 0, 0, width, height);
+                ctx.fillStyle = imageFade;
+                ctx.fillRect(0, 0, width, height);
+                ctx.restore();
+            } else {
+                const fallback = ctx.createLinearGradient(0, 0, width, height);
+                fallback.addColorStop(0, "#1b2a2c");
+                fallback.addColorStop(0.28, "#111d24");
+                fallback.addColorStop(1, "#050a11");
+                ctx.fillStyle = fallback;
+                ctx.fillRect(0, 0, width, height);
+            }
+            const dark = ctx.createLinearGradient(0, height * 0.45, 0, height);
+            dark.addColorStop(0, "rgba(6, 10, 18, 0.00)");
+            dark.addColorStop(0.45, "rgba(6, 10, 18, 0.18)");
+            dark.addColorStop(1, "rgba(6, 10, 18, 0.82)");
+            ctx.fillStyle = dark;
+            ctx.fillRect(0, 0, width, height);
+
+            const captionText = (brandCaptionInput.value || examples["football-stats"].caption || "FUTGOL").trim() || "FUTGOL";
+            ctx.fillStyle = "#ffffff";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.font = `900 ${78 * scale}px "Segoe UI", Arial, sans-serif`;
+            const captionX = 42 * scale;
+            const captionY = 82 * scale;
+            const captionWidth = ctx.measureText(captionText.toUpperCase()).width;
+            ctx.fillText(captionText.toUpperCase(), captionX, captionY);
+            addPosterHitRegion("caption", captionX, captionY - 38 * scale, Math.min(captionWidth + 18 * scale, width * .5), 58 * scale);
+
+            const title = (titleInput.value || "Elliot Anderson").trim();
+            const subtitle = (dateInput.value || "Liverpool'ga qarshi").trim();
+            const infoY = 680 * scale;
+            const infoW = 708 * scale;
+            const infoX = (width - infoW) / 2;
+            const infoH = 128 * scale;
+            ctx.save();
+            ctx.filter = "blur(42px)";
+            ctx.fillStyle = "rgba(13, 18, 25, 0.64)";
+            ctx.beginPath();
+            ctx.roundRect(infoX, infoY, infoW, infoH, 32 * scale);
+            ctx.fill();
+            ctx.filter = "none";
+            ctx.fillStyle = "rgba(255,255,255,0.10)";
+            ctx.beginPath();
+            ctx.roundRect(infoX, infoY, infoW, infoH, 32 * scale);
+            ctx.fill();
+            ctx.fillStyle = "rgba(255,255,255,0.06)";
+            ctx.beginPath();
+            ctx.roundRect(infoX + 8 * scale, infoY + 8 * scale, infoW - 16 * scale, infoH - 16 * scale, 24 * scale);
+            ctx.fill();
+            ctx.strokeStyle = "rgba(255,255,255,0.36)";
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#ffffff";
+            ctx.font = `800 ${50 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.shadowColor = "rgba(255,255,255,0.18)";
+            ctx.shadowBlur = 18 * scale;
+            ctx.shadowOffsetY = 0;
+            ctx.fillText(title, width / 2, infoY + 40 * scale);
+            ctx.font = `700 ${36 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.fillStyle = "rgba(255,255,255,0.96)";
+            ctx.shadowColor = "rgba(255,255,255,0.10)";
+            ctx.shadowBlur = 10 * scale;
+            ctx.fillText(subtitle, width / 2, infoY + 88 * scale);
+            ctx.restore();
+
+            const stats = Array.isArray(rows) && rows.length ? rows : defaultPlayerStatsRows;
+            const listY = 860 * scale;
+            const statScale = 0.9;
+            const statWidth = 226 * scale * statScale;
+            const statGap = 18 * scale;
+            const boxHeight = 118 * scale * statScale;
+            const totalWidth = 3 * statWidth + 2 * statGap;
+            const startX = (width - totalWidth) / 2;
+            const boxes = stats.slice(0, 6);
+            boxes.forEach((item, index) => {
+                const col = index % 3;
+                const rowIndex = Math.floor(index / 3);
+                const x = startX + col * (statWidth + statGap);
+                const y = listY + rowIndex * (boxHeight + 22 * scale);
+                ctx.save();
+                ctx.shadowColor = "rgba(0, 0, 0, 0.42)";
+                ctx.shadowBlur = 28 * scale;
+                ctx.shadowOffsetY = 8 * scale;
+                ctx.filter = "blur(20px)";
+                ctx.fillStyle = "rgba(12,18,25,0.52)";
+                ctx.beginPath();
+                ctx.roundRect(x, y, statWidth, boxHeight, 30 * scale);
+                ctx.fill();
+                ctx.filter = "none";
+                ctx.fillStyle = "rgba(255,255,255,0.10)";
+                ctx.beginPath();
+                ctx.roundRect(x, y, statWidth, boxHeight, 30 * scale);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(255,255,255,0.34)";
+                ctx.lineWidth = 1.6 * scale;
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#ffffff";
+                ctx.font = `900 ${40 * scale}px "Segoe UI", Arial, sans-serif`;
+                const valueText = String(Array.isArray(item) ? item[0] : item.value || "");
+                ctx.fillText(valueText, x + statWidth / 2, y + 38 * scale, statWidth - 18 * scale);
+                const labelText = String(Array.isArray(item) ? item[1] : item.label || "").trim().toUpperCase();
+                const labelMaxWidth = statWidth - 20 * scale;
+                const labelFontSize = fitText(labelText, labelMaxWidth, 22 * scale, 700, 10 * scale, "Segoe UI");
+                ctx.font = `700 ${labelFontSize}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillStyle = "rgba(235,255,240,0.96)";
+                ctx.fillText(labelText, x + statWidth / 2, y + 88 * scale, labelMaxWidth);
+            });
+
+            const badgeWidth = 190 * scale;
+            const badgeX = width / 2 - badgeWidth / 2;
+            const badgeY = (listY + (boxHeight + 22 * scale) * 2 + boxHeight + 2 * scale);
+            if (brandLogo && brandLogo.complete && brandLogo.naturalWidth) {
+                ctx.save();
+                ctx.shadowBlur = 20 * scale;
+                ctx.shadowColor = "rgba(0,0,0,0.38)";
+                drawImageContain(brandLogo, badgeX, badgeY, badgeWidth, 64 * scale);
+                ctx.restore();
+            } else {
+                ctx.save();
+                ctx.fillStyle = "rgba(255,255,255,0.10)";
+                ctx.beginPath();
+                ctx.roundRect(badgeX, badgeY, badgeWidth, 64 * scale, 18 * scale);
+                ctx.fill();
+                ctx.restore();
+                ctx.fillStyle = "#ffffff";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.font = `900 ${30 * scale}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText("PITCHPLAN", width / 2, badgeY + 32 * scale);
+            }
         }
 
         function drawFootballNewsPoster(width, height) {
@@ -2289,6 +2516,7 @@ function getClubDisplayName(name) {
                 photoTextSizes,
                 matchlistColumns,
                 todayResultsTheme,
+                redStarTheme,
                 backgroundImage: imageSource(backgroundImage),
                 backgroundImages: Object.fromEntries([...backgroundImagesByTemplate, ...(backgroundImage ? [[currentTemplate, backgroundImage]] : [])].map(([template, image]) => [
                     template,
@@ -2366,7 +2594,7 @@ function getClubDisplayName(name) {
                 snapshot.footballNewsRatio : "5:6";
             footballLuxLogoSize = Number.isFinite(snapshot.footballLuxLogoSize) ?
                 Math.min(180, Math.max(30, snapshot.footballLuxLogoSize)) : 80;
-            photoTextSizes = Object.fromEntries(["result", "football-news", "football-lux"].map(template => [
+            photoTextSizes = Object.fromEntries(["result", "football-news", "football-lux", "football-stats"].map(template => [
                 template,
                 Number.isFinite(snapshot.photoTextSizes?.[template]) ?
                     Math.min(160, Math.max(50, snapshot.photoTextSizes[template])) : 100
@@ -2375,6 +2603,8 @@ function getClubDisplayName(name) {
             todayResultsTheme = Object.hasOwn(todayResultsThemes, snapshot.todayResultsTheme) ?
                 snapshot.todayResultsTheme : "current";
             updateTodayResultsThemeOptions();
+            redStarTheme = Object.hasOwn(redStarThemes, snapshot.redStarTheme) ? snapshot.redStarTheme : "current";
+            applyRedStarTheme();
             setTemplate(snapshot.template);
             const [savedBackground, savedBrand, savedLeague, ...rowLogos] = await Promise.all([
                 loadImageSource(snapshot.backgroundImage),
@@ -4341,6 +4571,17 @@ function getClubDisplayName(name) {
                 }
                 todayResultsTheme = selectedTheme;
                 updateTodayResultsThemeOptions();
+                drawPoster();
+            });
+        });
+        redStarThemeOptions.forEach(button => {
+            button.addEventListener("click", () => {
+                const selectedTheme = button.dataset.sfTheme;
+                if (currentTemplate !== "sf" || !Object.hasOwn(redStarThemes, selectedTheme)) {
+                    throw new Error("RED STAR FUTBOL posteri mavzusi yaroqsiz.");
+                }
+                redStarTheme = selectedTheme;
+                applyRedStarTheme();
                 drawPoster();
             });
         });

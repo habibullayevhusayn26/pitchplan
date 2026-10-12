@@ -258,6 +258,16 @@
             border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
         }
         .today-results-theme-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+        .red-star-theme-options { display: flex; flex-wrap: wrap; gap: 7px; }
+        .red-star-theme-option {
+            min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+            background: var(--panel); color: var(--muted); font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .red-star-theme-option:hover,
+        .red-star-theme-option[aria-pressed="true"] {
+            border-color: var(--blue); background: rgba(77,124,255,.12); color: var(--blue);
+        }
+        .red-star-theme-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
         .brand-logo-shape-options { display: flex; gap: 7px; }
         .brand-logo-shape-option {
             min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
@@ -352,7 +362,16 @@
             gap: 7px; align-items: center; min-width: 0; padding: 8px; border: 1px solid #2b394e; border-radius: 11px; background: #0d1725;
             transition: background-color .22s ease, border-color .22s ease, box-shadow .22s ease, backdrop-filter .22s ease;
         }
-        .match-row:hover {
+                .stat-editor-row {
+                    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end;
+                }
+                .stat-editor-field {
+                    display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 11px;
+                }
+                .stat-editor-field input {
+                    width: 100%; min-width: 0; height: 36px; padding: 0 8px; border: 1px solid #34435b; border-radius: 7px; outline: 0; background: #0c1523; color: var(--text); font-size: 12px;
+                }
+                .match-row:hover {
             border-color: rgba(157,190,255,.52);
             background-color: rgba(42,61,91,.68);
             backdrop-filter: blur(12px) saturate(145%);

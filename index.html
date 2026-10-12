@@ -179,6 +179,16 @@
                         <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
                     </span>
                 </button>
+                <button type="button" class="template-card" data-template="football-stats" aria-label="PLAYER STATS shablonini tanlash va tahrirlash">
+                    <span class="template-card-image">
+                        <canvas class="template-preview" width="500" height="667" aria-label="PLAYER STATS shabloni ko‘rinishi"></canvas>
+                    </span>
+                    <span class="template-card-details">
+                        <span class="template-card-title">PLAYER STATS</span>
+                        <span class="template-card-description">Futbolchi statistikasi, markaziy info bloki va pastki logo</span>
+                        <span class="template-card-action">Shablonni tahrirlash <span aria-hidden="true">→</span></span>
+                    </span>
+                </button>
                 <button type="button" class="template-card" data-template="monthly-club-fixtures" aria-label="Oylik klub uchrashuvlari shablonini tanlash va tahrirlash">
                     <span class="template-card-image">
                         <canvas class="template-preview" width="500" height="625" aria-label="Oylik klub uchrashuvlari shabloni ko‘rinishi"></canvas>
@@ -413,6 +423,15 @@
                     <div class="result-auto-row">
                         <button type="button" class="btn result-auto-button" id="auto-upcoming-matches-button">Avtomatik jadval</button>
                         <span class="hint-inline">Top-5 ligalardagi uchrashuvlarni vaqt oralig‘ini tanlab yuklaydi.</span>
+                    </div>
+                </div>
+                <div class="field" id="red-star-theme-controls" hidden>
+                    <span class="field-label" id="red-star-theme-label">RED STAR FUTBOL mavzusi</span>
+                    <div class="red-star-theme-options" role="group" aria-labelledby="red-star-theme-label">
+                        <button type="button" class="red-star-theme-option" data-sf-theme="current" aria-pressed="true">Hozirgi</button>
+                        <button type="button" class="red-star-theme-option" data-sf-theme="green" aria-pressed="false">Yashil</button>
+                        <button type="button" class="red-star-theme-option" data-sf-theme="white-blue" aria-pressed="false">Oq-ko‘k</button>
+                        <button type="button" class="red-star-theme-option" data-sf-theme="blue-red" aria-pressed="false">Ko‘k-qizil</button>
                     </div>
                 </div>
                 <div class="field result-auto-field" id="today-results-auto-field" hidden>
