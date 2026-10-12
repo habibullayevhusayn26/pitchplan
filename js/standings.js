@@ -14,10 +14,30 @@
     const tabs = [...document.querySelectorAll(".live-league-tab")];
     const liveView = document.getElementById("live-view");
     const downloadButton = document.getElementById("standings-download");
+    const topSixInput = document.getElementById("standings-top-six");
+    const logoInput = document.getElementById("standings-logo-input");
+    const logoUploadButton = document.getElementById("standings-logo-upload");
+    const logoCircleInput = document.getElementById("standings-logo-circle");
+    const logoShapeControl = document.querySelector(".standings-logo-shape-control");
     const railTitle = document.getElementById("standings-rail-title");
     const railSeason = document.getElementById("standings-rail-season");
     const railRound = document.getElementById("standings-rail-round");
     const leagueLogo = document.getElementById("standings-league-logo");
+    const brandLogoPreview = document.getElementById("standings-brand-logo");
+    const brandLogoStorageKey = "pitchplan-standings-channel-logo";
+    const brandLogoCircleStorageKey = "pitchplan-standings-channel-logo-circle";
+    let customBrandLogoSource = "";
+
+    function updateBrandLogoPreview(source) {
+        const hasCustomLogo = Boolean(source);
+        brandLogoPreview.classList.toggle("is-custom", hasCustomLogo);
+        brandLogoPreview.classList.toggle("is-circle", hasCustomLogo && logoCircleInput.checked);
+        brandLogoPreview.alt = hasCustomLogo ? "Kanal logosi" : "PitchPlan";
+        logoCircleInput.disabled = !hasCustomLogo;
+        logoShapeControl.classList.toggle("is-disabled", !hasCustomLogo);
+        if (source) brandLogoPreview.src = source;
+        else brandLogoPreview.src = "./images/pitchplan.png";
+    }
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
         "esp.1": "./images/ligalar/LaLiga_logo_2023.svg.webp",
@@ -275,17 +295,17 @@
         context.restore();
     }
 
-    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season, round, leagueCode) {
+    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season, round, leagueCode, customBrandLogo, customBrandLogoCircle) {
         const canvas = document.createElement("canvas");
         const width = 1000;
         const railWidth = 132;
         const panelX = 166;
-        const panelY = 42;
         const panelWidth = width - panelX - 38;
         const height = 1375;
         const headerHeight = 52;
-        const rowHeight = Math.min(62, (height - panelY - 112 - headerHeight) / rows.length);
+        const rowHeight = Math.min(rows.length <= 6 ? 96 : 62, (height - 42 - 112 - headerHeight) / rows.length);
         const panelHeight = headerHeight + rows.length * rowHeight;
+        const panelY = rows.length <= 6 ? (height - panelHeight) / 2 : 42;
         const outputScale = 2.16;
         canvas.width = Math.round(width * outputScale);
         canvas.height = Math.round(height * outputScale);
@@ -319,10 +339,41 @@
         context.fill();
         context.restore();
 
-        if (brandLogo) {
-            const brandWidth = 108;
-            const brandHeight = brandWidth * brandLogo.height / brandLogo.width;
-            context.drawImage(brandLogo, (railWidth - brandWidth) / 2, 24, brandWidth, brandHeight);
+        if (brandLogo && customBrandLogo) {
+            const logoSize = 56;
+            const logoX = (railWidth - logoSize) / 2;
+            const logoY = 24;
+            const radius = customBrandLogoCircle ? logoSize / 2 : 12;
+            context.save();
+            context.beginPath();
+            context.roundRect(logoX, logoY, logoSize, logoSize, radius);
+            context.shadowColor = "rgba(19,44,31,.5)";
+            context.shadowBlur = 12;
+            context.shadowOffsetY = 4;
+            context.fillStyle = "#fff";
+            context.fill();
+            context.shadowColor = "transparent";
+            context.clip();
+            const scale = Math.max(logoSize / brandLogo.width, logoSize / brandLogo.height);
+            const logoWidth = brandLogo.width * scale;
+            const logoHeight = brandLogo.height * scale;
+            context.drawImage(brandLogo, logoX + (logoSize - logoWidth) / 2, logoY + (logoSize - logoHeight) / 2, logoWidth, logoHeight);
+            context.restore();
+            context.save();
+            context.beginPath();
+            context.roundRect(logoX, logoY, logoSize, logoSize, radius);
+            context.strokeStyle = "rgba(255,255,255,.96)";
+            context.lineWidth = 3;
+            context.shadowColor = "rgba(19,44,31,.35)";
+            context.shadowBlur = 8;
+            context.shadowOffsetY = 3;
+            context.stroke();
+            context.restore();
+        } else if (brandLogo) {
+            const scale = Math.min(108 / brandLogo.width, 44 / brandLogo.height);
+            const brandWidth = brandLogo.width * scale;
+            const brandHeight = brandLogo.height * scale;
+            context.drawImage(brandLogo, (railWidth - brandWidth) / 2, 24 + (44 - brandHeight) / 2, brandWidth, brandHeight);
         } else {
             drawExportRoundRect(context, (railWidth - 68) / 2, 20, 68, 68, 19, "#fff");
             context.fillStyle = "#6554bb";
@@ -452,26 +503,30 @@
             setStatus("Avval jadval ma’lumotlari yuklanishini kuting.", true);
             return;
         }
-        const exportRows = currentRows.slice();
+        const exportTopSix = topSixInput.checked;
+        const exportRows = exportTopSix ? currentRows.slice(0, 6) : currentRows.slice();
         const exportLeagueCode = selectedLeague;
         const exportLeague = leagueName.textContent;
         const exportSeason = seasonLabel.textContent;
         const exportRound = currentRound;
+        const exportBrandLogoSource = customBrandLogoSource || new URL("./images/pitchplan.png", document.baseURI).href;
+        const exportCustomBrandLogo = Boolean(customBrandLogoSource);
+        const exportBrandLogoCircle = exportCustomBrandLogo && logoCircleInput.checked;
         downloadButton.disabled = true;
         setStatus("PNG yuklab olishga tayyorlanmoqda…");
         try {
             const [brandLogo, leagueBadge, ...logos] = await Promise.all([
-                loadExportLogo(new URL("./images/pitchplan.png", document.baseURI).href),
+                loadExportLogo(exportBrandLogoSource),
                 loadExportLogo(new URL(leagueAssets[exportLeagueCode], document.baseURI).href),
                 ...exportRows.map(team => loadExportLogo(team.logo))
             ]);
-            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode);
+            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode, exportCustomBrandLogo, exportBrandLogoCircle);
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
             });
             const safeLeague = exportLeague.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            const filename = `${safeLeague || "liga"}-${seasonLabel.textContent}-jadvali.png`;
+            const filename = `${safeLeague || "liga"}-${exportSeason}${exportTopSix ? "-top-6" : ""}-jadvali.png`;
             const result = await window.pitchplanSaveImage(blob, filename);
             setStatus(result.method === "share"
                 ? "Jadval ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
@@ -479,7 +534,7 @@
                     ? "Jadvalni saqlash bekor qilindi."
                     : result.method === "preview"
                         ? "Jadval rasmi yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
-                        : "Turnir jadvali PNG formatida yuklab olindi.");
+                        : `Turnir jadvali${exportTopSix ? " Top 6" : ""} PNG formatida yuklab olindi.`);
         } catch (error) {
             setStatus("Jadval rasmini yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
             console.error("Standings poster export failed:", error);
@@ -574,6 +629,65 @@
 
     document.getElementById("standings-refresh").addEventListener("click", refreshStandings);
     downloadButton.addEventListener("click", downloadStandingsPoster);
+    logoUploadButton.addEventListener("click", () => logoInput.click());
+    logoCircleInput.addEventListener("change", () => {
+        updateBrandLogoPreview(customBrandLogoSource);
+        try {
+            localStorage.setItem(brandLogoCircleStorageKey, String(logoCircleInput.checked));
+        } catch (error) {
+            console.error("Could not save the standings logo shape:", error);
+            setStatus("Logo shakli o‘zgardi, ammo brauzer xotirasida saqlanmadi.", true);
+        }
+    });
+    logoInput.addEventListener("change", () => {
+        const file = logoInput.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            setStatus("Kanal logosi uchun rasm faylini tanlang.", true);
+            logoInput.value = "";
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result !== "string") {
+                setStatus("Kanal logosi faylini o‘qib bo‘lmadi.", true);
+                return;
+            }
+            const image = new Image();
+            image.onload = () => {
+                customBrandLogoSource = reader.result;
+                updateBrandLogoPreview(customBrandLogoSource);
+                try {
+                    localStorage.setItem(brandLogoStorageKey, customBrandLogoSource);
+                } catch (error) {
+                    console.error("Could not save the standings channel logo:", error);
+                    setStatus("Logo yuklandi, ammo brauzer xotirasida saqlanmadi.", true);
+                }
+            };
+            image.onerror = () => {
+                setStatus("Tanlangan kanal logosi ochilmadi.", true);
+                logoInput.value = "";
+            };
+            image.src = reader.result;
+        };
+        reader.onerror = () => {
+            setStatus("Kanal logosi faylini o‘qib bo‘lmadi.", true);
+            logoInput.value = "";
+        };
+        reader.readAsDataURL(file);
+    });
+    try {
+        const storedLogo = localStorage.getItem(brandLogoStorageKey);
+        logoCircleInput.checked = localStorage.getItem(brandLogoCircleStorageKey) === "true";
+        if (storedLogo) {
+            customBrandLogoSource = storedLogo;
+        }
+        updateBrandLogoPreview(customBrandLogoSource);
+    } catch (error) {
+        console.error("Could not restore the standings channel logo:", error);
+        setStatus("Saqlangan kanal logosini o‘qib bo‘lmadi.", true);
+        updateBrandLogoPreview("");
+    }
     window.addEventListener("pitchplan:sectionchange", event => setActive(event.detail.section === "live"));
     document.addEventListener("visibilitychange", () => {
         if (document.hidden) {

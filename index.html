@@ -234,13 +234,17 @@
             <div class="standings-card-heading">
                 <div class="standings-accessible-title"><strong id="standings-league-name">Premier League</strong><span id="standings-season"></span></div>
                 <div class="standings-actions">
+                    <label class="standings-top-six-control"><input id="standings-top-six" type="checkbox"><span>Top 6 yuklab olish</span></label>
+                    <button type="button" class="btn standings-logo-upload" id="standings-logo-upload">＋ Kanal logosi</button>
+                    <input id="standings-logo-input" type="file" accept="image/*" hidden>
+                    <label class="standings-logo-shape-control"><input id="standings-logo-circle" type="checkbox" disabled><span>Dumaloq logo</span></label>
                     <button type="button" class="btn standings-download" id="standings-download" disabled>↓ PNG yuklab olish</button>
                     <button type="button" class="btn standings-refresh" id="standings-refresh" aria-label="Jadvalni yangilash">⟳ Yangilash</button>
                 </div>
             </div>
             <div class="standings-poster">
                 <aside class="standings-brand-rail" aria-label="PitchPlan liga va mavsum">
-                    <img src="./images/pitchplan.png" alt="PitchPlan" class="standings-brand-logo">
+                    <img src="./images/pitchplan.png" alt="PitchPlan" class="standings-brand-logo" id="standings-brand-logo">
                     <img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt="Liga logosi" class="standings-league-logo" id="standings-league-logo">
                     <div class="standings-rail-title" id="standings-rail-title">Premier League</div>
                     <div class="standings-rail-season" id="standings-rail-season"></div>

@@ -1805,7 +1805,21 @@
             }
             .standings-accessible-title { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; clip-path: inset(50%); }
             .standings-actions { display: flex; flex: 0 0 auto; gap: 8px; }
-            .standings-refresh, .standings-download { min-height: 37px; padding-inline: 12px; font-size: 11px; }
+            .standings-refresh, .standings-download, .standings-logo-upload { min-height: 37px; padding-inline: 12px; font-size: 11px; }
+            .standings-top-six-control {
+                display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line);
+                border-radius: 10px; color: var(--muted); font-size: 11px; font-weight: 750; white-space: nowrap;
+                cursor: pointer;
+            }
+            .standings-top-six-control input { accent-color: #6756bd; }
+            .standings-logo-shape-control {
+                display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--line);
+                border-radius: 10px; color: var(--muted); font-size: 11px; font-weight: 750; white-space: nowrap;
+                cursor: pointer;
+            }
+            .standings-logo-shape-control input { accent-color: #6756bd; }
+            .standings-logo-shape-control.is-disabled { opacity: .5; cursor: not-allowed; }
+            .standings-logo-upload { border-color: rgba(35,171,103,.28); background: rgba(35,171,103,.08); color: #238956; }
             .standings-download {
                 border-color: rgba(139,118,220,.4);
                 background: linear-gradient(125deg, rgba(121,96,232,.94), rgba(93,182,231,.9));
@@ -1857,6 +1871,17 @@
                 object-fit: contain;
                 box-shadow: none;
             }
+            .standings-brand-logo.is-custom {
+                width: 56px;
+                height: 56px;
+                padding: 2px;
+                border: 2px solid rgba(255,255,255,.92);
+                border-radius: 13px;
+                background: #fff;
+                object-fit: cover;
+                box-shadow: 0 5px 14px rgba(19,44,31,.35), 0 0 0 1px rgba(17,38,27,.22);
+            }
+            .standings-brand-logo.is-custom.is-circle { border-radius: 50%; }
             .standings-league-logo {
                 position: relative;
                 z-index: 1;
@@ -1964,8 +1989,9 @@
                 .match-h2h-item { grid-template-columns: 58px minmax(0,1fr) auto minmax(0,1fr); gap: 5px; font-size: 9px; }
                 .match-form-item { grid-template-columns: 24px minmax(0,1fr) auto auto; gap: 5px; }
                 .standings-card-heading { justify-content: stretch; }
-                .standings-actions { width: 100%; }
+                .standings-actions { width: 100%; flex-wrap: wrap; }
                 .standings-actions .btn { flex: 1; }
+                .standings-top-six-control, .standings-logo-shape-control { flex: 1 1 auto; justify-content: center; min-height: 37px; }
                 .standings-poster { grid-template-columns: 78px minmax(0, 1fr); border-radius: 16px; }
                 .standings-brand-rail { padding: 16px 6px; }
                 .standings-brand-logo { width: 62px; height: 20px; }
