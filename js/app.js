@@ -1,10 +1,10 @@
 const defaultPlayerStatsRows = [
-    ["100ta", "to‘pga teginish", ""],
-    ["71ta", "aniq pas", ""],
-    ["8ta", "fol ishlatishga majbur qilish", ""],
-    ["6ta", "to‘pni qaytarib olish", ""],
-    ["2ta", "vaziyat yaratish", ""],
-    ["1ta", "golli uzatma", ""]
+    ["39 ta", "To'pga teginish", ""],
+    ["22 ta", "Aniq pas", ""],
+    ["5 ta", "Dribling", ""],
+    ["8 ta", "Duellarda yutish", ""],
+    ["3 ta", "Key passes", ""],
+    ["1 ta", "Vaziyat yaratish", ""]
 ];
 
 const examples = {
@@ -95,9 +95,9 @@ const examples = {
         ]
     },
     "football-stats": {
-        title: "Elliot Anderson",
+        title: "Jeremy Doku",
         date: "Liverpool'ga qarshi",
-        caption: "FUTGOL",
+        caption: "PITCHPLAN",
         logoPlacement: "Yuqori chap burchakdagi logo, markaziy matn va pastki ishonch logosi.",
         rows: defaultPlayerStatsRows
     },
@@ -334,8 +334,12 @@ function getClubDisplayName(name) {
         const redStarPasswordInput = document.getElementById("red-star-password-input");
         const redStarPasswordError = document.getElementById("red-star-password-error");
         const redStarPasswordTitle = document.getElementById("red-star-password-title");
+        const redStarPasswordPrompt = redStarPasswordDialog.querySelector(".club-picker-header p");
+        const redStarPasswordSubmit = redStarPasswordForm.querySelector("button[type='submit']");
+        const removePlayerStatsWatermarkButton = document.getElementById("remove-player-stats-watermark");
         const redStarAccessStorageKey = "pitchplan-red-star-unlocked";
         let pendingProtectedTemplate = null;
+        const playerStatsWatermarkAction = "remove-player-stats-watermark";
         const brandLogoShapeOptions = document.querySelectorAll(".brand-logo-shape-option");
         const photoTextSizeField = document.getElementById("photo-text-size-field");
         const photoTextSizeInput = document.getElementById("photo-text-size");
@@ -368,6 +372,7 @@ function getClubDisplayName(name) {
         let backgroundImage = null;
         let backgroundImagesByTemplate = new Map();
         const defaultPosterBackground = new Image();
+        const playerStatsDefaultBackground = new Image();
         const todayResultsBackground = new Image();
         const telegramPosterLogo = new Image();
         const matchdayHomeLogo = new Image();
@@ -378,6 +383,7 @@ function getClubDisplayName(name) {
         let footballLuxLogoSize = 80;
         let nonLuxBrandLogoSize = brandLogoSizeInput.value;
         let photoTextSizes = { result: 100, "football-news": 100, "football-lux": 100, "football-stats": 100 };
+        let playerStatsWatermarkEnabled = true;
         let matchlistColumns = 1;
         let todayResultsTheme = "current";
         let redStarTheme = "current";
@@ -455,8 +461,8 @@ function getClubDisplayName(name) {
         defaultPosterBackground.onload = () => {
             if (photoPosterTemplates.has(currentTemplate) && !backgroundImage &&
                 !backgroundImagesByTemplate.has(currentTemplate)) {
-                backgroundImage = defaultPosterBackground;
-                if (workspaceInitialized) drawPoster();
+                backgroundImage = getDefaultPosterBackground(currentTemplate);
+                if (backgroundImage && workspaceInitialized) drawPoster();
             }
             templatePreviewsRendered = false;
             scheduleTemplatePreviews();
@@ -465,6 +471,22 @@ function getClubDisplayName(name) {
             statusEl.textContent = "Standart poster rasmi images/deffault.jpg yuklanmadi.";
         };
         defaultPosterBackground.src = "./images/deffault.jpg";
+        playerStatsDefaultBackground.onload = () => {
+            if (currentTemplate === "football-stats" && !backgroundImage &&
+                !backgroundImagesByTemplate.has(currentTemplate)) {
+                backgroundImage = playerStatsDefaultBackground;
+                if (workspaceInitialized) drawPoster();
+            }
+            templatePreviewsRendered = false;
+            scheduleTemplatePreviews();
+        };
+        playerStatsDefaultBackground.onerror = () => {
+            console.error("Default player-stats background images/doku.jpg could not be loaded.");
+            if (currentTemplate === "football-stats") {
+                statusEl.textContent = "Player Stats uchun images/doku.jpg foni yuklanmadi.";
+            }
+        };
+        playerStatsDefaultBackground.src = "./images/doku.jpg";
         todayResultsBackground.onload = () => {
             if (currentTemplate === "today-results" && workspaceInitialized) drawPoster();
             templatePreviewsRendered = false;
@@ -536,6 +558,19 @@ function getClubDisplayName(name) {
         };
         defaultBrandLogo.src = "./images/pitchplan.png";
 
+        function getDefaultPosterBackground(template) {
+            if (template === "football-stats") {
+                return playerStatsDefaultBackground.complete && playerStatsDefaultBackground.naturalWidth ?
+                    playerStatsDefaultBackground : null;
+            }
+            return defaultPosterBackground.complete && defaultPosterBackground.naturalWidth ?
+                defaultPosterBackground : null;
+        }
+
+        function isDefaultPosterBackground(image) {
+            return image === defaultPosterBackground || image === playerStatsDefaultBackground;
+        }
+
         function setTemplate(name) {
             const previousTemplate = currentTemplate;
             if (previousTemplate === "football-lux") {
@@ -555,7 +590,7 @@ function getClubDisplayName(name) {
                 brandLogoSizeInput.value = nonLuxBrandLogoSize;
             }
             brandLogoSizeValue.textContent = `${brandLogoSizeInput.value}%`;
-            if (previousTemplate && backgroundImage && backgroundImage !== defaultPosterBackground) {
+            if (previousTemplate && backgroundImage && !isDefaultPosterBackground(backgroundImage)) {
                 backgroundImagesByTemplate.set(previousTemplate, backgroundImage);
             } else if (previousTemplate) {
                 backgroundImagesByTemplate.delete(previousTemplate);
@@ -585,13 +620,20 @@ function getClubDisplayName(name) {
                 opacityValue.textContent = "100%";
             }
             if (photoPosterTemplates.has(name) && !telegramTemplate && !matchdayTemplate && !monthlyTemplate) {
+                const statsTemplate = name === "football-stats";
+                photoTextSizeInput.min = statsTemplate ? "30" : "50";
+                photoTextSizeInput.max = statsTemplate ? "100" : "160";
+                photoTextSizeInput.step = "5";
+                photoTextSizeLabel.textContent = statsTemplate ? "Brend yozuvi o‘lchami" :
+                    name === "result" ? "Hisob o‘lchami" : "Asosiy matn o‘lchami";
+                if (statsTemplate) {
+                    photoTextSizes[name] = Math.min(100, Math.max(30, photoTextSizes[name]));
+                }
                 photoTextSizeInput.value = String(photoTextSizes[name]);
                 photoTextSizeValue.textContent = `${photoTextSizes[name]}%`;
-                photoTextSizeLabel.textContent = name === "result" ? "Hisob o‘lchami" : "Asosiy matn o‘lchami";
             }
             backgroundImage = backgroundImagesByTemplate.get(name) ||
-                (photoPosterTemplates.has(name) && defaultPosterBackground.complete && defaultPosterBackground.naturalWidth ?
-                    defaultPosterBackground : null);
+                (photoPosterTemplates.has(name) ? getDefaultPosterBackground(name) : null);
             backgroundImageInput.value = "";
             brandLogo = brandLogosByTemplate.get(name) ||
                 (name !== "football-lux" && !matchdayTemplate && !monthlyTemplate && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
@@ -641,6 +683,8 @@ function getClubDisplayName(name) {
             const statsEditorTemplate = name === "football-stats";
             document.getElementById("poster-appearance-heading").hidden = newsTemplate || monthlyTemplate;
             document.getElementById("poster-brand-logo-field").hidden = false;
+            document.getElementById("player-stats-watermark-field").hidden = !statsEditorTemplate;
+            updatePlayerStatsWatermarkControl();
             document.getElementById("brand-logo-shape-field").hidden = matchdayTemplate;
             document.getElementById("poster-appearance-fields").hidden = false;
             document.getElementById("background-opacity-field").hidden = photoTemplate || matchdayTemplate;
@@ -667,7 +711,7 @@ function getClubDisplayName(name) {
             document.getElementById("brand-color-field").hidden = resultTemplate || newsTemplate || luxTemplate || telegramTemplate || matchdayTemplate || monthlyTemplate || statsEditorTemplate;
             document.getElementById("brand-caption-field").hidden = resultTemplate || newsTemplate || luxTemplate || matchdayTemplate;
             document.getElementById("brand-caption-field").querySelector("label").textContent =
-                monthlyTemplate ? "Kanal nomi" : "Logo yonidagi yozuv";
+                monthlyTemplate ? "Kanal nomi" : statsEditorTemplate ? "Poster brend yozuvi" : "Logo yonidagi yozuv";
             brandCaptionInput.placeholder = monthlyTemplate ? "Kanal nomini kiriting…" : "";
             if (monthlyTemplate) {
                 document.getElementById("clear-brand-logo").textContent = "Kanal logosini olib tashlash";
@@ -728,8 +772,7 @@ function getClubDisplayName(name) {
                 monthlyClubResults.replaceChildren();
                 monthlyFixturesRefresh.disabled = true;
             }
-            backgroundImage = photoPosterTemplates.has(template) &&
-                defaultPosterBackground.complete && defaultPosterBackground.naturalWidth ? defaultPosterBackground : null;
+            backgroundImage = photoPosterTemplates.has(template) ? getDefaultPosterBackground(template) : null;
             backgroundImagesByTemplate.delete(template);
             brandLogo = null;
             customBrandLogo = false;
@@ -739,6 +782,10 @@ function getClubDisplayName(name) {
                 footballNewsRatio = "5:6";
             }
             if (template === "sf") redStarTheme = "current";
+            if (template === "football-stats") {
+                playerStatsWatermarkEnabled = true;
+                updatePlayerStatsWatermarkControl();
+            }
             if (template === "football-lux") {
                 footballLuxLogoSize = 80;
                 brandLogoSizeInput.value = "80";
@@ -827,6 +874,12 @@ function getClubDisplayName(name) {
             redStarThemeOptions.forEach(button => {
                 button.setAttribute("aria-pressed", String(button.dataset.sfTheme === redStarTheme));
             });
+        }
+
+        function updatePlayerStatsWatermarkControl() {
+            removePlayerStatsWatermarkButton.disabled = !playerStatsWatermarkEnabled;
+            removePlayerStatsWatermarkButton.textContent = playerStatsWatermarkEnabled ?
+                "Watermarkni parol bilan olib tashlash" : "Watermark olib tashlangan";
         }
 
         function renderInputs() {
@@ -1725,11 +1778,11 @@ function getClubDisplayName(name) {
             ctx.fillStyle = dark;
             ctx.fillRect(0, 0, width, height);
 
-            const captionText = (brandCaptionInput.value || examples["football-stats"].caption || "FUTGOL").trim() || "FUTGOL";
+            const captionText = (brandCaptionInput.value || examples["football-stats"].caption || "PITCHPLAN").trim() || "PITCHPLAN";
             ctx.fillStyle = "#ffffff";
             ctx.textAlign = "left";
             ctx.textBaseline = "middle";
-            ctx.font = `900 ${78 * scale}px "Segoe UI", Arial, sans-serif`;
+            ctx.font = `900 ${78 * scale * photoTextSizes["football-stats"] / 100}px "Segoe UI", Arial, sans-serif`;
             const captionX = 42 * scale;
             const captionY = 82 * scale;
             const captionWidth = ctx.measureText(captionText.toUpperCase()).width;
@@ -1742,39 +1795,90 @@ function getClubDisplayName(name) {
             const infoW = 708 * scale;
             const infoX = (width - infoW) / 2;
             const infoH = 128 * scale;
-            ctx.save();
-            ctx.filter = "blur(42px)";
-            ctx.fillStyle = "rgba(13, 18, 25, 0.64)";
-            ctx.beginPath();
-            ctx.roundRect(infoX, infoY, infoW, infoH, 32 * scale);
-            ctx.fill();
-            ctx.filter = "none";
-            ctx.fillStyle = "rgba(255,255,255,0.10)";
-            ctx.beginPath();
-            ctx.roundRect(infoX, infoY, infoW, infoH, 32 * scale);
-            ctx.fill();
-            ctx.fillStyle = "rgba(255,255,255,0.06)";
-            ctx.beginPath();
-            ctx.roundRect(infoX + 8 * scale, infoY + 8 * scale, infoW - 16 * scale, infoH - 16 * scale, 24 * scale);
-            ctx.fill();
-            ctx.strokeStyle = "rgba(255,255,255,0.36)";
-            ctx.lineWidth = 1.5 * scale;
-            ctx.stroke();
-            ctx.restore();
+            const infoRadius = infoH / 2;
+            const drawLiquidGlassBox = (x, y, boxWidth, boxHeight, radius) => {
+                const blurPadding = 16 * scale;
+                const glassCanvas = document.createElement("canvas");
+                glassCanvas.width = Math.ceil(boxWidth + blurPadding * 2);
+                glassCanvas.height = Math.ceil(boxHeight + blurPadding * 2);
+                const glassContext = glassCanvas.getContext("2d");
+                if (!glassContext) throw new Error("Liquid glass box fonini chizib bo‘lmadi.");
+                glassContext.filter = `blur(${3 * scale}px)`;
+                glassContext.drawImage(
+                    canvas,
+                    x - blurPadding,
+                    y - blurPadding,
+                    glassCanvas.width,
+                    glassCanvas.height,
+                    0,
+                    0,
+                    glassCanvas.width,
+                    glassCanvas.height
+                );
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
+                ctx.clip();
+                ctx.drawImage(glassCanvas, x - blurPadding, y - blurPadding);
+                const glassTint = ctx.createLinearGradient(0, y, 0, y + boxHeight);
+                glassTint.addColorStop(0, "rgba(225, 245, 255, 0.27)");
+                glassTint.addColorStop(0.42, "rgba(20, 48, 76, 0.30)");
+                glassTint.addColorStop(1, "rgba(5, 18, 36, 0.44)");
+                ctx.fillStyle = glassTint;
+                ctx.fillRect(x, y, boxWidth, boxHeight);
+                const glassShine = ctx.createLinearGradient(0, y, 0, y + boxHeight * 0.58);
+                glassShine.addColorStop(0, "rgba(255,255,255,0.22)");
+                glassShine.addColorStop(0.55, "rgba(255,255,255,0.04)");
+                glassShine.addColorStop(1, "rgba(255,255,255,0)");
+                ctx.fillStyle = glassShine;
+                ctx.fillRect(x, y, boxWidth, boxHeight * 0.58);
+                const liquidGlow = ctx.createRadialGradient(
+                    x + boxWidth * 0.22,
+                    y + boxHeight * 0.05,
+                    0,
+                    x + boxWidth * 0.22,
+                    y + boxHeight * 0.05,
+                    boxWidth * 0.72
+                );
+                liquidGlow.addColorStop(0, "rgba(255,255,255,0.20)");
+                liquidGlow.addColorStop(1, "rgba(255,255,255,0)");
+                ctx.fillStyle = liquidGlow;
+                ctx.fillRect(x, y, boxWidth, boxHeight);
+                ctx.restore();
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
+                ctx.strokeStyle = "rgba(255,255,255,0.52)";
+                ctx.lineWidth = 1.8 * scale;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.roundRect(x + 3 * scale, y + 3 * scale, boxWidth - 6 * scale, boxHeight - 6 * scale, radius - 3 * scale);
+                ctx.strokeStyle = "rgba(255,255,255,0.12)";
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.roundRect(x + 1.5 * scale, y + 1.5 * scale, boxWidth - 3 * scale, boxHeight - 3 * scale, radius - 1.5 * scale);
+                ctx.strokeStyle = "rgba(190,225,255,0.18)";
+                ctx.lineWidth = 1 * scale;
+                ctx.stroke();
+                ctx.restore();
+            };
+            drawLiquidGlassBox(infoX, infoY, infoW, infoH, infoRadius);
 
             ctx.save();
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#ffffff";
             ctx.font = `800 ${50 * scale}px "Segoe UI", Arial, sans-serif`;
-            ctx.shadowColor = "rgba(255,255,255,0.18)";
-            ctx.shadowBlur = 18 * scale;
-            ctx.shadowOffsetY = 0;
+            ctx.shadowColor = "rgba(0,0,0,0.88)";
+            ctx.shadowBlur = 8 * scale;
+            ctx.shadowOffsetY = 2 * scale;
             ctx.fillText(title, width / 2, infoY + 40 * scale);
             ctx.font = `700 ${36 * scale}px "Segoe UI", Arial, sans-serif`;
-            ctx.fillStyle = "rgba(255,255,255,0.96)";
-            ctx.shadowColor = "rgba(255,255,255,0.10)";
-            ctx.shadowBlur = 10 * scale;
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = "rgba(0,0,0,0.88)";
+            ctx.shadowBlur = 7 * scale;
             ctx.fillText(subtitle, width / 2, infoY + 88 * scale);
             ctx.restore();
 
@@ -1792,24 +1896,7 @@ function getClubDisplayName(name) {
                 const rowIndex = Math.floor(index / 3);
                 const x = startX + col * (statWidth + statGap);
                 const y = listY + rowIndex * (boxHeight + 22 * scale);
-                ctx.save();
-                ctx.shadowColor = "rgba(0, 0, 0, 0.42)";
-                ctx.shadowBlur = 28 * scale;
-                ctx.shadowOffsetY = 8 * scale;
-                ctx.filter = "blur(20px)";
-                ctx.fillStyle = "rgba(12,18,25,0.52)";
-                ctx.beginPath();
-                ctx.roundRect(x, y, statWidth, boxHeight, 30 * scale);
-                ctx.fill();
-                ctx.filter = "none";
-                ctx.fillStyle = "rgba(255,255,255,0.10)";
-                ctx.beginPath();
-                ctx.roundRect(x, y, statWidth, boxHeight, 30 * scale);
-                ctx.fill();
-                ctx.strokeStyle = "rgba(255,255,255,0.34)";
-                ctx.lineWidth = 1.6 * scale;
-                ctx.stroke();
-                ctx.restore();
+                drawLiquidGlassBox(x, y, statWidth, boxHeight, 30 * scale);
 
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
@@ -1832,7 +1919,12 @@ function getClubDisplayName(name) {
                 ctx.save();
                 ctx.shadowBlur = 20 * scale;
                 ctx.shadowColor = "rgba(0,0,0,0.38)";
-                drawImageContain(brandLogo, badgeX, badgeY, badgeWidth, 64 * scale);
+                if (brandLogoShape === "circle") {
+                    const badgeHeight = 64 * scale;
+                    drawImageWithLogoShape(brandLogo, width / 2 - badgeHeight / 2, badgeY, badgeHeight, badgeHeight);
+                } else {
+                    drawImageContain(brandLogo, badgeX, badgeY, badgeWidth, 64 * scale);
+                }
                 ctx.restore();
             } else {
                 ctx.save();
@@ -1846,6 +1938,22 @@ function getClubDisplayName(name) {
                 ctx.textBaseline = "middle";
                 ctx.font = `900 ${30 * scale}px "Segoe UI", Arial, sans-serif`;
                 ctx.fillText("PITCHPLAN", width / 2, badgeY + 32 * scale);
+            }
+            if (playerStatsWatermarkEnabled) {
+                if (defaultBrandLogo.complete && defaultBrandLogo.naturalWidth) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.28;
+                    const watermarkWidth = 104 * scale;
+                    const watermarkHeight = 66 * scale;
+                    drawImageContain(
+                        defaultBrandLogo,
+                        width - watermarkWidth - 18 * scale,
+                        (height - watermarkHeight) / 2,
+                        watermarkWidth,
+                        watermarkHeight
+                    );
+                    ctx.restore();
+                }
             }
         }
 
@@ -2474,6 +2582,10 @@ function getClubDisplayName(name) {
             return image ? image.src : null;
         }
 
+        function isLegacyStatsDefaultBackgroundSource(source) {
+            return typeof source === "string" && /(?:^|\/)images\/deffault\.jpg(?:[?#].*)?$/i.test(source);
+        }
+
         function captureWorkspace() {
             return {
                 template: currentTemplate,
@@ -2514,14 +2626,15 @@ function getClubDisplayName(name) {
                 footballNewsRatio,
                 footballLuxLogoSize,
                 photoTextSizes,
+                playerStatsWatermarkEnabled,
                 matchlistColumns,
                 todayResultsTheme,
                 redStarTheme,
-                backgroundImage: imageSource(backgroundImage),
-                backgroundImages: Object.fromEntries([...backgroundImagesByTemplate, ...(backgroundImage ? [[currentTemplate, backgroundImage]] : [])].map(([template, image]) => [
-                    template,
-                    imageSource(image)
-                ])),
+                backgroundImage: isDefaultPosterBackground(backgroundImage) ? null : imageSource(backgroundImage),
+                backgroundImages: Object.fromEntries([
+                    ...[...backgroundImagesByTemplate].filter(([, image]) => !isDefaultPosterBackground(image)),
+                    ...(backgroundImage && !isDefaultPosterBackground(backgroundImage) ? [[currentTemplate, backgroundImage]] : [])
+                ].map(([template, image]) => [template, imageSource(image)])),
                 backgroundOpacity: backgroundOpacityInput.value,
                 nonResultBackgroundOpacity,
                 row: rowColorInput.value,
@@ -2597,8 +2710,11 @@ function getClubDisplayName(name) {
             photoTextSizes = Object.fromEntries(["result", "football-news", "football-lux", "football-stats"].map(template => [
                 template,
                 Number.isFinite(snapshot.photoTextSizes?.[template]) ?
-                    Math.min(160, Math.max(50, snapshot.photoTextSizes[template])) : 100
+                    Math.min(template === "football-stats" ? 100 : 160,
+                        Math.max(template === "football-stats" ? 30 : 50, snapshot.photoTextSizes[template])) : 100
             ]));
+            playerStatsWatermarkEnabled = snapshot.playerStatsWatermarkEnabled !== false;
+            updatePlayerStatsWatermarkControl();
             matchlistColumns = snapshot.matchlistColumns === 2 ? 2 : 1;
             todayResultsTheme = Object.hasOwn(todayResultsThemes, snapshot.todayResultsTheme) ?
                 snapshot.todayResultsTheme : "current";
@@ -2606,8 +2722,13 @@ function getClubDisplayName(name) {
             redStarTheme = Object.hasOwn(redStarThemes, snapshot.redStarTheme) ? snapshot.redStarTheme : "current";
             applyRedStarTheme();
             setTemplate(snapshot.template);
+            const savedBackgroundSource = currentTemplate === "football-stats" &&
+                isLegacyStatsDefaultBackgroundSource(snapshot.backgroundImage) ? null : snapshot.backgroundImage;
+            const savedBackgroundEntries = Object.entries(snapshot.backgroundImages || {}).filter(([template, source]) =>
+                !(template === "football-stats" && isLegacyStatsDefaultBackgroundSource(source))
+            );
             const [savedBackground, savedBrand, savedLeague, ...rowLogos] = await Promise.all([
-                loadImageSource(snapshot.backgroundImage),
+                loadImageSource(savedBackgroundSource),
                 loadImageSource(snapshot.brandLogo),
                 loadImageSource(snapshot.leagueLogo),
                 ...snapshot.rows.flatMap(row => [
@@ -2615,7 +2736,7 @@ function getClubDisplayName(name) {
                     loadExportSafeImageSource(row.awayLogo)
                 ])
             ]);
-            const savedTemplateBackgrounds = await Promise.all(Object.entries(snapshot.backgroundImages || {}).map(async ([template, source]) =>
+            const savedTemplateBackgrounds = await Promise.all(savedBackgroundEntries.map(async ([template, source]) =>
                 [template, await loadImageSource(source)]
             ));
             const savedTemplateLogos = await Promise.all(Object.entries(snapshot.brandLogos || {}).map(async ([template, source]) =>
@@ -2661,9 +2782,8 @@ function getClubDisplayName(name) {
                 awayLogoEdited: true
             }));
             backgroundImage = savedBackground ||
-                (photoPosterTemplates.has(currentTemplate) && defaultPosterBackground.complete && defaultPosterBackground.naturalWidth ?
-                    defaultPosterBackground : null);
-            if (backgroundImage) backgroundImagesByTemplate.set(currentTemplate, backgroundImage);
+                (photoPosterTemplates.has(currentTemplate) ? getDefaultPosterBackground(currentTemplate) : null);
+            if (backgroundImage && !isDefaultPosterBackground(backgroundImage)) backgroundImagesByTemplate.set(currentTemplate, backgroundImage);
             else backgroundImagesByTemplate.delete(currentTemplate);
             backgroundImageInput.value = "";
             brandLogo = snapshot.customBrandLogo ? savedBrand :
@@ -4333,6 +4453,8 @@ function getClubDisplayName(name) {
                     pendingProtectedTemplate = card.dataset.template;
                     redStarPasswordTitle.textContent = card.dataset.template === "sf" ?
                         "RED STAR FUTBOL paroli" : "BUGUNGI NATIJALAR paroli";
+                    redStarPasswordPrompt.textContent = "Posterni tahrirlash uchun parolni kiriting.";
+                    redStarPasswordSubmit.textContent = "Kirish";
                     redStarPasswordInput.value = "";
                     redStarPasswordError.hidden = true;
                     redStarPasswordDialog.showModal();
@@ -4353,6 +4475,18 @@ function getClubDisplayName(name) {
                 return;
             }
             const targetTemplate = pendingProtectedTemplate;
+            if (targetTemplate === playerStatsWatermarkAction) {
+                if (currentTemplate !== "football-stats") {
+                    throw new Error("Watermarkni olib tashlash so‘rovi noto‘g‘ri posterga tegishli.");
+                }
+                playerStatsWatermarkEnabled = false;
+                updatePlayerStatsWatermarkControl();
+                redStarPasswordDialog.close();
+                pendingProtectedTemplate = null;
+                drawPoster();
+                statusEl.textContent = "Watermark parol orqali olib tashlandi.";
+                return;
+            }
             if (!["sf", "today-results"].includes(targetTemplate)) {
                 throw new Error("Himoyalangan poster tanlanmagan.");
             }
@@ -4366,7 +4500,21 @@ function getClubDisplayName(name) {
             pendingProtectedTemplate = null;
             openProtectedPoster(targetTemplate);
         });
-        document.getElementById("red-star-password-close").addEventListener("click", () => redStarPasswordDialog.close());
+        document.getElementById("red-star-password-close").addEventListener("click", () => {
+            redStarPasswordDialog.close();
+            pendingProtectedTemplate = null;
+        });
+        removePlayerStatsWatermarkButton.addEventListener("click", () => {
+            if (currentTemplate !== "football-stats" || !playerStatsWatermarkEnabled) return;
+            pendingProtectedTemplate = playerStatsWatermarkAction;
+            redStarPasswordTitle.textContent = "Watermarkni olib tashlash";
+            redStarPasswordPrompt.textContent = "Watermarkni olib tashlash uchun parolni kiriting.";
+            redStarPasswordSubmit.textContent = "Olib tashlash";
+            redStarPasswordInput.value = "";
+            redStarPasswordError.hidden = true;
+            redStarPasswordDialog.showModal();
+            redStarPasswordInput.focus();
+        });
         document.getElementById("back-to-templates").addEventListener("click", () => {
             showAppSection("templates");
             scheduleWorkspaceSave();
