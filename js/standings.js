@@ -4,7 +4,9 @@
         "esp.1": "LaLiga",
         "ita.1": "Serie A",
         "ger.1": "Bundesliga",
-        "fra.1": "Ligue 1"
+        "fra.1": "Ligue 1",
+        "uefa.champions": "UEFA Champions League",
+        "ksa.1": "Saudi Pro League"
     };
     const standingsBody = document.getElementById("standings-body");
     const leagueName = document.getElementById("standings-league-name");
@@ -43,14 +45,18 @@
         "esp.1": "./images/ligalar/LaLiga_logo_2023.svg.webp",
         "ita.1": "./images/ligalar/serie_a-brandlogo.net_-512x512.png",
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
-        "fra.1": "./images/ligalar/ligue-1.webp"
+        "fra.1": "./images/ligalar/ligue-1.webp",
+        "uefa.champions": "./images/ligalar/UEFA_Champions_League-ucl.svg",
+        "ksa.1": "./images/ligalar/Roshn_Saudi_League_Logo.png"
     };
     const leagueRailThemes = {
         "eng.1": { start: "#caff27", middle: "#8cf21e", end: "#19d16d", accent: "#00aa75", glow: "rgba(8,175,111,.92)", text: "#12251a" },
         "esp.1": { start: "#ff3158", middle: "#ff633e", end: "#ffb52e", accent: "#d8274c", glow: "rgba(216,39,76,.88)", text: "#fffaf3" },
         "ita.1": { start: "#1649b8", middle: "#087aca", end: "#10b6d3", accent: "#103f8f", glow: "rgba(16,63,143,.9)", text: "#ffffff" },
         "ger.1": { start: "#f01836", middle: "#d5092b", end: "#960c2f", accent: "#790a26", glow: "rgba(121,10,38,.9)", text: "#ffffff" },
-        "fra.1": { start: "#142b83", middle: "#2851b6", end: "#7d4ae0", accent: "#102364", glow: "rgba(16,35,100,.9)", text: "#ffffff" }
+        "fra.1": { start: "#142b83", middle: "#2851b6", end: "#7d4ae0", accent: "#102364", glow: "rgba(16,35,100,.9)", text: "#ffffff" },
+        "uefa.champions": { start: "#111f5c", middle: "#263a91", end: "#5368c9", accent: "#15266d", glow: "rgba(34,53,143,.9)", text: "#ffffff" },
+        "ksa.1": { start: "#0d593f", middle: "#12945f", end: "#9bcc42", accent: "#08633e", glow: "rgba(13,104,67,.9)", text: "#ffffff" }
     };
     if (!standingsBody || !liveView || !tabs.length) return;
 
@@ -84,12 +90,18 @@
         return `${startYear}/${String(startYear + 1).slice(-2)}`;
     }
 
-    function getCurrentRound(rows, events, startYear, liveMatches) {
+    function isCurrentSeasonEvent(event, startYear, league) {
+        if (league === "uefa.champions") {
+            return Number(event.season?.year) === startYear && event.season?.slug === "league-phase";
+        }
+        return event.season?.slug?.startsWith(`${startYear}-${String(startYear + 1).slice(-2)}`);
+    }
+
+    function getCurrentRound(rows, events, startYear, liveMatches, league) {
         if (!rows.length) return null;
-        const seasonPrefix = `${startYear}-${String(startYear + 1).slice(-2)}`;
         const scheduledGames = new Map();
         events.forEach(event => {
-            if (!event.season?.slug?.startsWith(seasonPrefix)) return;
+            if (!isCurrentSeasonEvent(event, startYear, league)) return;
             const competitors = event.competitions?.[0]?.competitors || [];
             competitors.forEach(({ team }) => {
                 if (!team?.id) return;
@@ -103,14 +115,13 @@
         return Math.min(activeRound, maxScheduledGames);
     }
 
-    function getLiveStandings(events, startYear) {
-        const seasonPrefix = `${startYear}-${String(startYear + 1).slice(-2)}`;
+    function getLiveStandings(events, startYear, league) {
         const teams = new Map();
         const liveTeamIds = new Set();
         let liveMatches = 0;
 
         events.forEach(event => {
-            if (!event.season?.slug?.startsWith(seasonPrefix)) return;
+            if (!isCurrentSeasonEvent(event, startYear, league)) return;
             const competition = event.competitions?.[0];
             const competitors = competition?.competitors || [];
             if (competitors.length !== 2) return;
@@ -582,8 +593,8 @@
             if (generation !== requestGeneration) return;
             const eventsById = new Map(eventGroups.flat().map(event => [event.id, event]));
             const events = [...eventsById.values()];
-            const { rows, liveMatches, liveTeamIds } = getLiveStandings(events, startYear);
-            currentRound = getCurrentRound(rows, events, startYear, liveMatches);
+            const { rows, liveMatches, liveTeamIds } = getLiveStandings(events, startYear, selectedLeague);
+            currentRound = getCurrentRound(rows, events, startYear, liveMatches, selectedLeague);
             railRound.textContent = currentRound ? `${currentRound}-TUR` : "TUR —";
             renderStandings(rows, liveTeamIds);
             lastSuccessfulUpdate = new Date();

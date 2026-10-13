@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=70">
+    <link rel="stylesheet" href="css/styles.css?v=72">
 </head>
 <body>
     <header class="topbar">
@@ -31,17 +31,17 @@
                     <span class="theme-picker-chevron" aria-hidden="true"></span>
                 </button>
                 <div class="theme-picker-options" id="theme-picker-options" role="listbox" aria-label="Sayt mavzusi" hidden>
-                    <button type="button" class="theme-picker-option" role="option" data-theme-option="light" aria-selected="true">
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="light" aria-label="Kunduzgi mavzu" aria-selected="true">
                         <span class="theme-picker-option-icon" aria-hidden="true">☼</span>
                         <span class="theme-picker-option-copy"><strong>Kunduzgi</strong><small>Yorug‘ va tiniq ko‘rinish</small></span>
                         <span class="theme-picker-check" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="theme-picker-option" role="option" data-theme-option="dark" aria-selected="false">
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="dark" aria-label="Tungi mavzu" aria-selected="false">
                         <span class="theme-picker-option-icon" aria-hidden="true">☾</span>
                         <span class="theme-picker-option-copy"><strong>Tungi</strong><small>Ko‘zga qulay qorong‘i rejim</small></span>
                         <span class="theme-picker-check" aria-hidden="true"></span>
                     </button>
-                    <button type="button" class="theme-picker-option" role="option" data-theme-option="auto" aria-selected="false">
+                    <button type="button" class="theme-picker-option" role="option" data-theme-option="auto" aria-label="Avtomatik mavzu" aria-selected="false">
                         <span class="theme-picker-option-icon" aria-hidden="true">◐</span>
                         <span class="theme-picker-option-copy"><strong>Avtomatik</strong><small>Qurilma sozlamasiga moslashadi</small></span>
                         <span class="theme-picker-check" aria-hidden="true"></span>
@@ -83,7 +83,7 @@
                 </button>
                 <button type="button" class="home-shortcut" data-app-section="live">
                     <span class="home-shortcut-icon live-shortcut-icon" aria-hidden="true"><img src="./images/menu-icons/turnir-jadvali.svg" alt=""></span>
-                    <span><strong>Turnir jadvallari</strong><small>Top-5 ligalar jadvalini jonli kuzating</small></span>
+                    <span><strong>Turnir jadvallari</strong><small>Top-5, UCL va Saudiya ligalari jadvalini kuzating</small></span>
                     <span class="home-shortcut-arrow" aria-hidden="true">→</span>
                 </button>
                 <button type="button" class="home-shortcut" data-app-section="matches">
@@ -215,20 +215,22 @@
             <div class="section-banner section-banner--standings">
                 <div class="live-heading">
                     <div>
-                        <span class="home-eyebrow">YEVROPA · TOP-5</span>
-                        <h1 id="live-heading">Top-5 liga turnir jadvallari</h1>
+                        <span class="home-eyebrow">FUTBOL · JONLI</span>
+                        <h1 id="live-heading">Turnir jadvallari</h1>
                         <p>O‘ngoing o‘yinlar natijalari jadvalga vaqtincha qo‘shiladi.</p>
                     </div>
                     <span class="live-status" id="standings-status" role="status" aria-live="polite">
                         <span class="live-status-dot" aria-hidden="true"></span><span id="standings-status-text">Jadval yuklanmoqda…</span>
                     </span>
                 </div>
-                <nav class="live-league-tabs" id="live-league-tabs" aria-label="Top-5 Yevropa ligalari">
+                <nav class="live-league-tabs" id="live-league-tabs" aria-label="Futbol ligalari turnir jadvallari">
                     <button type="button" class="live-league-tab is-active" data-live-league="eng.1" aria-pressed="true"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
                     <button type="button" class="live-league-tab" data-live-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
                     <button type="button" class="live-league-tab" data-live-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
                     <button type="button" class="live-league-tab" data-live-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
                     <button type="button" class="live-league-tab" data-live-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="uefa.champions" aria-pressed="false"><img src="./images/ligalar/UEFA_Champions_League-ucl.svg" alt=""><span>UCL</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="ksa.1" aria-pressed="false"><img src="./images/ligalar/Roshn_Saudi_League_Logo.png" alt=""><span>Saudi Pro League</span></button>
                 </nav>
             </div>
             <div class="standings-card-heading">
@@ -286,6 +288,8 @@
                     <button type="button" class="live-match-filter" data-match-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
                     <button type="button" class="live-match-filter" data-match-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
                     <button type="button" class="live-match-filter" data-match-league="fra.1" aria-pressed="false"><img src="./images/ligalar/ligue-1.webp" alt=""><span>Ligue 1</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="uefa.champions" aria-pressed="false"><img src="./images/ligalar/UEFA_Champions_League-ucl.svg" alt=""><span>UCL</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="ksa.1" aria-pressed="false"><img src="./images/ligalar/Roshn_Saudi_League_Logo.png" alt=""><span>Saudi Pro League</span></button>
                 </nav>
             </div>
             <nav class="live-match-state-filters" id="live-match-state-filters" aria-label="O‘yin holati bo‘yicha saralash">
@@ -293,11 +297,12 @@
                 <button type="button" class="live-match-state-filter" data-match-state="all" aria-pressed="false">Barcha o‘yinlar</button>
                 <button type="button" class="live-match-state-filter" data-match-state="upcoming" aria-pressed="false">Keyingi 24 soat</button>
                 <button type="button" class="live-match-state-filter" data-match-state="completed" aria-pressed="false">Oxirgi 24 soatda yakunlangan</button>
+                <button type="button" class="live-match-state-filter" data-match-state="ucl-month" aria-pressed="false">UCL · shu oy oxirigacha</button>
             </nav>
             <section class="club-search-panel" id="club-search-panel" aria-labelledby="club-search-heading" hidden>
                 <div class="club-search-copy">
                     <h2 id="club-search-heading">Klub qidirish</h2>
-                    <p>Top-5 ligadagi klubni toping va uning tarkibi, jadvali hamda o‘yin statistikasini ko‘ring.</p>
+                    <p>O‘yinlar bo‘limidagi ligalardan klubni toping va uning tarkibi, jadvali hamda statistikasini ko‘ring.</p>
                 </div>
                 <label class="club-search-field">
                     <span class="sr-only">Klub nomi</span>
@@ -505,7 +510,7 @@
                 </div>
                 <div class="field" id="brand-logo-size-field">
                     <label for="brand-logo-size">Logo o‘lchami <span id="brand-logo-size-value">200%</span></label>
-                    <input id="brand-logo-size" class="range-input" type="range" min="50" max="300" step="10" value="200">
+                    <input id="brand-logo-size" class="range-input" type="range" min="10" max="500" step="5" value="200">
                 </div>
                 <div class="section-label" id="matches-section-label"><strong>Uchrashuvlar</strong><span id="matches-hint">Jamoa nomi, vaqt va logo</span></div>
                 <div class="match-list" id="match-list" aria-label="Uchrashuvlarni tahrirlash"></div>
@@ -621,10 +626,11 @@
         </div>
     </dialog>
 
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" defer></script>
     <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=66" defer></script>
-    <script src="js/live-matches.js?v=34" defer></script>
-    <script src="js/standings.js?v=11" defer></script>
+    <script src="js/app.js?v=69" defer></script>
+    <script src="js/live-matches.js?v=35" defer></script>
+    <script src="js/standings.js?v=12" defer></script>
 </body>
 </html>
     

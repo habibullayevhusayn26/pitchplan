@@ -49,6 +49,8 @@
             outline-offset: 3px;
         }
         .topbar {
+            position: relative;
+            z-index: 1000;
             min-height: 82px;
             padding: 0 5vw;
             display: flex;
@@ -80,7 +82,7 @@
         }
         .top-note { color: var(--muted); font-size: 13px; }
         .theme-switcher { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
-        .theme-picker { position: relative; }
+        .theme-picker { position: relative; z-index: 1001; }
         .theme-select-native { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); clip-path: inset(50%); white-space: nowrap; }
         .theme-picker-trigger {
             display: inline-flex;
@@ -115,7 +117,7 @@
         .theme-picker-trigger[aria-expanded="true"] .theme-picker-chevron { margin-top: 4px; transform: rotate(225deg); }
         .theme-picker-options {
             position: absolute;
-            z-index: 50;
+            z-index: 1002;
             top: calc(100% + 9px);
             right: 0;
             width: 254px;
@@ -509,12 +511,7 @@
         }
         @media (max-width: 520px) {
             .topbar { gap: 8px; padding: 0 12px; min-height: 62px; }
-            .brand-icon { width: 150px; max-width: min(150px, calc(100vw - 175px)); }
-            .theme-switcher { gap: 5px; font-size: 10px; }
-            .theme-picker-trigger { min-width: 124px; min-height: 38px; gap: 7px; padding-inline: 8px; }
-            .theme-picker-current-label { font-size: 10px; }
-            .theme-picker-options { width: 236px; }
-            .top-note { display: none; }
+            .brand-icon { width: 150px; max-width: min(150px, calc(100vw - 190px)); }
             main { padding: 24px 12px 40px; }
             .editor, .preview-panel { padding: 15px; }
             .template-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -1271,6 +1268,54 @@
                 transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
             }
             .club-search-result:hover, .club-search-result:focus-visible { transform: translateY(-1px); border-color: rgba(139,118,220,.5); box-shadow: 0 7px 16px rgba(72,76,119,.1); outline: none; }
+            .club-logo-link, .club-logo-visual {
+                position: relative;
+                display: inline-grid;
+                flex: 0 0 auto;
+                place-items: center;
+                overflow: hidden;
+                isolation: isolate;
+                border: 1px solid rgba(255,255,255,.58);
+                border-radius: 17px;
+                background: linear-gradient(145deg, rgba(255,255,255,.34), rgba(255,255,255,.08));
+                box-shadow: 0 5px 15px rgba(49,60,98,.12), inset 0 1px 0 rgba(255,255,255,.72);
+                perspective: 600px;
+                transform-style: preserve-3d;
+            }
+            .club-logo-link { color: inherit; cursor: pointer; text-decoration: none; }
+            .club-logo-link::after, .club-logo-visual::after {
+                position: absolute;
+                z-index: 2;
+                inset: -65% -45%;
+                background: linear-gradient(115deg, transparent 43%, rgba(255,255,255,.08) 47%, rgba(255,255,255,.9) 51%, rgba(255,255,255,.18) 56%, transparent 61%);
+                content: "";
+                opacity: 0;
+                pointer-events: none;
+                transform: translate(-38%, -38%);
+                transition: opacity .18s ease, transform .72s cubic-bezier(.2,.7,.2,1);
+            }
+            .club-logo-link img, .club-logo-visual img {
+                position: relative;
+                z-index: 1;
+                display: block;
+                transform: translateZ(0);
+                transition: transform .42s cubic-bezier(.2,.7,.2,1), filter .42s ease;
+            }
+            .club-logo-link:hover, .club-logo-link:focus-visible, .club-logo-visual:hover {
+                border-color: rgba(255,255,255,.94);
+                background: linear-gradient(145deg, rgba(255,255,255,.64), rgba(198,214,255,.2));
+                box-shadow: 0 10px 24px rgba(57,70,117,.2), inset 0 1px 0 #fff;
+                transform: translateY(-1px) rotateX(4deg) rotateY(-5deg);
+            }
+            .club-logo-link:hover::after, .club-logo-link:focus-visible::after, .club-logo-visual:hover::after {
+                opacity: 1;
+                transform: translate(38%, 38%);
+            }
+            .club-logo-link:hover img, .club-logo-link:focus-visible img, .club-logo-visual:hover img {
+                filter: drop-shadow(0 5px 7px rgba(31,45,79,.34));
+                transform: perspective(500px) rotateX(9deg) rotateY(-11deg) translateZ(8px) scale(1.1);
+            }
+            .club-logo-link:focus-visible { outline: 2px solid #8065e2; outline-offset: 3px; }
             .club-search-logo { width: 34px; height: 34px; flex: 0 0 auto; object-fit: contain; }
             .club-search-result-copy { display: grid; min-width: 0; gap: 3px; }
             .club-search-result-copy strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -1311,12 +1356,53 @@
             .club-player-table thead th { color: #858a9c; font-size: 9px; font-weight: 750; }
             .club-player-table tbody th { color: #41465b; text-align: left; }
             .club-player-points { color: #6651be; font-weight: 900; }
-            .club-match-list { display: grid; gap: 8px; }
-            .club-match-card { min-width: 0; padding: 9px 11px; border: 1px solid rgba(125,132,160,.13); border-radius: 11px; background: rgba(255,255,255,.5); }
+            .club-match-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+            .club-match-card {
+                min-width: 0;
+                padding: 12px 14px;
+                border: 1px solid rgba(255,255,255,.62);
+                border-radius: 20px;
+                background: linear-gradient(135deg, rgba(255,255,255,.38), rgba(255,255,255,.16));
+                box-shadow: 0 10px 26px rgba(48,59,95,.1), inset 0 1px 0 rgba(255,255,255,.62);
+                backdrop-filter: blur(20px) saturate(185%);
+                -webkit-backdrop-filter: blur(20px) saturate(185%);
+                transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+            }
+            .club-match-card.is-win {
+                border-color: rgba(0,255,128,.72);
+                background: linear-gradient(115deg, rgba(0,230,118,.82), rgba(105,255,0,.68));
+                color: #07351d;
+                box-shadow: 0 8px 22px rgba(0,210,95,.2), inset 0 1px 0 rgba(255,255,255,.58);
+                backdrop-filter: blur(18px) saturate(185%);
+                -webkit-backdrop-filter: blur(18px) saturate(185%);
+            }
+            .club-match-card.is-loss {
+                border-color: rgba(255,92,110,.78);
+                background: linear-gradient(115deg, rgba(255,23,68,.82), rgba(255,82,82,.68));
+                color: #4b0813;
+                box-shadow: 0 8px 22px rgba(255,25,60,.2), inset 0 1px 0 rgba(255,255,255,.58);
+                backdrop-filter: blur(18px) saturate(185%);
+                -webkit-backdrop-filter: blur(18px) saturate(185%);
+            }
+            .club-match-card.is-draw {
+                border-color: rgba(77,198,255,.76);
+                background: linear-gradient(115deg, rgba(0,176,255,.8), rgba(72,225,255,.66));
+                color: #07314a;
+                box-shadow: 0 8px 22px rgba(0,160,235,.18), inset 0 1px 0 rgba(255,255,255,.58);
+                backdrop-filter: blur(18px) saturate(185%);
+                -webkit-backdrop-filter: blur(18px) saturate(185%);
+            }
             .club-match-card.is-live {
                 border-color: rgba(225,61,83,.35);
                 background: linear-gradient(135deg, rgba(255,240,242,.88), rgba(255,255,255,.68));
                 box-shadow: 0 8px 20px rgba(225,61,83,.1), inset 0 1px 0 rgba(255,255,255,.8);
+            }
+            .club-match-card:hover, .club-match-card:focus-visible {
+                transform: translateY(-2px);
+                border-color: rgba(255,255,255,.92);
+                box-shadow: 0 16px 34px rgba(48,59,95,.18), inset 0 1px 0 rgba(255,255,255,.78);
+                outline: 2px solid rgba(128,101,226,.58);
+                outline-offset: 2px;
             }
             .club-live-match-panel .club-match-link { min-height: 58px; }
             .club-live-match-panel .club-match-info small { color: #d34759; font-weight: 800; }
@@ -1328,10 +1414,6 @@
             .club-match-info strong { overflow: hidden; color: #41465b; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
             .club-match-info small { color: #858a9c; font-size: 9px; }
             .club-match-score { margin-left: auto; color: #34394e; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-            .club-match-details { margin: 8px 0 0 40px; border-top: 1px solid rgba(125,132,160,.12); }
-            .club-match-details summary { padding: 8px 0 2px; color: #6a58bd; font-size: 10px; font-weight: 750; cursor: pointer; }
-            .club-match-statistics { padding-top: 8px; }
-            .club-match-statistics .match-statistics-heading { font-size: 10px; }
             .club-profile-warning { margin: 5px 0; color: #ae6c1a; font-size: 10px; line-height: 1.5; }
             .back-to-matches { min-height: 38px; margin: 0 0 18px; padding-inline: 13px; font-size: 11px; }
             .live-match-detail-header {
@@ -1345,8 +1427,15 @@
                 -webkit-backdrop-filter: blur(18px) saturate(145%);
             }
             .live-match-detail-league { display: flex; align-items: center; gap: 10px; color: #70768b; font-size: 13px; font-weight: 800; }
-            .live-match-detail-header .live-match-detail-league,
-            .live-match-detail-header .live-match-detail-meta { color: #a2b0c4; }
+            .live-match-detail-header .live-match-detail-league { color: #35445c; }
+            .live-match-detail-header .live-match-detail-meta { color: #4e5d74; }
+            .live-match-detail-header .live-match-phase {
+                border-color: rgba(64,78,105,.2);
+                background: rgba(255,255,255,.76);
+                color: #35445c;
+                box-shadow: 0 2px 8px rgba(31,44,68,.1);
+            }
+            .live-match-detail-header .live-match-phase.is-upcoming { color: #285b91; }
             .live-match-detail-scoreboard {
                 display: grid;
                 grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1355,16 +1444,16 @@
                 margin: 24px 0 16px;
             }
             .live-match-detail-center { display: grid; justify-items: center; gap: 6px; min-width: 100px; }
-            .live-match-detail-team { display: grid; justify-items: center; gap: 10px; min-width: 0; color: #e8edf6; text-align: center; overflow-wrap: anywhere; }
+            .live-match-detail-team { display: grid; justify-items: center; gap: 10px; min-width: 0; color: #17243a; text-align: center; overflow-wrap: anywhere; }
             .live-match-detail-team-logo {
                 width: clamp(46px, 8vw, 76px);
                 height: clamp(46px, 8vw, 76px);
                 object-fit: contain;
                 filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 6px rgba(0,0,0,.3));
             }
-            .live-match-detail-score { color: #e8edf6; font-size: clamp(28px, 6vw, 48px); font-variant-numeric: tabular-nums; font-weight: 900; white-space: nowrap; }
-            .live-match-detail-score.is-fixture { color: #a2b0c4; }
-            .live-match-detail-meta { margin: 0; color: #a2b0c4; font-size: 12px; text-align: center; }
+            .live-match-detail-score { color: #17243a; font-size: clamp(28px, 6vw, 48px); font-variant-numeric: tabular-nums; font-weight: 900; white-space: nowrap; }
+            .live-match-detail-score.is-fixture { color: #4e5d74; }
+            .live-match-detail-meta { margin: 0; color: #4e5d74; font-size: 12px; text-align: center; }
             .match-clock-panel {
                 display: grid;
                 justify-items: center;
@@ -1377,8 +1466,8 @@
                 background: transparent;
                 color: #16834e;
             }
-            .match-clock-panel.is-live { color: #e13d53; }
-            .match-clock-panel.is-countdown { color: #16834e; }
+            .match-clock-panel.is-live { color: #b4233c; }
+            .match-clock-panel.is-countdown { color: #087443; }
             .match-clock-label { font-size: 10px; font-weight: 750; }
             .match-clock-value { font-size: clamp(18px, 2.5vw, 24px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: .02em; white-space: nowrap; }
             .match-clock-value.is-days { font-size: clamp(14px, 2.2vw, 19px); letter-spacing: 0; }
@@ -1405,7 +1494,8 @@
                 transform: translateY(-3px);
                 border-color: rgba(139,118,220,.62);
                 box-shadow: 0 18px 38px rgba(72,76,119,.16), inset 0 1px 0 #fff;
-                outline: none;
+                outline: 2px solid rgba(128,101,226,.58);
+                outline-offset: 2px;
             }
             .live-match-card-action { display: block; padding: 0 15px 14px; color: #6855bd; font-size: 11px; font-weight: 800; text-align: right; }
             .live-heading {
@@ -1949,6 +2039,15 @@
                 .app-sidebar { left: 18px; }
             }
             @media (max-width: 760px) {
+                .topbar { gap: 8px; padding-inline: 12px; }
+                .top-note { display: none; }
+                .theme-picker-trigger { min-width: 38px; min-height: 38px; justify-content: center; gap: 0; padding-inline: 6px; }
+                .theme-picker-current-label, .theme-picker-chevron { display: none; }
+                .theme-picker-options { display: flex; width: max-content; gap: 5px; padding: 6px; }
+                .theme-picker-options[hidden] { display: none; }
+                .theme-picker-option { width: 40px; min-height: 40px; justify-content: center; padding: 3px; }
+                .theme-picker-option-copy, .theme-picker-check { display: none; }
+                .theme-picker-option-icon { width: 30px; height: 30px; }
                 .app-content { margin-left: 0; }
                 .app-sidebar {
                     position: sticky;
@@ -1973,6 +2072,7 @@
                 .live-match-toolbar { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
                 .live-match-toolbar .live-status { flex: 0 1 100%; min-width: 0; max-width: 100%; white-space: normal; }
                 .club-profile-overview { grid-template-columns: minmax(0, 1fr); }
+                .club-match-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
                 .live-league-tab { min-height: 36px; gap: 5px; padding-inline: 9px; font-size: 10px; }
                 .live-league-tab img { width: 20px; height: 20px; }
                 .live-match-filters { gap: 6px; }
@@ -2007,6 +2107,7 @@
             }
             @media (max-width: 520px) {
                 .app-sidebar { padding-inline: 4px; }
+                .club-match-list { grid-template-columns: minmax(0, 1fr); }
                 .app-nav-item { min-height: 56px; font-size: 8px; }
                 .app-nav-icon { width: 20px; height: 20px; }
                 .home-view .intro h1 { font-size: 30px; }
@@ -2137,16 +2238,38 @@
                     background: rgba(5,11,20,.25);
                     color: #e8edf6;
                 }
+                .club-match-card {
+                    border-color: rgba(220,235,255,.32);
+                    background: linear-gradient(135deg, rgba(40,59,86,.72), rgba(20,34,54,.54));
+                    box-shadow: 0 12px 30px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.22);
+                }
                 .club-match-card.is-live {
                     border-color: rgba(255,113,137,.4);
                     background: linear-gradient(135deg, rgba(92,34,50,.48), rgba(5,11,20,.32));
                     box-shadow: 0 8px 20px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.08);
                 }
+                .club-match-card.is-win {
+                    border-color: rgba(0,255,128,.78);
+                    background: linear-gradient(115deg, rgba(0,230,118,.82), rgba(105,255,0,.68));
+                    color: #07351d;
+                }
+                .club-match-card.is-loss {
+                    border-color: rgba(255,92,110,.82);
+                    background: linear-gradient(115deg, rgba(255,23,68,.82), rgba(255,82,82,.68));
+                    color: #4b0813;
+                }
+                .club-match-card.is-draw {
+                    border-color: rgba(77,198,255,.8);
+                    background: linear-gradient(115deg, rgba(0,176,255,.8), rgba(72,225,255,.66));
+                    color: #07314a;
+                }
+                .club-match-card.is-win .club-match-info strong, .club-match-card.is-win .club-match-score { color: #07351d; }
+                .club-match-card.is-loss .club-match-info strong, .club-match-card.is-loss .club-match-score { color: #4b0813; }
+                .club-match-card.is-draw .club-match-info strong, .club-match-card.is-draw .club-match-score { color: #07314a; }
                 .club-live-match-panel .club-match-info small,
                 .club-live-match-panel .club-match-score { color: #ff91a5; }
-                .club-player-table th, .club-player-table td, .club-match-details { border-bottom-color: rgba(180,205,245,.13); }
-                .club-match-details { border-top-color: rgba(180,205,245,.13); }
-                .club-player-points, .club-match-details summary { color: #c7baff; }
+                .club-player-table th, .club-player-table td { border-bottom-color: rgba(180,205,245,.13); }
+                .club-player-points { color: #c7baff; }
                 .live-match-card-action { color: #d2c8ff; }
                 .live-match-card-header { border-bottom-color: rgba(180,205,245,.12); }
                 .live-match-league, .match-statistics-heading, .match-stat-label,
@@ -2277,8 +2400,8 @@
             }
             .live-match-detail-header::after,
             .club-profile-header::after {
-                background: linear-gradient(135deg, rgba(255,255,255,.52), rgba(255,255,255,.24));
-                box-shadow: inset 0 1px 0 rgba(255,255,255,.38);
+                background: linear-gradient(135deg, rgba(255,255,255,.82), rgba(255,255,255,.68));
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.68);
             }
             :root[data-theme="dark"] .section-banner,
             :root[data-theme="dark"] .live-match-detail-header,
@@ -2303,6 +2426,11 @@
                 background: linear-gradient(135deg, rgba(13,25,45,.5), rgba(13,25,45,.28));
                 box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
             }
+            :root[data-theme="dark"] .live-match-detail-header .live-match-detail-league,
+            :root[data-theme="dark"] .live-match-detail-header .live-match-detail-meta { color: #a2b0c4; }
+            :root[data-theme="dark"] .live-match-detail-team,
+            :root[data-theme="dark"] .live-match-detail-score { color: #e8edf6; }
+            :root[data-theme="dark"] .live-match-detail-score.is-fixture { color: #a2b0c4; }
             :root[data-theme="dark"] .section-banner .home-eyebrow { color: #c7baff; }
             :root[data-theme="dark"] .section-banner .intro h1,
             :root[data-theme="dark"] .section-banner .live-heading h1 { color: #f5f7fb; }
@@ -2487,4 +2615,11 @@
         }
         @media (prefers-reduced-motion: reduce) {
             .red-star-password-dialog { animation: none; }
+            .club-logo-link, .club-logo-visual,
+            .club-logo-link::after, .club-logo-visual::after,
+            .club-logo-link img, .club-logo-visual img { transition: none; }
+            .club-logo-link:hover, .club-logo-link:focus-visible, .club-logo-visual:hover,
+            .club-logo-link:hover img, .club-logo-link:focus-visible img, .club-logo-visual:hover img {
+                transform: none;
+            }
         }

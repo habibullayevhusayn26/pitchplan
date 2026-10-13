@@ -4,15 +4,20 @@
         "esp.1": "LaLiga",
         "ita.1": "Serie A",
         "ger.1": "Bundesliga",
-        "fra.1": "Ligue 1"
+        "fra.1": "Ligue 1",
+        "uefa.champions": "UEFA Champions League",
+        "ksa.1": "Saudi Pro League"
     };
     const leagues = Object.keys(leagueNames);
+    const topFiveLeagues = ["eng.1", "esp.1", "ita.1", "ger.1", "fra.1"];
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
         "esp.1": "./images/ligalar/LaLiga_logo_2023.svg.webp",
         "ita.1": "./images/ligalar/serie_a-brandlogo.net_-512x512.png",
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
-        "fra.1": "./images/ligalar/ligue-1.webp"
+        "fra.1": "./images/ligalar/ligue-1.webp",
+        "uefa.champions": "./images/ligalar/UEFA_Champions_League-ucl.svg",
+        "ksa.1": "./images/ligalar/Roshn_Saudi_League_Logo.png"
     };
     const monthlyCupCompetitions = [
         { id: "uefa.champions", name: "UEFA Champions League", shortName: "UCL", logo: "./images/ligalar/UEFA_Champions_League-ucl.svg" },
@@ -56,6 +61,9 @@
     let selectedLeague = "all";
     let selectedMatchState = "live";
     let matches = [];
+    let uclMonthMatches = [];
+    let uclMonthRequestGeneration = 0;
+    let uclMonthController = null;
     let active = false;
     let refreshTimer = 0;
     let requestGeneration = 0;
@@ -237,11 +245,24 @@
         }
         if (failed.length) {
             clubDirectoryPartial = true;
-            failed.forEach(result => console.error("A Top-5 league club directory failed:", result.reason));
+            failed.forEach(result => console.error("A league club directory failed:", result.reason));
         }
-        clubDirectory = successful.flatMap(result => result.value).sort((first, second) =>
-            first.name.localeCompare(second.name) || leagues.indexOf(first.league) - leagues.indexOf(second.league)
-        );
+        const leaguePriority = league => league === "uefa.champions" ? leagues.length : leagues.indexOf(league);
+        const seenClubIds = new Set();
+        const seenClubNames = new Set();
+        clubDirectory = successful.flatMap(result => result.value)
+            .sort((first, second) =>
+                leaguePriority(first.league) - leaguePriority(second.league) ||
+                first.name.localeCompare(second.name)
+            )
+            .filter(club => {
+                const normalizedName = normalizeClubSearch(club.name);
+                if (seenClubIds.has(club.id) || seenClubNames.has(normalizedName)) return false;
+                seenClubIds.add(club.id);
+                seenClubNames.add(normalizedName);
+                return true;
+            })
+            .sort((first, second) => first.name.localeCompare(second.name));
         return clubDirectory;
     }
 
@@ -260,7 +281,7 @@
 
     async function fetchMonthlyPosterFixtures(club, year, month, signal) {
         const competitions = [
-            ...leagues.map(id => ({ id, name: leagueNames[id], logo: leagueAssets[id] })),
+            ...topFiveLeagues.map(id => ({ id, name: leagueNames[id], logo: leagueAssets[id] })),
             ...monthlyCupCompetitions
         ];
         const results = await Promise.allSettled(competitions.map(async competition => {
@@ -346,7 +367,7 @@
             link.href = `#/club/${encodeURIComponent(club.league)}/${encodeURIComponent(club.id)}`;
             link.setAttribute("role", "listitem");
             link.setAttribute("aria-label", `${club.name}, ${leagueNames[club.league]} klub sahifasini ochish`);
-            appendImage(link, club.logo, "", "club-search-logo");
+            appendClubLogo(link, club, club.league, "club-search-logo", false);
             const text = createElement("span", "club-search-result-copy");
             text.append(
                 createElement("strong", "", club.name),
@@ -471,6 +492,39 @@
         parent.append(image);
     }
 
+    function appendClubLogo(parent, team, league, className, clickable = true) {
+        if (!team) return;
+        const logo = getTeamLogo(team);
+        if (!logo) return;
+        const name = team.displayName || team.name || "Klub";
+        const hasProfile = clickable && leagueNames[league] && team.id;
+        const wrapper = createElement(hasProfile ? "a" : "span", hasProfile ? "club-logo-link" : "club-logo-visual");
+        if (hasProfile) {
+            wrapper.setAttribute("href", `#/club/${encodeURIComponent(league)}/${encodeURIComponent(team.id)}`);
+            wrapper.setAttribute("aria-label", `${name} klub profilini ochish`);
+            wrapper.title = `${name} klub profilini ochish`;
+            wrapper.addEventListener("click", event => event.stopPropagation());
+        }
+        appendImage(wrapper, logo, hasProfile ? "" : `${name} logosi`, className);
+        parent.append(wrapper);
+    }
+
+    function makeMatchCardNavigable(card, league, eventId, label) {
+        const href = `#/match/${encodeURIComponent(league)}/${encodeURIComponent(eventId)}`;
+        card.setAttribute("role", "link");
+        card.tabIndex = 0;
+        card.setAttribute("aria-label", label);
+        card.addEventListener("click", event => {
+            if (event.target instanceof Element && event.target.closest("a, button")) return;
+            window.location.hash = href.slice(1);
+        });
+        card.addEventListener("keydown", event => {
+            if (event.key !== "Enter" || event.target !== card) return;
+            event.preventDefault();
+            window.location.hash = href.slice(1);
+        });
+    }
+
     function getPlayerPosition(player) {
         return String(player.position?.abbreviation || player.athlete?.position?.abbreviation || "").toUpperCase();
     }
@@ -520,11 +574,11 @@
         const pitch = createElement("div", "match-lineup-pitch");
         pitch.setAttribute("role", "group");
         pitch.setAttribute("aria-label", "Ikkala jamoaning asosiy tarkibi bitta futbol maydonida");
-        teamLineups.forEach(({ team, rosterData, starters, side }) => {
+        teamLineups.forEach(({ team, rosterData, starters, side, league }) => {
             const half = createElement("section", `match-pitch-half is-${side}`);
             half.setAttribute("aria-label", `${team.name} asosiy tarkibi`);
             const heading = createElement("div", "match-pitch-team-label");
-            appendImage(heading, team.logo, "", "match-pitch-team-logo");
+            appendClubLogo(heading, team, league, "match-pitch-team-logo");
             heading.append(createElement("strong", "", team.name));
             if (rosterData.formation) {
                 heading.append(createElement("span", "match-pitch-formation", rosterData.formation));
@@ -772,7 +826,7 @@
             const rosterData = lineupRosters.find(roster => roster.homeAway === side);
             const roster = Array.isArray(rosterData?.roster) ? rosterData.roster : [];
             const starters = getStartingPlayers(rosterData);
-            if (starters.length) lineupData.push({ side, team, rosterData, starters });
+            if (starters.length) lineupData.push({ side, team, rosterData, starters, league: match.league });
             const substitutes = roster.filter(player =>
                 !starters.includes(player) &&
                 (player.active === true || player.athlete?.active === true || player.substitute === true)
@@ -780,7 +834,7 @@
             if (substitutes.length) {
                 const group = createElement("section", `match-lineup-team is-${side}`);
                 const heading = createElement("h4", "match-lineup-heading");
-                appendImage(heading, team.logo, "", "match-team-logo");
+                appendClubLogo(heading, team, match.league, "match-team-logo");
                 heading.append(createElement("span", "", team.name));
                 const substitutesHeading = createElement("h5", "match-lineup-substitutes-heading", "Zaxira");
                 const substitutesList = createElement("ul", "match-lineup-list is-substitutes");
@@ -844,7 +898,7 @@
         ].forEach(({ team, games }) => {
             const group = createElement("section", "match-form-team");
             const heading = createElement("h4", "match-lineup-heading");
-            appendImage(heading, team.logo, "", "match-team-logo");
+            appendClubLogo(heading, team, match.league, "match-team-logo");
             heading.append(createElement("span", "", `${team.name} · so‘nggi ${games.length} o‘yin`));
             group.append(heading);
             if (!games.length) {
@@ -1008,18 +1062,25 @@
         return score ?? "—";
     }
 
-    function renderClubMatchCard(event, club, signal, generation) {
+    function renderClubMatchCard(event, club) {
         const competition = event.competitions?.[0];
         const competitors = competition?.competitors || [];
         const clubEntry = competitors.find(competitor => String(competitor.team?.id) === String(club.id));
         const opponent = getClubOpponent(event, club.id);
-        const card = createElement("article", "club-match-card");
+        const card = createElement("div", "club-match-card club-match-link");
+        makeMatchCardNavigable(card, club.league, event.id,
+            `${club.name} va ${opponent?.team?.displayName || "raqib"} uchrashuvi. Statistika, tarkib va o‘zaro o‘yinlarni ochish`);
         const isLive = competition?.status?.type?.state === "in";
+        if (competition?.status?.type?.state === "post" && clubEntry && opponent) {
+            const clubScore = Number.parseInt(String(getClubScore(event, clubEntry)), 10);
+            const opponentScore = Number.parseInt(String(getClubScore(event, opponent)), 10);
+            if (Number.isFinite(clubScore) && Number.isFinite(opponentScore)) {
+                card.classList.add(clubScore > opponentScore ? "is-win" : clubScore < opponentScore ? "is-loss" : "is-draw");
+            }
+        }
         if (isLive) card.classList.add("is-live");
-        const link = createElement("a", "club-match-link");
-        link.href = `#/match/${encodeURIComponent(club.league)}/${encodeURIComponent(event.id)}`;
-        link.setAttribute("aria-label", `${club.name} va ${opponent?.team?.displayName || "raqib"} uchrashuvi${isLive ? ", jonli" : ""}. Tafsilotlarni ochish`);
-        appendImage(link, getTeamLogo(opponent?.team || {}), "", "club-match-opponent-logo");
+        card.setAttribute("aria-label", `${club.name} va ${opponent?.team?.displayName || "raqib"} uchrashuvi${isLive ? ", jonli" : ""}. Statistika, tarkib va o‘zaro o‘yinlarni ochish`);
+        appendClubLogo(card, opponent?.team || {}, club.league, "club-match-opponent-logo");
         const info = createElement("span", "club-match-info");
         const isHome = clubEntry?.homeAway === "home";
         info.append(
@@ -1033,46 +1094,17 @@
             : isHome
                 ? `${getClubScore(event, clubEntry)} – ${getClubScore(event, opponent)}`
                 : `${getClubScore(event, opponent)} – ${getClubScore(event, clubEntry)}`;
-        link.append(info, createElement("strong", "club-match-score", score));
-        card.append(link);
-        if (isLive) return card;
-
-        const details = createElement("details", "club-match-details");
-        const summaryLabel = createElement("summary", "", "To‘liq statistika");
-        const stats = createElement("div", "club-match-statistics");
-        details.append(summaryLabel, stats);
-        details.addEventListener("toggle", async () => {
-            if (!details.open || details.dataset.loaded) return;
-            details.dataset.loaded = "true";
-            if (competition?.status?.type?.state === "pre") {
-                stats.append(createElement("p", "match-detail-empty", "Uchrashuv boshlanmagan. Statistika o‘yin tugagach mavjud bo‘ladi."));
-                return;
-            }
-            stats.append(createElement("p", "match-detail-loading", "Uchrashuv statistikasi yuklanmoqda…"));
-            try {
-                const match = getMatches([event], club.league, true)[0];
-                if (!match) throw new Error("Uchrashuv jamoalari topilmadi.");
-                match.isUpcoming = false;
-                const summaryData = await fetchMatchSummaryData(club.league, event.id, signal);
-                if (generation !== clubProfileGeneration || signal.aborted) return;
-                stats.replaceChildren(renderStatistics(summaryData, match));
-            } catch (error) {
-                if (signal.aborted || generation !== clubProfileGeneration) return;
-                stats.replaceChildren(createElement("p", "match-detail-empty is-error", "Uchrashuv statistikasini yuklab bo‘lmadi."));
-                console.error(`Club match statistics failed for ${club.league}:${event.id}:`, error);
-            }
-        });
-        card.append(details);
+        card.append(info, createElement("strong", "club-match-score", score));
         return card;
     }
 
-    function renderClubMatchList(events, club, signal, generation, emptyText) {
+    function renderClubMatchList(events, club, emptyText) {
         const list = createElement("div", "club-match-list");
         if (!events.length) {
             list.append(createElement("p", "match-detail-empty", emptyText));
             return list;
         }
-        events.forEach(event => list.append(renderClubMatchCard(event, club, signal, generation)));
+        events.forEach(event => list.append(renderClubMatchCard(event, club)));
         return list;
     }
 
@@ -1146,7 +1178,7 @@
 
     function renderClubProfile(club, rosterData, events, eventsFailed, signal, generation) {
         const heading = createElement("header", "club-profile-header");
-        appendImage(heading, club.logo, "", "club-profile-logo");
+        appendClubLogo(heading, club, club.league, "club-profile-logo", false);
         const title = createElement("div", "club-profile-title-copy");
         const clubTitle = createElement("h1", "", club.name);
         clubTitle.id = "club-profile-title";
@@ -1197,9 +1229,9 @@
         const nextPanel = createClubPanel(live.length ? "Jonli o‘yini" : "Keyingi o‘yini");
         if (live.length) {
             nextPanel.classList.add("club-live-match-panel");
-            nextPanel.append(renderClubMatchCard(live[0], club, signal, generation));
+            nextPanel.append(renderClubMatchCard(live[0], club));
         } else if (next.length) {
-            const nextCard = renderClubMatchCard(next[0], club, signal, generation);
+            const nextCard = renderClubMatchCard(next[0], club);
             nextPanel.append(nextCard);
         } else if (events) {
             nextPanel.append(createElement("p", "match-detail-empty", "Keyingi o‘yin jadvali hozircha e’lon qilinmagan."));
@@ -1237,13 +1269,13 @@
         clubProfileContent.append(topPlayersPanel);
 
         const recentPanel = createClubPanel("Avvalgi 5 ta uchrashuv", "O‘yinni tanlab, uning batafsil statistikasini oching");
-        recentPanel.append(renderClubMatchList(previous, club, signal, generation, events
+        recentPanel.append(renderClubMatchList(previous, club, events
             ? "Avvalgi uchrashuvlar topilmadi."
             : "Avvalgi uchrashuvlarni yuklab bo‘lmadi."));
         clubProfileContent.append(recentPanel);
 
         const upcomingPanel = createClubPanel("Keyingi 5 ta uchrashuv", "Har bir o‘yin uchun to‘liq statistika o‘yin yakunlangach ko‘rinadi");
-        upcomingPanel.append(renderClubMatchList(next, club, signal, generation, events
+        upcomingPanel.append(renderClubMatchList(next, club, events
             ? "Keyingi uchrashuvlar jadvali hali e’lon qilinmagan."
             : "Keyingi uchrashuvlarni yuklab bo‘lmadi."));
         clubProfileContent.append(upcomingPanel);
@@ -1397,10 +1429,10 @@
 
         const scoreboard = createElement("div", "live-match-detail-scoreboard");
         const home = createElement("div", "live-match-detail-team");
-        appendImage(home, match.home.logo, "", "live-match-detail-team-logo");
+        appendClubLogo(home, match.home, match.league, "live-match-detail-team-logo");
         home.append(createElement("strong", "", match.home.name));
         const away = createElement("div", "live-match-detail-team is-away");
-        appendImage(away, match.away.logo, "", "live-match-detail-team-logo");
+        appendClubLogo(away, match.away, match.league, "live-match-detail-team-logo");
         away.append(createElement("strong", "", match.away.name));
         const center = createElement("div", "live-match-detail-center");
         const score = createElement("strong", "live-match-detail-score",
@@ -1602,36 +1634,40 @@
     }
 
     function createMatchCard(match) {
-        const card = createElement("a", "live-match-card");
-        card.href = `#/match/${encodeURIComponent(match.league)}/${encodeURIComponent(match.id)}`;
-        card.setAttribute("aria-label", `${match.home.name} va ${match.away.name} uchrashuvi tafsilotlari`);
+        const card = createElement("div", "live-match-card");
+        makeMatchCardNavigable(card, match.league, match.id,
+            `${match.home.name} va ${match.away.name} uchrashuvi tafsilotlari`);
         const header = createElement("div", "live-match-card-header");
         const league = createElement("div", "live-match-league");
         appendImage(league, match.leagueLogo, "", "live-match-league-logo");
         league.append(createElement("span", "", match.name));
-        const phaseText = match.isUpcoming ? formatKickoff(match.date) :
+        const phaseText = match.isPre ? formatKickoff(match.date) :
             match.isRecentlyCompleted ? `Yakunlandi · ${formatKickoff(match.date)}` :
                 match.clock || match.phase;
-        const phase = createElement("span", `live-match-phase${match.isUpcoming ? " is-upcoming" : ""}`, phaseText);
+        const phase = createElement("span", `live-match-phase${match.isPre ? " is-upcoming" : ""}`, phaseText);
         header.append(league, phase);
 
         const scoreboard = createElement("div", "live-match-scoreboard");
         const home = createElement("div", "live-match-team");
-        appendImage(home, match.home.logo, "", "live-match-team-logo");
+        appendClubLogo(home, match.home, match.league, "live-match-team-logo");
         home.append(createElement("span", "live-match-team-name", match.home.name));
         const away = createElement("div", "live-match-team is-away");
-        appendImage(away, match.away.logo, "", "live-match-team-logo");
+        appendClubLogo(away, match.away, match.league, "live-match-team-logo");
         away.append(createElement("span", "live-match-team-name", match.away.name));
-        const score = createElement("div", `live-match-score${match.isUpcoming ? " is-fixture" : ""}`, match.isUpcoming ? "VS" : `${match.home.score ?? "0"} – ${match.away.score ?? "0"}`);
-        score.setAttribute("aria-label", match.isUpcoming ? `${match.home.name} va ${match.away.name} uchrashuvi` : `${match.home.name} ${match.home.score ?? 0}, ${match.away.score ?? 0} ${match.away.name}`);
+        const score = createElement("div", `live-match-score${match.isPre ? " is-fixture" : ""}`, match.isPre ? "VS" : `${match.home.score ?? "0"} – ${match.away.score ?? "0"}`);
+        score.setAttribute("aria-label", match.isPre ? `${match.home.name} va ${match.away.name} uchrashuvi` : `${match.home.name} ${match.home.score ?? 0}, ${match.away.score ?? 0} ${match.away.name}`);
         scoreboard.append(home, score, away);
         card.append(header, scoreboard, createElement("span", "live-match-card-action", "Barcha ma’lumotlar →"));
         return card;
     }
 
     function renderMatches() {
-        const leagueMatches = selectedLeague === "all" ? matches : matches.filter(match => match.league === selectedLeague);
-        const visibleMatches = selectedMatchState === "live"
+        const leagueMatches = selectedMatchState === "ucl-month"
+            ? uclMonthMatches
+            : selectedLeague === "all" ? matches : matches.filter(match => match.league === selectedLeague);
+        const visibleMatches = selectedMatchState === "ucl-month"
+            ? leagueMatches
+            : selectedMatchState === "live"
             ? leagueMatches.filter(match => match.isLive)
             : selectedMatchState === "upcoming"
                 ? leagueMatches.filter(match => match.isUpcoming)
@@ -1641,7 +1677,9 @@
         matchList.replaceChildren();
         if (!visibleMatches.length) {
             const empty = createElement("div", "live-match-empty");
-            const emptyMessage = selectedMatchState === "live"
+            const emptyMessage = selectedMatchState === "ucl-month"
+                ? "Shu oy oxirigacha UCL o‘yinlari topilmadi"
+                : selectedMatchState === "live"
                 ? selectedLeague === "all"
                     ? "Hozir jonli o‘yin yo‘q"
                     : `${leagueNames[selectedLeague]}da hozir jonli o‘yin yo‘q`
@@ -1659,11 +1697,22 @@
             empty.append(
                 createElement("span", "live-match-empty-icon", "◷"),
                 createElement("strong", "", emptyMessage),
-                createElement("span", "", selectedMatchState === "live"
+                createElement("span", "", selectedMatchState === "ucl-month"
+                    ? "UCL taqvimi yangilanganda shu yerda ko‘rinadi."
+                    : selectedMatchState === "live"
                     ? "Jonli uchrashuv boshlansa, shu yerda darhol ko‘rinadi. Kelasi o‘yinlarni yuqoridagi filtrdan tanlang."
                     : "Uchrashuvlar jadvali yangilanganda bu yerda avtomatik ko‘rinadi.")
             );
             matchList.append(empty);
+            return;
+        }
+        if (selectedMatchState === "ucl-month") {
+            const section = createElement("section", "live-match-section is-upcoming");
+            section.append(createElement("h2", "live-match-section-heading", "UCL — shu oy oxirigacha"));
+            const grid = createElement("div", "live-match-grid");
+            visibleMatches.forEach(match => grid.append(createMatchCard(match)));
+            section.append(grid);
+            matchList.append(section);
             return;
         }
         const completedMatches = visibleMatches
@@ -1904,7 +1953,7 @@
             const successful = responses.filter(result => result.status === "fulfilled");
             const failed = responses.filter(result => result.status === "rejected");
             if (!successful.length) throw new AggregateError(failed.map(result => result.reason), "Barcha ligalarning jonli o‘yinlarini olish muvaffaqiyatsiz tugadi.");
-            failed.forEach(result => console.error("A Top-5 league live scoreboard failed:", result.reason));
+            failed.forEach(result => console.error("A league live scoreboard failed:", result.reason));
             matches = successful.flatMap(result => result.value).sort((first, second) =>
                 second.isRecentlyCompleted - first.isRecentlyCompleted ||
                 (first.isRecentlyCompleted && second.isRecentlyCompleted
@@ -1927,8 +1976,63 @@
         }
     }
 
+    async function refreshUclMonthMatches() {
+        const generation = ++uclMonthRequestGeneration;
+        uclMonthController?.abort();
+        uclMonthController = new AbortController();
+        const { signal } = uclMonthController;
+        const now = new Date();
+        const month = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const endExclusive = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
+        refreshButton.disabled = true;
+        setStatus("UCL o‘yinlari oy oxirigacha yuklanmoqda…");
+        try {
+            const endpoint = `https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.champions/scoreboard?dates=${month}&limit=100`;
+            const response = await fetch(endpoint, { signal, cache: "no-store" });
+            if (!response.ok) throw new Error(`UCL: server ${response.status}`);
+            const data = await response.json();
+            if (!Array.isArray(data.events)) throw new Error("UCL: noto‘g‘ri javob");
+            if (generation !== uclMonthRequestGeneration) return;
+            uclMonthMatches = getMatches(data.events, "uefa.champions", true)
+                .filter(match => {
+                    const kickoff = Date.parse(match.date);
+                    return match.isPre && Number.isFinite(kickoff) &&
+                        kickoff >= Date.now() && kickoff < endExclusive;
+                })
+                .sort((first, second) => Date.parse(first.date) - Date.parse(second.date));
+            renderMatches();
+            const updatedAt = new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit" }).format(new Date());
+            setStatus(`${uclMonthMatches.length} ta UCL o‘yini oy oxirigacha yuklandi · ${updatedAt} da yangilandi`);
+        } catch (error) {
+            if (generation !== uclMonthRequestGeneration) return;
+            setStatus("UCL o‘yinlarini yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
+            console.error("UCL month fixtures fetch failed:", error);
+        } finally {
+            if (generation === uclMonthRequestGeneration) refreshButton.disabled = false;
+        }
+    }
+
+    function refreshCurrentMatches() {
+        if (selectedMatchState === "ucl-month") {
+            refreshUclMonthMatches();
+            return;
+        }
+        refreshLiveMatches();
+    }
+
     filters.forEach(button => {
         button.addEventListener("click", () => {
+            if (selectedMatchState === "ucl-month") {
+                selectedMatchState = "all";
+                uclMonthRequestGeneration += 1;
+                uclMonthController?.abort();
+                stateFilters.forEach(filter => {
+                    const selected = filter.dataset.matchState === selectedMatchState;
+                    filter.classList.toggle("is-active", selected);
+                    filter.setAttribute("aria-pressed", String(selected));
+                });
+                refreshButton.disabled = false;
+            }
             selectedLeague = button.dataset.matchLeague || "all";
             filters.forEach(filter => {
                 const selected = filter === button;
@@ -1942,12 +2046,29 @@
     stateFilters.forEach(button => {
         button.addEventListener("click", () => {
             selectedMatchState = button.dataset.matchState || "live";
+            if (selectedMatchState === "ucl-month") {
+                selectedLeague = "uefa.champions";
+                requestGeneration += 1;
+                activeController?.abort();
+                filters.forEach(filter => {
+                    const selected = filter.dataset.matchLeague === selectedLeague;
+                    filter.classList.toggle("is-active", selected);
+                    filter.setAttribute("aria-pressed", String(selected));
+                });
+            } else {
+                uclMonthRequestGeneration += 1;
+                uclMonthController?.abort();
+            }
             stateFilters.forEach(filter => {
                 const selected = filter === button;
                 filter.classList.toggle("is-active", selected);
                 filter.setAttribute("aria-pressed", String(selected));
             });
-            renderMatches();
+            if (selectedMatchState === "ucl-month") refreshUclMonthMatches();
+            else {
+                renderMatches();
+                refreshButton.disabled = false;
+            }
         });
     });
 
@@ -1964,7 +2085,7 @@
         clubSearchToggle.focus();
     });
     clubSearchInput.addEventListener("input", renderClubSearch);
-    refreshButton.addEventListener("click", refreshLiveMatches);
+    refreshButton.addEventListener("click", refreshCurrentMatches);
     window.addEventListener("pitchplan:sectionchange", event => {
         active = event.detail.section === "matches";
         window.clearInterval(refreshTimer);
@@ -2001,8 +2122,8 @@
         window.clearInterval(matchPageRefreshTimer);
         window.clearInterval(matchClockTimer);
         if (active) {
-            refreshLiveMatches();
-            refreshTimer = window.setInterval(refreshLiveMatches, 30000);
+            refreshCurrentMatches();
+            refreshTimer = window.setInterval(refreshCurrentMatches, 30000);
             if (!clubDirectory.length) {
                 clubDirectoryController = new AbortController();
                 const { signal } = clubDirectoryController;
@@ -2012,7 +2133,7 @@
                 }).catch(error => {
                     if (signal.aborted) return;
                     clubSearchStatus.textContent = "Klublar ro‘yxatini yuklab bo‘lmadi. Sahifani yangilab qayta urinib ko‘ring.";
-                    console.error("Top-5 league club directory failed:", error);
+                    console.error("League club directory failed:", error);
                 });
             } else {
                 renderClubSearch();
@@ -2033,8 +2154,8 @@
         } else if (currentClubRoute) {
             openClubPage(currentClubRoute);
         } else if (active) {
-            refreshLiveMatches();
-            refreshTimer = window.setInterval(refreshLiveMatches, 30000);
+            refreshCurrentMatches();
+            refreshTimer = window.setInterval(refreshCurrentMatches, 30000);
         }
     });
 })();

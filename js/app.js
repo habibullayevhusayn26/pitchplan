@@ -382,7 +382,27 @@ function getClubDisplayName(name) {
         let footballNewsRatio = "5:6";
         let footballLuxLogoSize = 80;
         let nonLuxBrandLogoSize = brandLogoSizeInput.value;
+        let brandLogoPositions = {};
         let photoTextSizes = { result: 100, "football-news": 100, "football-lux": 100, "football-stats": 100 };
+
+        function normalizeBrandLogoSize(value, fallback = 200) {
+            const numericValue = Number(value);
+            if (!Number.isFinite(numericValue)) return fallback;
+            return Math.min(500, Math.max(10, numericValue));
+        }
+
+        function syncBrandLogoSizeControl() {
+            const currentValue = currentTemplate === "football-lux" ?
+                normalizeBrandLogoSize(footballLuxLogoSize, 80) :
+                normalizeBrandLogoSize(nonLuxBrandLogoSize, 200);
+            if (currentTemplate === "football-lux") footballLuxLogoSize = currentValue;
+            else nonLuxBrandLogoSize = String(currentValue);
+            brandLogoSizeInput.min = "10";
+            brandLogoSizeInput.max = "500";
+            brandLogoSizeInput.step = "5";
+            brandLogoSizeInput.value = String(currentValue);
+            brandLogoSizeValue.textContent = `${currentValue}%`;
+        }
         let playerStatsWatermarkEnabled = true;
         let matchlistColumns = 1;
         let todayResultsTheme = "current";
@@ -574,22 +594,17 @@ function getClubDisplayName(name) {
         function setTemplate(name) {
             const previousTemplate = currentTemplate;
             if (previousTemplate === "football-lux") {
-                footballLuxLogoSize = Number(brandLogoSizeInput.value);
+                footballLuxLogoSize = normalizeBrandLogoSize(brandLogoSizeInput.value, 80);
             } else {
-                nonLuxBrandLogoSize = brandLogoSizeInput.value;
+                nonLuxBrandLogoSize = String(normalizeBrandLogoSize(brandLogoSizeInput.value, 200));
             }
-            if (name === "football-lux") {
-                brandLogoSizeInput.min = "30";
-                brandLogoSizeInput.max = "180";
-                brandLogoSizeInput.step = "5";
-                brandLogoSizeInput.value = String(footballLuxLogoSize);
-            } else {
-                brandLogoSizeInput.min = "50";
-                brandLogoSizeInput.max = "300";
-                brandLogoSizeInput.step = "10";
-                brandLogoSizeInput.value = nonLuxBrandLogoSize;
-            }
-            brandLogoSizeValue.textContent = `${brandLogoSizeInput.value}%`;
+            const nextSize = name === "football-lux" ?
+                normalizeBrandLogoSize(footballLuxLogoSize, 80) :
+                normalizeBrandLogoSize(nonLuxBrandLogoSize, 200);
+            if (name === "football-lux") footballLuxLogoSize = nextSize;
+            else nonLuxBrandLogoSize = String(nextSize);
+            currentTemplate = name;
+            syncBrandLogoSizeControl();
             if (previousTemplate && backgroundImage && !isDefaultPosterBackground(backgroundImage)) {
                 backgroundImagesByTemplate.set(previousTemplate, backgroundImage);
             } else if (previousTemplate) {
@@ -614,7 +629,6 @@ function getClubDisplayName(name) {
                 backgroundOpacityInput.value = nonResultBackgroundOpacity;
                 opacityValue.textContent = `${nonResultBackgroundOpacity}%`;
             }
-            currentTemplate = name;
             if (matchdayTemplate || monthlyTemplate) {
                 backgroundOpacityInput.value = "100";
                 opacityValue.textContent = "100%";
@@ -762,6 +776,7 @@ function getClubDisplayName(name) {
 
         function resetCurrentTemplate() {
             const template = currentTemplate;
+            delete brandLogoPositions[template];
             if (template === "monthly-club-fixtures") {
                 monthlyFixtureLoadController?.abort();
                 monthlyClub = null;
@@ -788,8 +803,8 @@ function getClubDisplayName(name) {
             }
             if (template === "football-lux") {
                 footballLuxLogoSize = 80;
-                brandLogoSizeInput.value = "80";
-                brandLogoSizeValue.textContent = "80%";
+                nonLuxBrandLogoSize = String(normalizeBrandLogoSize(nonLuxBrandLogoSize, 200));
+                syncBrandLogoSizeControl();
             }
             if (photoPosterTemplates.has(template) && template !== "telegram-promo") {
                 photoTextSizes[template] = 100;
@@ -1588,7 +1603,22 @@ function getClubDisplayName(name) {
         }
 
         function addPosterHitRegion(type, x, y, width, height, rowIndex = -1) {
+            if (type === "brandLogo") {
+                const offset = getBrandLogoOffset();
+                x += offset.x;
+                y += offset.y;
+            }
             posterHitRegions.push({ type, x, y, width, height, rowIndex });
+        }
+
+        function getBrandLogoOffset(template = currentTemplate) {
+            const position = brandLogoPositions[template] || { x: 0, y: 0 };
+            return { x: position.x * canvas.width, y: position.y * canvas.height };
+        }
+
+        function drawPositionedBrandImage(image, x, y, width, height) {
+            const offset = getBrandLogoOffset();
+            drawImageWithLogoShape(image, x + offset.x, y + offset.y, width, height);
         }
 
         function getGoalColumns() {
@@ -1671,6 +1701,10 @@ function getClubDisplayName(name) {
 
         canvas.addEventListener("click", event => {
             if (!expandedPreview.open) return;
+            if (canvas.dataset.brandLogoDragged === "true") {
+                delete canvas.dataset.brandLogoDragged;
+                return;
+            }
             const rect = canvas.getBoundingClientRect();
             const x = (event.clientX - rect.left) * canvas.width / rect.width;
             const y = (event.clientY - rect.top) * canvas.height / rect.height;
@@ -1697,6 +1731,65 @@ function getClubDisplayName(name) {
                 showInlineEditor(target, event.clientX, event.clientY);
             }
         });
+
+        let brandLogoDrag = null;
+        canvas.addEventListener("pointerdown", event => {
+            if (!expandedPreview.open || !customBrandLogo || !brandLogo) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * canvas.width / rect.width;
+            const y = (event.clientY - rect.top) * canvas.height / rect.height;
+            const logoRegion = [...posterHitRegions].reverse().find(region =>
+                region.type === "brandLogo" &&
+                x >= region.x && x <= region.x + region.width &&
+                y >= region.y && y <= region.y + region.height
+            );
+            if (!logoRegion) return;
+            const offset = getBrandLogoOffset();
+            brandLogoDrag = {
+                pointerId: event.pointerId,
+                startClientX: event.clientX,
+                startClientY: event.clientY,
+                startOffsetX: offset.x,
+                startOffsetY: offset.y,
+                regionX: logoRegion.x - offset.x,
+                regionY: logoRegion.y - offset.y,
+                regionWidth: logoRegion.width,
+                regionHeight: logoRegion.height,
+                moved: false
+            };
+            canvas.setPointerCapture(event.pointerId);
+        });
+        canvas.addEventListener("pointermove", event => {
+            if (!brandLogoDrag || brandLogoDrag.pointerId !== event.pointerId) return;
+            const rect = canvas.getBoundingClientRect();
+            const deltaX = (event.clientX - brandLogoDrag.startClientX) * canvas.width / rect.width;
+            const deltaY = (event.clientY - brandLogoDrag.startClientY) * canvas.height / rect.height;
+            if (!brandLogoDrag.moved && Math.hypot(deltaX, deltaY) < 4) return;
+            brandLogoDrag.moved = true;
+            const minX = -brandLogoDrag.regionX;
+            const minY = -brandLogoDrag.regionY;
+            const maxX = canvas.width - brandLogoDrag.regionX - brandLogoDrag.regionWidth;
+            const maxY = canvas.height - brandLogoDrag.regionY - brandLogoDrag.regionHeight;
+            const offsetX = Math.min(maxX, Math.max(minX, brandLogoDrag.startOffsetX + deltaX));
+            const offsetY = Math.min(maxY, Math.max(minY, brandLogoDrag.startOffsetY + deltaY));
+            brandLogoPositions[currentTemplate] = {
+                x: offsetX / canvas.width,
+                y: offsetY / canvas.height
+            };
+            canvas.classList.add("is-dragging-logo");
+            drawPoster();
+        });
+        function finishBrandLogoDrag(event) {
+            if (!brandLogoDrag || brandLogoDrag.pointerId !== event.pointerId) return;
+            if (brandLogoDrag.moved) {
+                canvas.dataset.brandLogoDragged = "true";
+                scheduleWorkspaceSave();
+            }
+            brandLogoDrag = null;
+            canvas.classList.remove("is-dragging-logo");
+        }
+        canvas.addEventListener("pointerup", finishBrandLogoDrag);
+        canvas.addEventListener("pointercancel", finishBrandLogoDrag);
 
         inlineEditor.addEventListener("input", () => {
             if (activeInlineTarget) updateInlineTarget(activeInlineTarget, inlineEditor.value);
@@ -1913,32 +2006,32 @@ function getClubDisplayName(name) {
             });
 
             const badgeWidth = 190 * scale;
-            const badgeX = width / 2 - badgeWidth / 2;
             const badgeY = (listY + (boxHeight + 22 * scale) * 2 + boxHeight + 2 * scale);
+            const brandLogoScale = Number(brandLogoSizeInput.value) / 100;
+            const scaledBadgeWidth = badgeWidth * brandLogoScale;
+            const scaledBadgeHeight = 64 * scale * brandLogoScale;
+            const scaledBadgeX = width / 2 - scaledBadgeWidth / 2;
+            const scaledBadgeY = badgeY + (64 * scale - scaledBadgeHeight) / 2;
             if (brandLogo && brandLogo.complete && brandLogo.naturalWidth) {
                 ctx.save();
                 ctx.shadowBlur = 20 * scale;
                 ctx.shadowColor = "rgba(0,0,0,0.38)";
-                if (brandLogoShape === "circle") {
-                    const badgeHeight = 64 * scale;
-                    drawImageWithLogoShape(brandLogo, width / 2 - badgeHeight / 2, badgeY, badgeHeight, badgeHeight);
-                } else {
-                    drawImageContain(brandLogo, badgeX, badgeY, badgeWidth, 64 * scale);
-                }
+                drawPositionedBrandImage(brandLogo, scaledBadgeX, scaledBadgeY, scaledBadgeWidth, scaledBadgeHeight);
                 ctx.restore();
             } else {
                 ctx.save();
                 ctx.fillStyle = "rgba(255,255,255,0.10)";
                 ctx.beginPath();
-                ctx.roundRect(badgeX, badgeY, badgeWidth, 64 * scale, 18 * scale);
+                ctx.roundRect(scaledBadgeX, scaledBadgeY, scaledBadgeWidth, scaledBadgeHeight, 18 * scale * brandLogoScale);
                 ctx.fill();
                 ctx.restore();
                 ctx.fillStyle = "#ffffff";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `900 ${30 * scale}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillText("PITCHPLAN", width / 2, badgeY + 32 * scale);
+                ctx.font = `900 ${30 * scale * brandLogoScale}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText("PITCHPLAN", width / 2, badgeY + 32 * scale, scaledBadgeWidth);
             }
+            addPosterHitRegion("brandLogo", scaledBadgeX, scaledBadgeY, scaledBadgeWidth, scaledBadgeHeight);
             if (playerStatsWatermarkEnabled) {
                 if (defaultBrandLogo.complete && defaultBrandLogo.naturalWidth) {
                     const watermarkWidth = 104 * scale;
@@ -2020,9 +2113,16 @@ function getClubDisplayName(name) {
             let headlineFontSize = 156 * scale * headlineScale;
             const headline = titleInput.value.trim() || "Futbolda yangi rekord qayd etildi";
             const headlineWidth = width * .8;
-            const logoBoxWidth = 140 * scale;
-            const logoBoxHeight = 150 * scale;
-            const logoY = footerTop + 25 * scale;
+            const logoScale = Number(brandLogoSizeInput.value) / 100;
+            const baseLogoBoxWidth = 140 * scale;
+            const baseLogoBoxHeight = 150 * scale;
+            const logoBoxWidth = baseLogoBoxWidth * logoScale;
+            const logoBoxHeight = baseLogoBoxHeight * logoScale;
+            const logoCenterX = width / 2;
+            const logoCenterY = footerTop + 25 * scale + baseLogoBoxHeight / 2;
+            const logoX = logoCenterX - logoBoxWidth / 2;
+            const logoY = logoCenterY - logoBoxHeight / 2;
+            const logoOffset = getBrandLogoOffset();
             const maxHeadlineHeight = logoY - headlineY - 35 * scale;
             let headlineLines;
             let headlineLineHeight;
@@ -2061,19 +2161,19 @@ function getClubDisplayName(name) {
             ctx.letterSpacing = "0px";
             addPosterHitRegion("title", width * .14, headlineY, headlineWidth, headlineLineHeight * Math.max(1, headlineLines.length));
 
-            const logoX = (width - logoBoxWidth) / 2;
             if (!customBrandLogo) {
                 ctx.fillStyle = "#b50d1b";
-                ctx.fillRect(logoX, logoY, logoBoxWidth, logoBoxHeight);
+                ctx.fillRect(logoX + logoOffset.x, logoY + logoOffset.y, logoBoxWidth, logoBoxHeight);
             }
             if (brandLogo) {
-                drawImageWithLogoShape(brandLogo, logoX + 13 * scale, logoY + 13 * scale, logoBoxWidth - 26 * scale, logoBoxHeight - 26 * scale);
+                const logoInset = 13 * scale * logoScale;
+                drawPositionedBrandImage(brandLogo, logoX + logoInset, logoY + logoInset, logoBoxWidth - logoInset * 2, logoBoxHeight - logoInset * 2);
             } else {
                 ctx.fillStyle = "#ffffff";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.font = `900 ${44 * scale}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillText("PP", width / 2, logoY + logoBoxHeight / 2);
+                ctx.font = `900 ${44 * scale * logoScale}px "Segoe UI", Arial, sans-serif`;
+                ctx.fillText("PP", width / 2 + logoOffset.x, logoY + logoBoxHeight / 2 + logoOffset.y);
             }
             addPosterHitRegion("brandLogo", logoX, logoY, logoBoxWidth, logoBoxHeight);
         }
@@ -2090,6 +2190,9 @@ function getClubDisplayName(name) {
 
             const logoX = width * .016;
             const logoY = height * .016;
+            const logoOffset = getBrandLogoOffset();
+            const drawLogoX = logoX + logoOffset.x;
+            const drawLogoY = logoY + logoOffset.y;
             const logoScale = Number(brandLogoSizeInput.value) / 100;
             const logoWidth = width * .34 * logoScale;
             const logoHeight = height * .1 * logoScale;
@@ -2100,12 +2203,12 @@ function getClubDisplayName(name) {
                 if (brandLogoShape === "circle") {
                     ctx.save();
                     ctx.beginPath();
-                    ctx.arc(logoX + imageWidth / 2, logoY + imageHeight / 2, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
+                    ctx.arc(drawLogoX + imageWidth / 2, drawLogoY + imageHeight / 2, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
                     ctx.clip();
-                    ctx.drawImage(brandLogo, logoX, logoY, imageWidth, imageHeight);
+                    ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
                     ctx.restore();
                 } else {
-                    ctx.drawImage(brandLogo, logoX, logoY, imageWidth, imageHeight);
+                    ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
                 }
             } else {
                 let logoFontSize = Math.min(54 * scale * logoScale, logoHeight * .64);
@@ -2120,13 +2223,13 @@ function getClubDisplayName(name) {
                 }
                 const footballWidth = ctx.measureText("FOOTBALL").width;
                 ctx.fillStyle = "#f4f4f4";
-                ctx.fillText("FOOTBALL", logoX, logoY + logoFontSize, footballWidth);
+                ctx.fillText("FOOTBALL", drawLogoX, drawLogoY + logoFontSize, footballWidth);
                 ctx.fillStyle = "#e8df00";
-                ctx.fillText("NEWS", logoX + footballWidth, logoY + logoFontSize,
+                ctx.fillText("NEWS", drawLogoX + footballWidth, drawLogoY + logoFontSize,
                     Math.max(0, logoWidth - footballWidth));
                 ctx.letterSpacing = "0px";
                 ctx.fillStyle = "#e8df00";
-                ctx.fillRect(logoX, logoY + logoHeight * .86, logoWidth, Math.max(2 * scale, 2));
+                ctx.fillRect(drawLogoX, drawLogoY + logoHeight * .86, logoWidth, Math.max(2 * scale, 2));
                 ctx.restore();
             }
             addPosterHitRegion("brandLogo", logoX, logoY, logoWidth, logoHeight);
@@ -2189,7 +2292,7 @@ function getClubDisplayName(name) {
             const logoX = width - 24 * scale - logoSize;
             const logoY = 24 * scale;
             if (brandLogo) {
-                drawImageWithLogoShape(brandLogo, logoX, logoY, logoSize, logoSize);
+                drawPositionedBrandImage(brandLogo, logoX, logoY, logoSize, logoSize);
             } else {
                 drawBrandLogo(logoX + logoSize / 2, logoY, logoSize);
             }
@@ -2306,7 +2409,8 @@ function getClubDisplayName(name) {
             const markX = center - 56 * scale;
             const markY = 22 * scale;
             if (customBrandLogo && brandLogo) {
-                drawImageContain(brandLogo, markX, markY, 112 * scale, 96 * scale);
+                const offset = getBrandLogoOffset();
+                drawImageContain(brandLogo, markX + offset.x, markY + offset.y, 112 * scale, 96 * scale);
             } else if (matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth) {
                 ctx.save();
                 ctx.filter = "brightness(0) invert(1)";
@@ -2650,6 +2754,7 @@ function getClubDisplayName(name) {
                 customText: Array.from(customTextColors),
                 brandLogoSize: brandLogoSizeInput.value,
                 brandLogoShape,
+                brandLogoPositions: { ...brandLogoPositions },
                 customBrandLogo,
                 brandLogo: customBrandLogo ? imageSource(brandLogo) : null,
                 nonLuxBrandLogoSize,
@@ -2712,7 +2817,7 @@ function getClubDisplayName(name) {
             footballNewsRatio = Object.hasOwn(footballNewsRatios, snapshot.footballNewsRatio) ?
                 snapshot.footballNewsRatio : "5:6";
             footballLuxLogoSize = Number.isFinite(snapshot.footballLuxLogoSize) ?
-                Math.min(180, Math.max(30, snapshot.footballLuxLogoSize)) : 80;
+                normalizeBrandLogoSize(snapshot.footballLuxLogoSize, 80) : 80;
             photoTextSizes = Object.fromEntries(["result", "football-news", "football-lux", "football-stats"].map(template => [
                 template,
                 Number.isFinite(snapshot.photoTextSizes?.[template]) ?
@@ -2798,6 +2903,15 @@ function getClubDisplayName(name) {
                 defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
             customBrandLogo = Boolean(snapshot.customBrandLogo);
             brandLogoShape = snapshot.brandLogoShape === "circle" ? "circle" : "square";
+            brandLogoPositions = Object.fromEntries(
+                Object.entries(snapshot.brandLogoPositions || {})
+                    .filter(([template, position]) =>
+                        Boolean(examples[template]) && Number.isFinite(position?.x) && Number.isFinite(position?.y))
+                    .map(([template, position]) => [template, {
+                        x: Math.min(1, Math.max(-1, position.x)),
+                        y: Math.min(1, Math.max(-1, position.y))
+                    }])
+            );
             updateBrandLogoShapeOptions();
             if (customBrandLogo && brandLogo) brandLogosByTemplate.set(currentTemplate, brandLogo);
             else brandLogosByTemplate.delete(currentTemplate);
@@ -2809,10 +2923,13 @@ function getClubDisplayName(name) {
             rowColorInput.value = snapshot.row;
             timeBackgroundColorInput.value = snapshot.timeBackground;
             nonLuxBrandLogoSize = Number.isFinite(snapshot.nonLuxBrandLogoSize) ?
-                String(Math.min(300, Math.max(50, snapshot.nonLuxBrandLogoSize))) : snapshot.brandLogoSize;
-            brandLogoSizeInput.value = snapshot.brandLogoSize;
+                String(normalizeBrandLogoSize(snapshot.nonLuxBrandLogoSize, Number(snapshot.brandLogoSize) || 200)) :
+                String(normalizeBrandLogoSize(snapshot.brandLogoSize, 200));
+            brandLogoSizeInput.value = String(currentTemplate === "football-lux" ?
+                normalizeBrandLogoSize(footballLuxLogoSize, 80) :
+                normalizeBrandLogoSize(nonLuxBrandLogoSize, 200));
             if (currentTemplate === "football-lux") {
-                brandLogoSizeInput.value = String(footballLuxLogoSize);
+                footballLuxLogoSize = normalizeBrandLogoSize(brandLogoSizeInput.value, 80);
             }
             brandLogoSizeValue.textContent = `${brandLogoSizeInput.value}%`;
             Object.entries(snapshot.colors).forEach(([key, value]) => {
@@ -3115,7 +3232,8 @@ function getClubDisplayName(name) {
             const channelGroupWidth = (brandLogo ? channelLogoSize + (channelName ? 14 * scale : 0) : 0) + channelTextWidth;
             const channelStartX = (width - channelGroupWidth) / 2;
             if (brandLogo) {
-                drawImageWithLogoShape(brandLogo, channelStartX, height - 73 * scale, channelLogoSize, channelLogoSize);
+                drawPositionedBrandImage(brandLogo, channelStartX, height - 73 * scale, channelLogoSize, channelLogoSize);
+                addPosterHitRegion("brandLogo", channelStartX, height - 73 * scale, channelLogoSize, channelLogoSize);
             }
             if (channelName) {
                 ctx.fillStyle = "#ffffff";
@@ -3252,7 +3370,7 @@ function getClubDisplayName(name) {
 
         function drawBrandLogo(centerX, y, size) {
             if (brandLogo) {
-                drawImageWithLogoShape(brandLogo, centerX - size / 2, y, size, size);
+                drawPositionedBrandImage(brandLogo, centerX - size / 2, y, size, size);
                 return;
             }
             ctx.save();
@@ -4398,6 +4516,273 @@ function getClubDisplayName(name) {
             window.dispatchEvent(new CustomEvent("pitchplan:sectionchange", { detail: { section, match: options.match, club: options.club } }));
         }
 
+        function youtubeVideoId(source) {
+            try {
+                const url = new URL(source);
+                const host = url.hostname.toLowerCase().replace(/^www\./, "");
+                if (host === "youtu.be") return url.pathname.slice(1).split("/")[0];
+                if (!["youtube.com", "m.youtube.com", "youtube-nocookie.com"].includes(host)) return "";
+                if (url.searchParams.has("v")) return url.searchParams.get("v");
+                const match = url.pathname.match(/^\/(?:embed|live|shorts)\/([^/?]+)/);
+                return match ? match[1] : "";
+            } catch {
+                return "";
+            }
+        }
+
+        function ensureYouTubeApi() {
+            if (window.YT && window.YT.Player) return Promise.resolve(window.YT);
+            if (youtubeApiPromise) return youtubeApiPromise;
+            youtubeApiPromise = new Promise((resolve, reject) => {
+                const existingScript = document.querySelector('script[src*="youtube.com/iframe_api"]');
+                const script = existingScript || document.createElement("script");
+                const previousReady = window.onYouTubeIframeAPIReady;
+                const timeout = window.setTimeout(() => reject(new Error("YouTube player API vaqtda yuklanmadi.")), 15000);
+                window.onYouTubeIframeAPIReady = () => {
+                    window.clearTimeout(timeout);
+                    resolve(window.YT);
+                    if (typeof previousReady === "function") previousReady();
+                };
+                script.addEventListener("error", () => {
+                    window.clearTimeout(timeout);
+                    reject(new Error("YouTube player API yuklanmadi."));
+                }, { once: true });
+                script.addEventListener("load", () => {
+                    if (window.YT && window.YT.Player) {
+                        window.clearTimeout(timeout);
+                        resolve(window.YT);
+                    }
+                }, { once: true });
+                if (window.YT && window.YT.Player) {
+                    window.clearTimeout(timeout);
+                    resolve(window.YT);
+                    return;
+                }
+                if (!existingScript) {
+                    script.src = "https://www.youtube.com/iframe_api";
+                    script.async = true;
+                    document.head.appendChild(script);
+                }
+            });
+            return youtubeApiPromise;
+        }
+
+        function updateBroadcastCaption() {
+            const caption = broadcastCaptionInput.value.trim();
+            broadcastPlayerCaption.textContent = caption;
+            broadcastPlayerCaption.hidden = !caption;
+        }
+
+        function updateBroadcastPlayButton(playing) {
+            broadcastPlaying = playing;
+            broadcastPlayPauseButton.textContent = playing ? "Ⅱ" : "▶";
+            broadcastPlayPauseButton.setAttribute("aria-label", playing ? "Pauza qilish" : "Videoni boshlash");
+        }
+
+        function replaceBroadcastIframe() {
+            const replacement = document.createElement("iframe");
+            replacement.id = "broadcast-iframe";
+            replacement.title = "Live stream embed";
+            replacement.allow = "autoplay; fullscreen";
+            replacement.loading = "lazy";
+            replacement.hidden = true;
+            if (broadcastIframe.isConnected) broadcastIframe.replaceWith(replacement);
+            else broadcastPlayerShell.insertBefore(replacement, broadcastPlayerCaption);
+            broadcastIframe = replacement;
+        }
+
+        function resetYouTubePlayer() {
+            if (youtubePlayer) youtubePlayer.destroy();
+            youtubePlayer = null;
+            youtubePlayerReady = false;
+            pendingYoutubeVideoId = null;
+            if (broadcastYoutubeMount.isConnected) broadcastYoutubeMount.remove();
+            broadcastYoutubeMount = document.createElement("div");
+            broadcastYoutubeMount.id = "broadcast-youtube-player";
+            broadcastYoutubeMount.hidden = true;
+            broadcastPlayerShell.insertBefore(broadcastYoutubeMount, broadcastPlayerCaption);
+            replaceBroadcastIframe();
+        }
+
+        function stopHlsPlayback() {
+            if (broadcastVideo.hls) {
+                broadcastVideo.hls.destroy();
+                broadcastVideo.hls = null;
+            }
+            broadcastVideo.pause();
+            broadcastVideo.removeAttribute("src");
+            broadcastVideo.load();
+        }
+
+        async function loadYouTubeVideo(videoId) {
+            pendingYoutubeVideoId = videoId;
+            broadcastMuted = false;
+            broadcastMuteButton.textContent = "Ovozni o‘chirish";
+            broadcastMuteButton.setAttribute("aria-label", broadcastMuteButton.textContent);
+            broadcastYoutubeMount.hidden = false;
+            broadcastIframe.hidden = false;
+            broadcastIframe.style.display = "none";
+            broadcastPlayerControls.hidden = false;
+            broadcastVideo.hidden = true;
+            broadcastPlayerEmpty.hidden = true;
+            broadcastStatusEl.textContent = "YouTube video yuklanmoqda…";
+            try {
+                const YT = await ensureYouTubeApi();
+                if (youtubePlayer && youtubePlayerReady) {
+                    youtubePlayer.unMute();
+                    youtubePlayer.setVolume(Number(broadcastVolumeInput.value));
+                    youtubePlayer.cueVideoById(pendingYoutubeVideoId);
+                    return;
+                }
+                if (youtubePlayer) return;
+                youtubePlayer = new YT.Player(broadcastYoutubeMount, {
+                    videoId: pendingYoutubeVideoId,
+                    width: "100%",
+                    height: "100%",
+                    playerVars: {
+                        autoplay: 0,
+                        controls: 0,
+                        disablekb: 1,
+                        fs: 0,
+                        playsinline: 1,
+                        rel: 0,
+                        origin: window.location.origin
+                    },
+                    events: {
+                        onReady: event => {
+                            youtubePlayer = event.target;
+                            youtubePlayerReady = true;
+                            event.target.setVolume(Number(broadcastVolumeInput.value));
+                            event.target.cueVideoById(pendingYoutubeVideoId);
+                        },
+                        onStateChange: event => {
+                            const playing = event.data === YT.PlayerState.PLAYING;
+                            updateBroadcastPlayButton(playing);
+                            if (playing) broadcastStatusEl.textContent = "Video ijro etilmoqda.";
+                            else if (event.data === YT.PlayerState.PAUSED) broadcastStatusEl.textContent = "Video pauzada.";
+                        },
+                        onError: event => {
+                            const message = event.data === 101 || event.data === 150
+                                ? "Bu video YouTube tomonidan boshqa saytda ko‘rsatishga ruxsat bermagan."
+                                : "YouTube videoni yuklay olmadi. Video havolasini tekshiring.";
+                            broadcastStatusEl.textContent = message;
+                        }
+                    }
+                });
+            } catch (error) {
+                youtubeApiPromise = null;
+                broadcastStatusEl.textContent = `YouTube player ishga tushmadi: ${error.message}`;
+                broadcastPlayerEmpty.hidden = false;
+                broadcastPlayerControls.hidden = true;
+            }
+        }
+
+        function setBroadcastSource(source) {
+            let trimmed = (source || "").trim();
+            const iframeSource = trimmed.match(/<iframe\b[^>]*\bsrc=["']([^"']+)["']/i);
+            if (iframeSource) trimmed = iframeSource[1].replace(/&amp;/g, "&").trim();
+            if (!trimmed) {
+                resetYouTubePlayer();
+                stopHlsPlayback();
+                broadcastStatusEl.textContent = "Live stream URL ni kiriting.";
+                broadcastPlayerEmpty.hidden = false;
+                broadcastVideo.hidden = true;
+                broadcastPlayerControls.hidden = true;
+                broadcastPlayerCaption.hidden = true;
+                broadcastIframe.hidden = true;
+                broadcastIframe.src = "";
+                return;
+            }
+            const videoId = youtubeVideoId(trimmed);
+            if (videoId) {
+                if (broadcastVideo.hls) {
+                    broadcastVideo.hls.destroy();
+                    broadcastVideo.hls = null;
+                }
+                broadcastVideo.pause();
+                broadcastVideo.removeAttribute("src");
+                broadcastVideo.load();
+                broadcastYoutubeMount.hidden = true;
+                broadcastIframe.style.display = "";
+                loadYouTubeVideo(videoId);
+                updateBroadcastCaption();
+                updateBroadcastPlayButton(false);
+                return;
+            }
+            const isHls = /\.m3u8(?:\?.*)?$/i.test(trimmed) || /hls/i.test(trimmed);
+            const isEmbed = /player\.twitch\.tv|vimeo\.com\/video|facebook\.com\/plugins|allplay|iframe|embed/i.test(trimmed);
+            if (trimmed.startsWith("rtmp://") || trimmed.startsWith("rtmps://")) {
+                resetYouTubePlayer();
+                stopHlsPlayback();
+                broadcastStatusEl.textContent = "RTMP browserda to‘g‘ridan-to‘g‘ri ishlamaydi. HLS/WHIP yoki embed URL ishlating.";
+                broadcastPlayerEmpty.hidden = false;
+                broadcastVideo.hidden = true;
+                broadcastPlayerControls.hidden = true;
+                broadcastIframe.hidden = true;
+                broadcastIframe.src = "";
+                return;
+            }
+            if (isHls) {
+                resetYouTubePlayer();
+                broadcastIframe.hidden = true;
+                broadcastIframe.src = "";
+                broadcastPlayerEmpty.hidden = true;
+                broadcastPlayerControls.hidden = false;
+                broadcastVideo.hidden = false;
+                broadcastMuted = false;
+                broadcastMuteButton.textContent = "Ovozni o‘chirish";
+                broadcastMuteButton.setAttribute("aria-label", broadcastMuteButton.textContent);
+                broadcastVideo.muted = false;
+                broadcastVideo.volume = Number(broadcastVolumeInput.value) / 100;
+                broadcastStatusEl.textContent = "HLS stream yuklandi. Ijroni boshlash uchun ▶ tugmasini bosing.";
+                updateBroadcastCaption();
+                updateBroadcastPlayButton(false);
+                if (window.Hls && window.Hls.isSupported()) {
+                    if (broadcastVideo.hls) {
+                        broadcastVideo.hls.destroy();
+                        broadcastVideo.hls = null;
+                    }
+                    const hls = new window.Hls();
+                    hls.loadSource(trimmed);
+                    hls.attachMedia(broadcastVideo);
+                    hls.on(window.Hls.Events.ERROR, (_, data) => {
+                        if (data.fatal) {
+                            broadcastStatusEl.textContent = "Stream yuklanmadi. URL ni tekshiring yoki HLS endpoint to‘g‘ri bo‘lishi kerak.";
+                        }
+                    });
+                    broadcastVideo.hls = hls;
+                } else if (broadcastVideo.canPlayType("application/vnd.apple.mpegurl")) {
+                    broadcastVideo.src = trimmed;
+                } else {
+                    broadcastStatusEl.textContent = "Bu brauzer HLS ni qo‘llab-quvvatlamaydi. Embed yoki boshqa stream formatini ishlating.";
+                }
+                return;
+            }
+            if (isEmbed || /^https?:\/\//i.test(trimmed)) {
+                resetYouTubePlayer();
+                stopHlsPlayback();
+                broadcastPlayerEmpty.hidden = true;
+                broadcastVideo.hidden = true;
+                broadcastVideo.pause();
+                broadcastVideo.removeAttribute("src");
+                broadcastVideo.load();
+                broadcastPlayerControls.hidden = true;
+                broadcastIframe.hidden = false;
+                broadcastIframe.src = trimmed;
+                broadcastStatusEl.textContent = "Embed player yuklanmoqda…";
+                updateBroadcastCaption();
+                return;
+            }
+            broadcastStatusEl.textContent = "URL ni HLS (.m3u8) yoki YouTube/embed URL sifatida kiriting.";
+            resetYouTubePlayer();
+            stopHlsPlayback();
+            broadcastPlayerEmpty.hidden = false;
+            broadcastVideo.hidden = true;
+            broadcastPlayerControls.hidden = true;
+            broadcastIframe.hidden = true;
+            broadcastIframe.src = "";
+        }
+
         document.querySelectorAll(".app-nav-item, .home-shortcut").forEach(button => {
             button.addEventListener("click", event => {
                 event.preventDefault();
@@ -4405,6 +4790,7 @@ function getClubDisplayName(name) {
                 window.scrollTo({ top: 0, behavior: "smooth" });
             });
         });
+
         function restoreRoute() {
             if (window.location.hash === lastHandledHash) return;
             lastHandledHash = window.location.hash;
@@ -4814,9 +5200,11 @@ function getClubDisplayName(name) {
                     "Premier League belgisi tiklandi." : "PitchPlan standart logosi tiklandi.";
         });
         brandLogoSizeInput.addEventListener("input", () => {
-            brandLogoSizeValue.textContent = `${brandLogoSizeInput.value}%`;
-            if (currentTemplate === "football-lux") footballLuxLogoSize = Number(brandLogoSizeInput.value);
-            else nonLuxBrandLogoSize = brandLogoSizeInput.value;
+            const normalizedValue = normalizeBrandLogoSize(brandLogoSizeInput.value, currentTemplate === "football-lux" ? 80 : 200);
+            brandLogoSizeInput.value = String(normalizedValue);
+            brandLogoSizeValue.textContent = `${normalizedValue}%`;
+            if (currentTemplate === "football-lux") footballLuxLogoSize = normalizedValue;
+            else nonLuxBrandLogoSize = String(normalizedValue);
             drawPoster();
         });
         document.getElementById("add-row").addEventListener("click", () => {
