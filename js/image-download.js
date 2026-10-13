@@ -23,7 +23,7 @@
         const isInAppBrowser = inAppBrowserPattern.test(navigator.userAgent || "");
         if (isInAppBrowser && typeof File === "function" &&
             typeof navigator.share === "function" && typeof navigator.canShare === "function") {
-            const file = new File([blob], filename, { type: "image/png" });
+            const file = new File([blob], filename, { type: blob.type || "image/png" });
             let canShareFile = false;
             try {
                 canShareFile = navigator.canShare({ files: [file] });

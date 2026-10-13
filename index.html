@@ -6,17 +6,17 @@
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="PitchPlan bilan futbol uchrashuvlari jadvalini yarating, tahrirlang va rasm sifatida yuklab oling.">
     <title>PitchPlan — futbol jadvali dizayneri</title>
-    <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=1">
-    <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=1">
+    <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=2">
+    <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=2">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=72">
+    <link rel="stylesheet" href="css/styles.css?v=79">
 </head>
 <body>
     <header class="topbar">
         <a class="brand" href="#/home" aria-label="PitchPlan bosh sahifasi">
-            <img class="brand-icon" src="./images/pitchplan.png" alt="PitchPlan">
+            <img class="brand-icon" src="./images/Pitch.png" alt="PitchPlan">
         </a>
-        <span class="top-note">Sport jadvalingizni bir necha daqiqada yarating</span>
+        <span class="top-note">Sport jadvalingizni bir necha daqiqada yarating!</span>
         <div class="theme-switcher">
             <span class="theme-switcher-label">Mavzu</span>
             <div class="theme-picker" id="theme-picker">
@@ -71,7 +71,7 @@
         <div class="app-content">
         <section class="home-view" id="home-view" aria-labelledby="home-heading">
             <div class="intro section-banner section-banner--home">
-                <span class="home-eyebrow">PITCHPLAN STUDIO</span>
+                <span class="home-eyebrow">pitchplan.uz STUDIO</span>
                 <h1 id="home-heading">Futbol dizayningiz shu yerdan boshlanadi</h1>
                 <p>Uchrashuv posterini yarating, jonli turnir jadvalini yoki Top-5 ligadagi o‘yinlarni kuzating.</p>
             </div>
@@ -246,7 +246,7 @@
             </div>
             <div class="standings-poster">
                 <aside class="standings-brand-rail" aria-label="PitchPlan liga va mavsum">
-                    <img src="./images/pitchplan.png" alt="PitchPlan" class="standings-brand-logo" id="standings-brand-logo">
+                    <img src="./images/Pitch.png" alt="PitchPlan" class="standings-brand-logo" id="standings-brand-logo">
                     <img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt="Liga logosi" class="standings-league-logo" id="standings-league-logo">
                     <div class="standings-rail-title" id="standings-rail-title">Premier League</div>
                     <div class="standings-rail-season" id="standings-rail-season"></div>
@@ -259,7 +259,7 @@
                             <tbody id="standings-body"><tr><td colspan="10" class="standings-placeholder">Turnir jadvali yuklanmoqda…</td></tr></tbody>
                         </table>
                     </div>
-                    <p class="standings-footnote">Manba: PitchPlan | Pitchplan.netlify.app</p>
+                    <p class="standings-footnote">Manba: pitchplan.uz</p>
                 </div>
             </div>
         </section>
@@ -376,20 +376,22 @@
                         <label for="background-image">Fon rasmi</label>
                         <input id="background-image" class="file-input" type="file" accept="image/*">
                     </div>
+                    <div class="field poster-ratio-field">
+                        <span class="field-label" id="poster-ratio-label">Poster o‘lchami</span>
+                        <div class="football-news-ratio-options" id="poster-ratio-options" role="group" aria-labelledby="poster-ratio-label">
+                            <button type="button" class="football-news-ratio-option" data-ratio="1:1" aria-label="1:1 o‘lcham" aria-pressed="false">1:1</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="3:4" aria-label="3:4 o‘lcham" aria-pressed="false">3:4</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="5:6" aria-label="5:6 o‘lcham" aria-pressed="false">5:6</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="7:5" aria-label="7:5 o‘lcham" aria-pressed="false">7:5</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="16:9" aria-label="16:9 o‘lcham" aria-pressed="false">16:9</button>
+                            <button type="button" class="football-news-ratio-option" data-ratio="original" aria-label="Fon rasmning asl nisbatini ishlatish" aria-pressed="false">Asl nisbat</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="field-grid" id="football-news-controls" hidden>
                     <div class="field">
                         <label for="football-news-effect-color">Gradient rangi</label>
                         <input id="football-news-effect-color" type="color" value="#000000">
-                    </div>
-                    <div class="field">
-                        <span class="field-label" id="football-news-ratio-label">Rasm nisbati</span>
-                        <div class="football-news-ratio-options" role="group" aria-labelledby="football-news-ratio-label">
-                            <button type="button" class="football-news-ratio-option" data-ratio="1:1" aria-label="1:1 nisbat" aria-pressed="false">1:1</button>
-                            <button type="button" class="football-news-ratio-option" data-ratio="3:4" aria-label="3:4 nisbat" aria-pressed="false">3:4</button>
-                            <button type="button" class="football-news-ratio-option" data-ratio="5:6" aria-label="5:6 nisbat" aria-pressed="true">5:6</button>
-                            <button type="button" class="football-news-ratio-option" data-ratio="7:5" aria-label="7:5 nisbat" aria-pressed="false">7:5</button>
-                        </div>
                     </div>
                 </div>
                 <div class="field-grid" id="matchday-poster-controls" hidden>
@@ -506,7 +508,7 @@
                 </div>
                 <div class="field" id="brand-caption-field">
                     <label for="brand-caption">Logo yonidagi yozuv</label>
-                    <input id="brand-caption" type="text" maxlength="40" value="PITCHPLAN">
+                    <input id="brand-caption" type="text" maxlength="40" value="pitchplan.uz">
                 </div>
                 <div class="field" id="brand-logo-size-field">
                     <label for="brand-logo-size">Logo o‘lchami <span id="brand-logo-size-value">200%</span></label>
@@ -557,6 +559,25 @@
                 <p class="club-picker-note" id="red-star-password-error" role="alert" hidden>Parol noto‘g‘ri. Qayta urinib ko‘ring.</p>
             </form>
             <p class="club-picker-note">Parolni olish uchun <a href="https://t.me/admn28" target="_blank" rel="noopener noreferrer">t.me/admn28</a> manziliga yozing.</p>
+        </div>
+    </dialog>
+
+    <dialog class="club-picker-dialog red-star-password-dialog" id="standings-logo-password-dialog" aria-labelledby="standings-logo-password-title">
+        <div class="club-picker-header">
+            <div>
+                <h2 id="standings-logo-password-title">Turnir jadvali logosi</h2>
+                <p>Standart logoni o‘zgartirish uchun parolni kiriting.</p>
+            </div>
+            <button type="button" class="btn club-picker-close" id="standings-logo-password-close" aria-label="Oynani yopish">×</button>
+        </div>
+        <div class="club-picker-content">
+            <form class="club-picker-tools" id="standings-logo-password-form">
+                <label class="club-search">
+                    <input id="standings-logo-password-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Parol" aria-label="Parol" required>
+                </label>
+                <button type="submit" class="btn btn-export">Davom etish</button>
+                <p class="club-picker-note" id="standings-logo-password-error" role="alert" hidden>Parol noto‘g‘ri. Qayta urinib ko‘ring.</p>
+            </form>
         </div>
     </dialog>
 
@@ -627,10 +648,11 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" defer></script>
-    <script src="js/image-download.js?v=2" defer></script>
-    <script src="js/app.js?v=69" defer></script>
-    <script src="js/live-matches.js?v=35" defer></script>
-    <script src="js/standings.js?v=12" defer></script>
+    <script src="js/image-download.js?v=3" defer></script>
+    <script src="js/app.js?v=75" defer></script>
+    <script src="js/live-matches.js?v=45" defer></script>
+    <script src="js/standings.js?v=15" defer></script>
+    <script src="js/scroll-reveal.js?v=3" defer></script>
 </body>
 </html>
     

@@ -601,6 +601,242 @@
         return pitch;
     }
 
+    async function createLineupExportImage(pitch) {
+        const bounds = pitch.getBoundingClientRect();
+        if (!bounds.width || !bounds.height) throw new Error("Tarkib maydoni ekranda ko‘rinmayapti.");
+        await document.fonts.ready;
+
+        const elements = [pitch, ...pitch.querySelectorAll("*")];
+        const assetUrls = new Set();
+        elements.forEach(element => {
+            if (element instanceof HTMLImageElement && element.src) assetUrls.add(element.src);
+            const backgroundImage = getComputedStyle(element).backgroundImage;
+            for (const match of backgroundImage.matchAll(/url\(["']?(.*?)["']?\)/g)) {
+                assetUrls.add(new URL(match[1], document.baseURI).href);
+            }
+        });
+        const assets = new Map();
+        try {
+            await Promise.all([...assetUrls].map(async url => {
+                const response = await fetch(url, { mode: "cors", credentials: "omit" });
+                if (!response.ok) throw new Error(`Tarkib rasmi yuklanmadi: server ${response.status} (${url})`);
+                const image = await createImageBitmap(await response.blob());
+                assets.set(url, image);
+            }));
+
+            const canvas = document.createElement("canvas");
+            const scale = Math.min(3, 2400 / Math.max(bounds.width, bounds.height));
+            canvas.width = Math.round(bounds.width * scale);
+            canvas.height = Math.round(bounds.height * scale);
+            const context = canvas.getContext("2d");
+            if (!context) throw new Error("Tarkib rasmini yaratish uchun canvas ochilmadi.");
+            context.scale(scale, scale);
+
+            const elementBounds = element => {
+                const rect = element.getBoundingClientRect();
+                return { x: rect.left - bounds.left, y: rect.top - bounds.top, width: rect.width, height: rect.height };
+            };
+            const drawRoundedRect = (rect, radius) => {
+                const r = Math.min(radius, rect.width / 2, rect.height / 2);
+                context.beginPath();
+                context.moveTo(rect.x + r, rect.y);
+                context.arcTo(rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height, r);
+                context.arcTo(rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height, r);
+                context.arcTo(rect.x, rect.y + rect.height, rect.x, rect.y, r);
+                context.arcTo(rect.x, rect.y, rect.x + rect.width, rect.y, r);
+                context.closePath();
+            };
+            const applyBoxShadow = style => {
+                const shadow = style.boxShadow.match(/(rgba?\([^)]+\)|#[\da-f]+)\s+(-?[\d.]+)px\s+(-?[\d.]+)px(?:\s+([\d.]+)px)?/i);
+                if (!shadow || style.boxShadow.includes("inset")) return false;
+                context.shadowColor = shadow[1];
+                context.shadowOffsetX = Number(shadow[2]);
+                context.shadowOffsetY = Number(shadow[3]);
+                context.shadowBlur = Number(shadow[4] || 0);
+                return true;
+            };
+            const drawImage = (image, rect, objectFit = "fill") => {
+                const imageWidth = image.width || image.naturalWidth;
+                const imageHeight = image.height || image.naturalHeight;
+                if (objectFit === "contain") {
+                    const ratio = Math.min(rect.width / imageWidth, rect.height / imageHeight);
+                    const width = imageWidth * ratio;
+                    const height = imageHeight * ratio;
+                    context.drawImage(image, rect.x + (rect.width - width) / 2, rect.y + (rect.height - height) / 2, width, height);
+                } else if (objectFit === "cover") {
+                    const ratio = Math.max(rect.width / imageWidth, rect.height / imageHeight);
+                    const width = imageWidth * ratio;
+                    const height = imageHeight * ratio;
+                    context.save();
+                    context.beginPath();
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                    context.clip();
+                    context.drawImage(image, rect.x + (rect.width - width) / 2, rect.y + (rect.height - height) / 2, width, height);
+                    context.restore();
+                } else {
+                    context.drawImage(image, rect.x, rect.y, rect.width, rect.height);
+                }
+            };
+            const drawText = (element, style, rect) => {
+                const textNodes = [...element.childNodes].filter(node => node.nodeType === Node.TEXT_NODE);
+                if (!textNodes.length) return;
+
+                context.save();
+                if (style.overflow === "hidden") {
+                    context.beginPath();
+                    context.rect(rect.x, rect.y, rect.width, rect.height);
+                    context.clip();
+                }
+                context.font = style.font;
+                context.fillStyle = style.color;
+                context.textAlign = style.textAlign === "center" ? "center" :
+                    style.textAlign === "right" || style.textAlign === "end" ? "right" : "left";
+                const shadow = style.textShadow.match(/(rgba?\([^)]+\)|#[\da-f]+)\s+(-?[\d.]+)px\s+(-?[\d.]+)px(?:\s+([\d.]+)px)?/i);
+                if (shadow) {
+                    context.shadowColor = shadow[1];
+                    context.shadowOffsetX = Number(shadow[2]);
+                    context.shadowOffsetY = Number(shadow[3]);
+                    context.shadowBlur = Number(shadow[4] || 0);
+                }
+                textNodes.forEach(node => {
+                    let value = node.nodeValue || "";
+                    if (style.textTransform === "uppercase") value = value.toLocaleUpperCase();
+                    else if (style.textTransform === "lowercase") value = value.toLocaleLowerCase();
+                    const range = document.createRange();
+                    range.selectNodeContents(node);
+                    const lineRects = [...range.getClientRects()].filter(line => line.width && line.height);
+                    const words = value.trim().split(/\s+/).filter(Boolean);
+                    let nextWord = 0;
+                    lineRects.forEach(lineRect => {
+                        const lineWidth = Math.min(lineRect.width, rect.width);
+                        let line = "";
+                        while (nextWord < words.length) {
+                            const candidate = line ? `${line} ${words[nextWord]}` : words[nextWord];
+                            if (line && context.measureText(candidate).width > lineWidth) break;
+                            line = candidate;
+                            nextWord += 1;
+                        }
+                        if (!line) return;
+                        const x = style.textAlign === "center" ? rect.x + rect.width / 2 :
+                            style.textAlign === "right" || style.textAlign === "end" ? rect.x + rect.width :
+                                lineRect.left - bounds.left;
+                        if (style.textOverflow === "ellipsis" && context.measureText(line).width > rect.width) {
+                            while (line && context.measureText(`${line}…`).width > rect.width) line = line.slice(0, -1);
+                            line = `${line.trimEnd()}…`;
+                        }
+                        context.fillText(line, x, lineRect.top - bounds.top + lineRect.height / 2, rect.width);
+                    });
+                });
+                context.restore();
+            };
+            const paint = element => {
+                if (!(element instanceof HTMLElement)) return;
+                const style = getComputedStyle(element);
+                if (style.display === "none" || style.visibility === "hidden") return;
+                const rect = elementBounds(element);
+                if (!rect.width || !rect.height) return;
+
+                const radius = Number.parseFloat(style.borderTopLeftRadius) || 0;
+                if (element === pitch) {
+                    const backgroundUrl = style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);
+                    if (backgroundUrl) {
+                        const asset = assets.get(new URL(backgroundUrl[1], document.baseURI).href);
+                        if (!asset) throw new Error(`Maydon foni yuklanmadi: ${backgroundUrl[1]}`);
+                        context.save();
+                        drawRoundedRect(rect, radius);
+                        context.clip();
+                        drawImage(asset, rect);
+                        const overlay = style.backgroundImage.match(/linear-gradient\(\s*(rgba?\([^)]+\))/);
+                        if (overlay) {
+                            context.fillStyle = overlay[1];
+                            context.fillRect(rect.x, rect.y, rect.width, rect.height);
+                        }
+                        context.restore();
+                    } else if (style.backgroundColor !== "rgba(0, 0, 0, 0)") {
+                        const hasShadow = applyBoxShadow(style);
+                        context.fillStyle = style.backgroundColor;
+                        drawRoundedRect(rect, radius);
+                        context.fill();
+                        if (hasShadow) {
+                            context.shadowColor = "transparent";
+                            context.shadowBlur = 0;
+                            context.shadowOffsetX = 0;
+                            context.shadowOffsetY = 0;
+                        }
+                    }
+                } else if (style.backgroundColor !== "rgba(0, 0, 0, 0)") {
+                    context.fillStyle = style.backgroundColor;
+                    drawRoundedRect(rect, radius);
+                    context.fill();
+                }
+
+                const borderWidth = Number.parseFloat(style.borderTopWidth) || 0;
+                if (borderWidth && style.borderTopStyle !== "none") {
+                    context.strokeStyle = style.borderTopColor;
+                    context.lineWidth = borderWidth;
+                    drawRoundedRect(rect, radius);
+                    context.stroke();
+                }
+
+                if (element instanceof HTMLImageElement) {
+                    const asset = assets.get(element.src);
+                    if (!asset) throw new Error(`Jamoa logosi eksport uchun yuklanmadi: ${element.src}`);
+                    drawImage(asset, rect, style.objectFit);
+                } else {
+                    drawText(element, style, rect);
+                    [...element.children].forEach(paint);
+                }
+            };
+            paint(pitch);
+            return await new Promise((resolve, reject) => {
+                canvas.toBlob(blob => blob
+                    ? resolve(blob)
+                    : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
+            });
+        } finally {
+            assets.forEach(image => image.close());
+        }
+    }
+
+    function createLineupExportControls(pitch, match) {
+        const controls = createElement("div", "match-lineup-export");
+        const button = createElement("button", "btn btn-export", "↓ Tarkibni rasm sifatida yuklab olish");
+        button.type = "button";
+        const status = createElement("span", "match-lineup-export-status");
+        status.setAttribute("role", "status");
+        status.setAttribute("aria-live", "polite");
+        button.addEventListener("click", async () => {
+            button.disabled = true;
+            status.textContent = "Rasm tayyorlanmoqda…";
+            try {
+                if (typeof window.pitchplanSaveImage !== "function") {
+                    throw new Error("Rasmni saqlash xizmati topilmadi.");
+                }
+                const blob = await createLineupExportImage(pitch);
+                const fileName = `${match.home.name}-${match.away.name}-tarkib.png`
+                    .normalize("NFKD")
+                    .replace(/[^\w.-]+/g, "-")
+                    .replace(/-+/g, "-")
+                    .toLowerCase();
+                const result = await window.pitchplanSaveImage(blob, fileName);
+                status.textContent = result.method === "cancelled"
+                    ? "Rasmni saqlash bekor qilindi."
+                    : result.method === "share"
+                        ? "Ulashish oynasi ochildi."
+                        : result.method === "preview"
+                            ? "Rasm yangi oynada ochildi."
+                            : "Tarkib rasmi yuklab olindi.";
+            } catch (error) {
+                status.textContent = "Tarkib rasmini saqlab bo‘lmadi. Qayta urinib ko‘ring.";
+                console.error("Lineup image export failed:", error);
+            } finally {
+                button.disabled = false;
+            }
+        });
+        controls.append(button, status);
+        return controls;
+    }
+
     function getTeamStatistics(summary, homeAway) {
         return summary.boxscore?.teams?.find(team => team.homeAway === homeAway)?.statistics || [];
     }
@@ -850,7 +1086,11 @@
                 container.append(group);
             }
         });
-        if (lineupData.length) container.prepend(createLineupPitch(lineupData));
+        if (lineupData.length) {
+            const pitch = createLineupPitch(lineupData);
+            container.prepend(pitch);
+            container.prepend(createLineupExportControls(pitch, match));
+        }
         if (!lineupData.length) {
             container.append(createElement("p", "match-detail-empty", match.isUpcoming
                 ? "Asosiy tarkib e’lon qilinishini kuting. Hozircha taxminiy tarkib topilmadi."

@@ -19,6 +19,10 @@
     const topSixInput = document.getElementById("standings-top-six");
     const logoInput = document.getElementById("standings-logo-input");
     const logoUploadButton = document.getElementById("standings-logo-upload");
+    const logoPasswordDialog = document.getElementById("standings-logo-password-dialog");
+    const logoPasswordForm = document.getElementById("standings-logo-password-form");
+    const logoPasswordInput = document.getElementById("standings-logo-password-input");
+    const logoPasswordError = document.getElementById("standings-logo-password-error");
     const logoCircleInput = document.getElementById("standings-logo-circle");
     const logoShapeControl = document.querySelector(".standings-logo-shape-control");
     const railTitle = document.getElementById("standings-rail-title");
@@ -38,7 +42,7 @@
         logoCircleInput.disabled = !hasCustomLogo;
         logoShapeControl.classList.toggle("is-disabled", !hasCustomLogo);
         if (source) brandLogoPreview.src = source;
-        else brandLogoPreview.src = "./images/pitchplan.png";
+        else brandLogoPreview.src = "./images/Pitch.png";
     }
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
@@ -505,7 +509,7 @@
         context.font = "600 16px Segoe UI, Arial, sans-serif";
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText("Natijalar pitchplan.netlify.app orqali yuklab olindi", width / 2, height - 24);
+        context.fillText("Natijalar pitchplan.uz orqali yuklab olindi", width / 2, height - 24);
         return canvas;
     }
 
@@ -520,7 +524,7 @@
         const exportLeague = leagueName.textContent;
         const exportSeason = seasonLabel.textContent;
         const exportRound = currentRound;
-        const exportBrandLogoSource = customBrandLogoSource || new URL("./images/pitchplan.png", document.baseURI).href;
+        const exportBrandLogoSource = customBrandLogoSource || new URL("./images/Pitch.png", document.baseURI).href;
         const exportCustomBrandLogo = Boolean(customBrandLogoSource);
         const exportBrandLogoCircle = exportCustomBrandLogo && logoCircleInput.checked;
         downloadButton.disabled = true;
@@ -640,7 +644,25 @@
 
     document.getElementById("standings-refresh").addEventListener("click", refreshStandings);
     downloadButton.addEventListener("click", downloadStandingsPoster);
-    logoUploadButton.addEventListener("click", () => logoInput.click());
+    logoUploadButton.addEventListener("click", () => {
+        logoPasswordInput.value = "";
+        logoPasswordError.hidden = true;
+        logoPasswordDialog.showModal();
+        logoPasswordInput.focus();
+    });
+    logoPasswordForm.addEventListener("submit", event => {
+        event.preventDefault();
+        if (logoPasswordInput.value !== "1728") {
+            logoPasswordError.hidden = false;
+            logoPasswordInput.select();
+            return;
+        }
+        logoPasswordDialog.close();
+        logoInput.click();
+    });
+    document.getElementById("standings-logo-password-close").addEventListener("click", () => {
+        logoPasswordDialog.close();
+    });
     logoCircleInput.addEventListener("change", () => {
         updateBrandLogoPreview(customBrandLogoSource);
         try {
