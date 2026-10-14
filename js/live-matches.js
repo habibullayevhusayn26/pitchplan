@@ -203,6 +203,14 @@
         return team.logo || team.logos?.[0]?.href || "";
     }
 
+    function getMatchPeriodLabel(match) {
+        if (match.isCompleted) return "FT";
+        const phase = `${match.phase || ""} ${match.statusName || ""}`;
+        return match.isLive && /(?:\bHT\b|HALF[\s_-]*TIME|INTERVAL|BREAK|TANAFFUS)/i.test(phase)
+            ? "HT"
+            : match.clock || match.phase || "Jonli";
+    }
+
     function normalizeClubSearch(value) {
         return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLocaleLowerCase();
     }
@@ -446,6 +454,7 @@
                 isCompleted,
                 isRecentlyCompleted,
                 clock: competition.status.displayClock,
+                statusName: competition.status.type.name,
                 phase: competition.status.type.shortDetail || competition.status.type.detail || "Jonli",
                 venue: competition.venue?.fullName || "",
                 home: {
@@ -1326,7 +1335,12 @@
         info.append(
             createElement("strong", "", `${isHome ? "Uyda" : "Safarda"} · ${opponent?.team?.displayName || "Raqib"}`),
             createElement("small", "", isLive
-                ? `Jonli o‘yin · ${competition.status.displayClock || competition.status.type.shortDetail || "Hozir"}`
+                ? `Jonli o‘yin · ${getMatchPeriodLabel({
+                    isLive: true,
+                    phase: competition.status.type.shortDetail || competition.status.type.detail,
+                    statusName: competition.status.type.name,
+                    clock: competition.status.displayClock
+                })}`
                 : `${formatMatchDate(event.date, true)} · ${formatKickoff(event.date).split(" · ").pop()}`)
         );
         const score = competition?.status?.type?.state === "pre"
@@ -1664,7 +1678,7 @@
         appendImage(league, match.leagueLogo, "", "live-match-league-logo");
         league.append(createElement("span", "", match.name));
         const phase = createElement("span", `live-match-phase${match.isUpcoming ? " is-upcoming" : ""}`,
-            match.isUpcoming ? formatKickoff(match.date) : match.clock || match.phase);
+            match.isUpcoming ? formatKickoff(match.date) : getMatchPeriodLabel(match));
         league.append(phase);
 
         const scoreboard = createElement("div", "live-match-detail-scoreboard");
@@ -1703,6 +1717,11 @@
         const value = createElement("strong", "match-clock-value");
         if (match.isLive) {
             label.textContent = "Jonli o‘yin";
+            if (getMatchPeriodLabel(match) === "HT") {
+                value.textContent = "HT";
+                panel.append(label, value);
+                return;
+            }
             const isPaused = /half|halftime|break|tanaffus|ht/i.test(match.phase || "");
             const baseSeconds = Number(panel.dataset.clockBaseSeconds);
             if (Number.isFinite(baseSeconds) && panel.dataset.clockStartedAt) {
@@ -1747,7 +1766,7 @@
             }
         } else if (match.isCompleted) {
             label.textContent = "O‘yin holati";
-            value.textContent = "Yakunlangan";
+            value.textContent = "FT";
         } else {
             label.textContent = "O‘yin vaqti";
             value.textContent = match.phase || "Vaqt noma’lum";
@@ -1882,8 +1901,8 @@
         appendImage(league, match.leagueLogo, "", "live-match-league-logo");
         league.append(createElement("span", "", match.name));
         const phaseText = match.isPre ? formatKickoff(match.date) :
-            match.isRecentlyCompleted ? `Yakunlandi · ${formatKickoff(match.date)}` :
-                match.clock || match.phase;
+            match.isRecentlyCompleted ? `FT · ${formatKickoff(match.date)}` :
+                getMatchPeriodLabel(match);
         const phase = createElement("span", `live-match-phase${match.isPre ? " is-upcoming" : ""}`, phaseText);
         header.append(league, phase);
 

@@ -4112,7 +4112,14 @@ function getClubDisplayName(name) {
             ctx.stroke();
             ctx.restore();
             if (leagueLogo) {
-                drawImageContain(leagueLogo, leagueBadgeX, leagueBadgeY, leagueSize, leagueSize);
+                drawImageContainWithOutline(
+                    leagueLogo,
+                    leagueBadgeX,
+                    leagueBadgeY,
+                    leagueSize,
+                    leagueSize,
+                    2.5 * scale
+                );
             } else {
                 ctx.fillStyle = "#f4f4f0";
                 ctx.textAlign = "center";
