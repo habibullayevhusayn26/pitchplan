@@ -1470,6 +1470,13 @@
             .live-match-detail-team-logo {
                 width: clamp(46px, 8vw, 76px);
                 height: clamp(46px, 8vw, 76px);
+                padding: clamp(7px, 1.4vw, 11px);
+                border: 1px solid rgba(255,255,255,.46);
+                border-radius: 19px;
+                background: rgba(255,255,255,.2);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.52), 0 8px 20px rgba(30,48,82,.12);
+                backdrop-filter: blur(14px) saturate(145%);
+                -webkit-backdrop-filter: blur(14px) saturate(145%);
                 object-fit: contain;
                 filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 6px rgba(0,0,0,.3));
             }
@@ -1518,6 +1525,38 @@
                 box-shadow: 0 18px 38px rgba(72,76,119,.16), inset 0 1px 0 #fff;
                 outline: 2px solid rgba(128,101,226,.58);
                 outline-offset: 2px;
+            }
+            .live-match-card:has(.live-match-league-logo:hover, .live-match-team-logo:hover) {
+                transform: none;
+                transition: none;
+            }
+            .live-match-card .club-logo-link,
+            .live-match-detail-view .club-logo-link,
+            .live-match-card .club-logo-link::after,
+            .live-match-detail-view .club-logo-link::after,
+            .live-match-card .club-logo-link img,
+            .live-match-detail-view .club-logo-link img {
+                transition: none;
+            }
+            .live-match-card .club-logo-link:hover,
+            .live-match-detail-view .club-logo-link:hover,
+            .live-match-card .club-logo-link:focus-visible,
+            .live-match-detail-view .club-logo-link:focus-visible {
+                transform: none;
+            }
+            .live-match-card .club-logo-link:hover::after,
+            .live-match-detail-view .club-logo-link:hover::after,
+            .live-match-card .club-logo-link:focus-visible::after,
+            .live-match-detail-view .club-logo-link:focus-visible::after {
+                opacity: 0;
+                transform: none;
+            }
+            .live-match-card .club-logo-link:hover img,
+            .live-match-detail-view .club-logo-link:hover img,
+            .live-match-card .club-logo-link:focus-visible img,
+            .live-match-detail-view .club-logo-link:focus-visible img {
+                filter: none;
+                transform: none;
             }
             .live-match-card-action { display: block; padding: 0 15px 14px; color: #6855bd; font-size: 11px; font-weight: 800; text-align: right; }
             .live-heading {
@@ -1633,13 +1672,21 @@
             }
             .live-match-filter img, .live-match-league-logo {
                 display: block;
-                width: 23px;
-                height: 23px;
+                width: 32px;
+                height: 32px;
                 flex: 0 0 auto;
-                padding: 2px;
-                border-radius: 50%;
-                background: rgba(255,255,255,.96);
+                padding: 5px;
+                border: 1px solid rgba(255,255,255,.48);
+                border-radius: 11px;
+                background: rgba(255,255,255,.2);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.48), 0 3px 9px rgba(48,57,91,.08);
+                backdrop-filter: blur(12px) saturate(145%);
+                -webkit-backdrop-filter: blur(12px) saturate(145%);
                 object-fit: contain;
+            }
+            .live-match-filter:has(img:hover) {
+                transform: none;
+                transition: none;
             }
             .live-match-filter.is-active {
                 border-color: rgba(139,118,220,.58);
@@ -1661,7 +1708,7 @@
                 font-size: 15px;
                 font-weight: 850;
             }
-            .live-match-group-heading .live-match-league-logo { width: 27px; height: 27px; }
+            .live-match-group-heading .live-match-league-logo { width: 34px; height: 34px; }
             .live-match-count {
                 display: grid;
                 min-width: 23px;
@@ -1696,7 +1743,7 @@
                 border-bottom: 1px solid rgba(115,122,149,.1);
             }
             .live-match-league { display: flex; min-width: 0; align-items: center; gap: 8px; color: #72778b; font-size: 11px; font-weight: 750; }
-            .live-match-league-logo { width: 22px; height: 22px; }
+            .live-match-league-logo { width: 30px; height: 30px; }
             .live-match-phase {
                 flex: 0 0 auto;
                 padding: 5px 9px;
@@ -1723,11 +1770,17 @@
             .live-match-team { display: flex; min-width: 0; align-items: center; gap: 10px; color: #36394d; font-size: 13px; font-weight: 750; }
             .live-match-team.is-away { flex-direction: row-reverse; text-align: right; }
             .live-match-team-logo {
-                width: 34px;
-                height: 34px;
+                width: 42px;
+                height: 42px;
                 flex: 0 0 auto;
+                padding: 6px;
+                border: 1px solid rgba(255,255,255,.48);
+                border-radius: 14px;
+                background: rgba(255,255,255,.2);
+                box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 5px 13px rgba(35,47,83,.1);
+                backdrop-filter: blur(12px) saturate(145%);
+                -webkit-backdrop-filter: blur(12px) saturate(145%);
                 object-fit: contain;
-                filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 3px 5px rgba(0,0,0,.28));
             }
             .live-match-team-name { display: -webkit-box; min-width: 0; overflow: hidden; line-height: 1.2; overflow-wrap: anywhere; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
             .live-match-score { color: #282c41; font-size: clamp(20px, 2.4vw, 30px); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.06em; white-space: nowrap; }
@@ -1735,11 +1788,11 @@
             @container (max-width: 300px) {
                 .live-match-card-header { min-height: 38px; gap: 6px; padding: 6px 9px; }
                 .live-match-league { gap: 5px; font-size: 9px; }
-                .live-match-league-logo { width: 18px; height: 18px; }
+                .live-match-league-logo { width: 25px; height: 25px; padding: 4px; }
                 .live-match-phase { padding: 3px 6px; font-size: 9px; }
                 .live-match-scoreboard { gap: 5px; padding: 12px 9px 10px; }
                 .live-match-team { gap: 5px; font-size: 10px; }
-                .live-match-team-logo { width: 24px; height: 24px; }
+                .live-match-team-logo { width: 34px; height: 34px; padding: 5px; border-radius: 11px; }
                 .live-match-score { font-size: 21px; }
                 .live-match-score.is-fixture { font-size: 11px; }
                 .live-match-card-action { padding: 0 9px 8px; font-size: 10px; }
@@ -2058,6 +2111,14 @@
             .standings-team img { width: 19px; height: 19px; margin-right: 6px; vertical-align: middle; object-fit: contain; }
             .standings-points { color: #202820; font-weight: 850; }
             .positive-difference { color: #23845d; }
+            .standings-table.is-cup-table { min-width: 680px; }
+            .standings-cup-round { background: #eaf0e8 !important; }
+            .standings-table .standings-cup-round th { height: 30px; padding-left: 10px; color: #35523d; text-align: left; }
+            .standings-cup-fixture { min-width: 330px; text-align: left !important; }
+            .standings-cup-team { display: inline-flex; max-width: 43%; align-items: center; gap: 5px; vertical-align: middle; }
+            .standings-cup-team > span { overflow: hidden; text-overflow: ellipsis; }
+            .standings-cup-team img { width: 19px; height: 19px; flex: 0 0 auto; object-fit: contain; }
+            .standings-cup-score { font-weight: 850; }
             .standings-placeholder { height: 120px !important; color: #7d849a; text-align: center !important; }
             .standings-footnote { margin: 0; padding: 12px 3px 8px; color: #858b83; font-size: 10px; }
             @media (max-width: 980px) {
@@ -2102,12 +2163,12 @@
                 .live-league-tab img { width: 20px; height: 20px; }
                 .live-match-filters { gap: 6px; }
                 .live-match-filter { min-height: 35px; padding-inline: 9px; font-size: 10px; }
-                .live-match-filter img { width: 20px; height: 20px; }
+                .live-match-filter img { width: 29px; height: 29px; padding: 4px; }
                 .live-match-grid { grid-template-columns: minmax(0, 1fr); }
                 .match-lineups { grid-template-columns: minmax(0, 1fr); }
                 .live-match-scoreboard { gap: 7px; padding: 16px 11px 14px; }
                 .live-match-team { gap: 6px; font-size: 11px; }
-                .live-match-team-logo { width: 27px; height: 27px; }
+                .live-match-team-logo { width: 38px; height: 38px; padding: 5px; }
                 .live-match-card-header { padding-inline: 11px; }
                 .live-match-card-body { padding-inline: 10px; }
                 .match-detail-tab { flex: 1 1 42%; min-width: 0; padding-inline: 4px; font-size: 10px; }
@@ -2676,3 +2737,44 @@
         :root[data-theme="light"] #club-picker .club-logo-choice { background: #f8f9fd; }
         :root[data-theme="light"] #club-picker .club-logo-choice:hover,
         :root[data-theme="light"] #club-picker .club-logo-choice:focus-visible { background: #f1eeff; }
+
+        button, .field input[type="file"]::file-selector-button {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.48), inset 0 -1px 0 rgba(70,80,120,.07), 0 4px 12px rgba(48,57,91,.08);
+        }
+        button:hover, button:focus-visible,
+        .field input[type="file"]::file-selector-button:hover {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            border-color: rgba(157,171,214,.62);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.72), inset 0 -1px 0 rgba(70,80,120,.06), 0 8px 20px rgba(48,57,91,.12);
+        }
+        button:has(img:hover) {
+            transform: none;
+            transition: none;
+        }
+        .club-logo-link, .club-logo-visual {
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+            perspective: none;
+            transform: none !important;
+            transition: none !important;
+        }
+        .club-logo-link:hover, .club-logo-link:focus-visible, .club-logo-visual:hover {
+            transform: none !important;
+            box-shadow: 0 5px 15px rgba(49,60,98,.12), inset 0 1px 0 rgba(255,255,255,.72);
+        }
+        .club-logo-link::after, .club-logo-visual::after {
+            display: none;
+        }
+        .club-logo-link img, .club-logo-visual img {
+            filter: none !important;
+            transform: none !important;
+            transition: none !important;
+        }
+        .live-match-filter img, .live-match-league-logo, .live-match-team-logo, .live-match-detail-team-logo {
+            filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+        }

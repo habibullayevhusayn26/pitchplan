@@ -9,7 +9,7 @@
     <link rel="icon" type="image/png" sizes="512x512" href="./images/pitchplan-icon.png?v=2">
     <link rel="apple-touch-icon" href="./images/pitchplan-icon.png?v=2">
     <script src="js/theme.js?v=2"></script>
-    <link rel="stylesheet" href="css/styles.css?v=79">
+    <link rel="stylesheet" href="css/styles.css?v=84">
 </head>
 <body>
     <header class="topbar">
@@ -83,7 +83,7 @@
                 </button>
                 <button type="button" class="home-shortcut" data-app-section="live">
                     <span class="home-shortcut-icon live-shortcut-icon" aria-hidden="true"><img src="./images/menu-icons/turnir-jadvali.svg" alt=""></span>
-                    <span><strong>Turnir jadvallari</strong><small>Top-5, UCL va Saudiya ligalari jadvalini kuzating</small></span>
+                    <span><strong>Turnir jadvallari</strong><small>Top-5, UCL, Saudiya ligalari va Angliya kuboklarini kuzating</small></span>
                     <span class="home-shortcut-arrow" aria-hidden="true">→</span>
                 </button>
                 <button type="button" class="home-shortcut" data-app-section="matches">
@@ -225,6 +225,8 @@
                 </div>
                 <nav class="live-league-tabs" id="live-league-tabs" aria-label="Futbol ligalari turnir jadvallari">
                     <button type="button" class="live-league-tab is-active" data-live-league="eng.1" aria-pressed="true"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="eng.fa" aria-pressed="false"><img src="./images/ligalar/fa-cup-badge.svg" alt=""><span>Angliya kubogi</span></button>
+                    <button type="button" class="live-league-tab" data-live-league="eng.league_cup" aria-pressed="false"><img src="./images/ligalar/efl-cup-badge.svg" alt=""><span>Angliya Liga kubogi</span></button>
                     <button type="button" class="live-league-tab" data-live-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
                     <button type="button" class="live-league-tab" data-live-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
                     <button type="button" class="live-league-tab" data-live-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
@@ -267,7 +269,7 @@
             <div class="section-banner section-banner--matches">
                 <div class="live-heading">
                     <div>
-                        <span class="home-eyebrow">PREMIER LEAGUE · LALIGA · SERIE A · BUNDESLIGA · LIGUE 1</span>
+                        <span class="home-eyebrow">PREMIER LEAGUE · FA CUP · EFL CUP · LALIGA · SERIE A · BUNDESLIGA · LIGUE 1</span>
                         <h1 id="live-matches-heading">O‘yinlar</h1>
                         <p>Jonli o‘yinlarni kuzating, shuningdek kelasi 24 soatdagi uchrashuvlar va jamoalar statistikasini ko‘ring.</p>
                     </div>
@@ -284,6 +286,8 @@
                 <nav class="live-match-filters" id="live-match-filters" aria-label="O‘yinlarni liga bo‘yicha saralash">
                     <button type="button" class="live-match-filter is-active" data-match-league="all" aria-pressed="true">Barchasi</button>
                     <button type="button" class="live-match-filter" data-match-league="eng.1" aria-pressed="false"><img src="./images/ligalar/english-premier-league.ee1e9b08.png" alt=""><span>Premier League</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="eng.fa" aria-pressed="false"><img src="./images/ligalar/fa-cup-badge.svg" alt=""><span>Angliya kubogi</span></button>
+                    <button type="button" class="live-match-filter" data-match-league="eng.league_cup" aria-pressed="false"><img src="./images/ligalar/efl-cup-badge.svg" alt=""><span>Angliya Liga kubogi</span></button>
                     <button type="button" class="live-match-filter" data-match-league="esp.1" aria-pressed="false"><img src="./images/ligalar/LaLiga_logo_2023.svg.webp" alt=""><span>LaLiga</span></button>
                     <button type="button" class="live-match-filter" data-match-league="ita.1" aria-pressed="false"><img src="./images/ligalar/serie_a-brandlogo.net_-512x512.png" alt=""><span>Serie A</span></button>
                     <button type="button" class="live-match-filter" data-match-league="ger.1" aria-pressed="false"><img src="./images/ligalar/Bundesliga_logo_(2017).svg.webp" alt=""><span>Bundesliga</span></button>
@@ -650,8 +654,8 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js" defer></script>
     <script src="js/image-download.js?v=3" defer></script>
     <script src="js/app.js?v=76" defer></script>
-    <script src="js/live-matches.js?v=46" defer></script>
-    <script src="js/standings.js?v=15" defer></script>
+    <script src="js/live-matches.js?v=48" defer></script>
+    <script src="js/standings.js?v=16" defer></script>
     <script src="js/scroll-reveal.js?v=3" defer></script>
 </body>
 </html>

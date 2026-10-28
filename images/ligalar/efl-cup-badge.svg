@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Angliya Liga kubogi</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#087b59"/>
+      <stop offset="1" stop-color="#21ae7b"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#background)"/>
+  <path d="M43 23h42v12c0 20-8 32-21 38-13-6-21-18-21-38V23Z" fill="#fff"/>
+  <path d="M43 31H27v8c0 15 9 23 25 24m33-32h16v8c0 15-9 23-25 24" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="7"/>
+  <path d="M64 73v15m-15 8h30m-25-8h20" fill="none" stroke="#fff" stroke-linecap="round" stroke-width="7"/>
+  <text x="64" y="117" fill="#fff" font-family="Arial,sans-serif" font-size="21" font-weight="800" text-anchor="middle">EFL CUP</text>
+</svg>

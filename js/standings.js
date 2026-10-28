@@ -1,6 +1,8 @@
 (() => {
     const leagueNames = {
         "eng.1": "Premier League",
+        "eng.fa": "Angliya kubogi",
+        "eng.league_cup": "Angliya Liga kubogi",
         "esp.1": "LaLiga",
         "ita.1": "Serie A",
         "ger.1": "Bundesliga",
@@ -29,6 +31,8 @@
     const railSeason = document.getElementById("standings-rail-season");
     const railRound = document.getElementById("standings-rail-round");
     const leagueLogo = document.getElementById("standings-league-logo");
+    const standingsTable = document.querySelector(".standings-table");
+    const defaultTableHead = standingsTable.querySelector("thead").cloneNode(true);
     const brandLogoPreview = document.getElementById("standings-brand-logo");
     const brandLogoStorageKey = "pitchplan-standings-channel-logo";
     const brandLogoCircleStorageKey = "pitchplan-standings-channel-logo-circle";
@@ -46,6 +50,8 @@
     }
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
+        "eng.fa": "./images/ligalar/fa-cup-badge.svg",
+        "eng.league_cup": "./images/ligalar/efl-cup-badge.svg",
         "esp.1": "./images/ligalar/LaLiga_logo_2023.svg.webp",
         "ita.1": "./images/ligalar/serie_a-brandlogo.net_-512x512.png",
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
@@ -60,7 +66,9 @@
         "ger.1": { start: "#f01836", middle: "#d5092b", end: "#960c2f", accent: "#790a26", glow: "rgba(121,10,38,.9)", text: "#ffffff" },
         "fra.1": { start: "#142b83", middle: "#2851b6", end: "#7d4ae0", accent: "#102364", glow: "rgba(16,35,100,.9)", text: "#ffffff" },
         "uefa.champions": { start: "#111f5c", middle: "#263a91", end: "#5368c9", accent: "#15266d", glow: "rgba(34,53,143,.9)", text: "#ffffff" },
-        "ksa.1": { start: "#0d593f", middle: "#12945f", end: "#9bcc42", accent: "#08633e", glow: "rgba(13,104,67,.9)", text: "#ffffff" }
+        "ksa.1": { start: "#0d593f", middle: "#12945f", end: "#9bcc42", accent: "#08633e", glow: "rgba(13,104,67,.9)", text: "#ffffff" },
+        "eng.fa": { start: "#132858", middle: "#315ba4", end: "#6588c2", accent: "#19386f", glow: "rgba(25,56,111,.9)", text: "#ffffff" },
+        "eng.league_cup": { start: "#087b59", middle: "#21ae7b", end: "#83d7ae", accent: "#086a4d", glow: "rgba(8,106,77,.9)", text: "#ffffff" }
     };
     if (!standingsBody || !liveView || !tabs.length) return;
 
@@ -71,7 +79,39 @@
     let activeController = null;
     let lastSuccessfulUpdate = null;
     let currentRows = [];
+    let currentCupMatches = [];
     let currentRound = null;
+
+    const cupLeagues = new Set(["eng.fa", "eng.league_cup"]);
+    const cupStageLabels = {
+        "preliminary-round": "Dastlabki bosqich",
+        "extra-preliminary-round": "Qo‘shimcha dastlabki bosqich",
+        "first-round": "1-bosqich",
+        "second-round": "2-bosqich",
+        "third-round": "3-bosqich",
+        "fourth-round": "4-bosqich",
+        "fifth-round": "5-bosqich",
+        "quarterfinals": "Chorak final",
+        "semifinals": "Yarim final",
+        "final": "Final"
+    };
+    const cupStageOrder = [
+        "extra-preliminary-round", "preliminary-round", "first-round", "second-round",
+        "third-round", "fourth-round", "fifth-round", "quarterfinals", "semifinals", "final"
+    ];
+
+    function isCupLeague(league) {
+        return cupLeagues.has(league);
+    }
+
+    function getCupStageOrder(stage) {
+        const index = cupStageOrder.indexOf(stage);
+        return index === -1 ? cupStageOrder.length : index;
+    }
+
+    function getCupStageLabel(stage) {
+        return cupStageLabels[stage] || String(stage || "Bosqich").replace(/-/g, " ");
+    }
 
     function applyLeagueRailTheme(league) {
         const rail = document.querySelector(".standings-brand-rail");
@@ -95,6 +135,7 @@
     }
 
     function isCurrentSeasonEvent(event, startYear, league) {
+        if (isCupLeague(league)) return Number(event.season?.year) === startYear;
         if (league === "uefa.champions") {
             return Number(event.season?.year) === startYear && event.season?.slug === "league-phase";
         }
@@ -205,8 +246,141 @@
         status.classList.toggle("is-loading", !isError && (message.includes("yuklan") || message.includes("tayyorlan")));
     }
 
+    function getCupMatches(events, startYear, league) {
+        return events.flatMap(event => {
+            if (!isCurrentSeasonEvent(event, startYear, league)) return [];
+            const competition = event.competitions?.[0];
+            const competitors = competition?.competitors || [];
+            const home = competitors.find(team => team.homeAway === "home") || competitors[0];
+            const away = competitors.find(team => team.homeAway === "away") || competitors[1];
+            if (!home?.team || !away?.team) return [];
+            const stage = event.season?.slug || "";
+            const parseScore = value => {
+                const score = Number.parseInt(value, 10);
+                return Number.isFinite(score) ? score : null;
+            };
+            return [{
+                id: event.id,
+                stage,
+                stageLabel: getCupStageLabel(stage),
+                stageOrder: getCupStageOrder(stage),
+                date: event.date,
+                state: competition.status?.type?.state || "pre",
+                home: {
+                    name: home.team.displayName || home.team.name || "Uy jamoasi",
+                    logo: home.team.logo || home.team.logos?.[0]?.href || ""
+                },
+                away: {
+                    name: away.team.displayName || away.team.name || "Mehmon jamoa",
+                    logo: away.team.logo || away.team.logos?.[0]?.href || ""
+                },
+                homeScore: parseScore(home.score),
+                awayScore: parseScore(away.score)
+            }];
+        }).sort((first, second) =>
+            first.stageOrder - second.stageOrder || Date.parse(first.date) - Date.parse(second.date)
+        );
+    }
+
+    function createCupTeam(team) {
+        const element = document.createElement("span");
+        element.className = "standings-cup-team";
+        if (team.logo) {
+            const image = document.createElement("img");
+            image.src = team.logo;
+            image.alt = "";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.addEventListener("error", () => image.remove(), { once: true });
+            element.append(image);
+        }
+        const name = document.createElement("span");
+        name.textContent = team.name;
+        element.append(name);
+        return element;
+    }
+
+    function setCupTableHeader() {
+        standingsTable.classList.add("is-cup-table");
+        const head = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        ["Bosqich", "Uchrashuv", "Sana", "Hisob", "Holat"].forEach(label => {
+            const cell = document.createElement("th");
+            cell.scope = "col";
+            cell.textContent = label;
+            headerRow.append(cell);
+        });
+        head.append(headerRow);
+        standingsTable.querySelector("thead").replaceWith(head);
+    }
+
+    function renderCupMatches(matches, league) {
+        currentRows = [];
+        currentCupMatches = matches;
+        downloadButton.disabled = matches.length === 0;
+        topSixInput.closest("label").hidden = true;
+        setCupTableHeader();
+        standingsBody.replaceChildren();
+
+        if (!matches.length) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+            cell.colSpan = 5;
+            cell.className = "standings-placeholder";
+            cell.textContent = `${leagueNames[league]} uchun joriy mavsum uchrashuvlari topilmadi.`;
+            row.append(cell);
+            standingsBody.append(row);
+            return;
+        }
+
+        let currentStage = "";
+        matches.forEach(match => {
+            if (match.stage !== currentStage) {
+                currentStage = match.stage;
+                const stageRow = document.createElement("tr");
+                stageRow.className = "standings-cup-round";
+                const stageCell = document.createElement("th");
+                stageCell.colSpan = 5;
+                stageCell.scope = "rowgroup";
+                stageCell.textContent = match.stageLabel;
+                stageRow.append(stageCell);
+                standingsBody.append(stageRow);
+            }
+
+            const row = document.createElement("tr");
+            if (match.state === "in") row.classList.add("is-live-team");
+            const stage = document.createElement("td");
+            stage.textContent = match.stageLabel;
+            const fixture = document.createElement("td");
+            fixture.className = "standings-cup-fixture";
+            fixture.append(
+                createCupTeam(match.home),
+                document.createTextNode(" – "),
+                createCupTeam(match.away)
+            );
+            const date = document.createElement("td");
+            const kickoff = new Date(match.date);
+            date.textContent = Number.isNaN(kickoff.getTime())
+                ? "—"
+                : new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(kickoff);
+            const score = document.createElement("td");
+            score.className = "standings-cup-score";
+            score.textContent = match.homeScore === null || match.awayScore === null
+                ? "—"
+                : `${match.homeScore} – ${match.awayScore}`;
+            const state = document.createElement("td");
+            state.textContent = match.state === "post" ? "Yakunlandi" : match.state === "in" ? "Jonli" : "Rejalashtirilgan";
+            row.append(stage, fixture, date, score, state);
+            standingsBody.append(row);
+        });
+    }
+
     function renderStandings(rows, liveTeamIds) {
+        currentCupMatches = [];
         currentRows = rows;
+        topSixInput.closest("label").hidden = false;
+        standingsTable.classList.remove("is-cup-table");
+        standingsTable.querySelector("thead").replaceWith(defaultTableHead.cloneNode(true));
         downloadButton.disabled = rows.length === 0;
         standingsBody.replaceChildren();
         if (!rows.length) {
@@ -310,7 +484,8 @@
         context.restore();
     }
 
-    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season, round, leagueCode, customBrandLogo, customBrandLogoCircle) {
+    function createStandingsPoster(rows, logos, brandLogo, leagueBadge, league, season, round, leagueCode, customBrandLogo, customBrandLogoCircle, cupMatches = null) {
+        const isCupPoster = Array.isArray(cupMatches);
         const canvas = document.createElement("canvas");
         const width = 1000;
         const railWidth = 132;
@@ -443,7 +618,7 @@
         context.font = "850 18px Segoe UI, Arial, sans-serif";
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText(round ? `${round}-TUR` : "TUR —", 0, 0, railWidth - 18);
+        context.fillText(round ? isCupPoster ? round : `${round}-TUR` : "TUR —", 0, 0, railWidth - 18);
         context.restore();
 
         drawExportRoundRect(context, panelX, panelY, panelWidth, panelHeight, 18, "#ffffff");
@@ -456,16 +631,25 @@
         context.fillStyle = "#737970";
         context.font = "750 17px Segoe UI, Arial, sans-serif";
         context.textBaseline = "middle";
-        context.textAlign = "center";
-        context.fillText("Pos", panelX + 31, panelY + headerHeight / 2);
-        context.textAlign = "left";
-        context.fillText("Klub", panelX + 100, panelY + headerHeight / 2);
-        const statWidth = 68;
-        const statStartX = panelX + panelWidth - statWidth * 3;
-        ["P", "GF:GA", "Pts"].forEach((label, index) => {
+        if (isCupPoster) {
+            context.textAlign = "left";
+            context.fillText("Bosqich", panelX + 18, panelY + headerHeight / 2);
+            context.fillText("Uchrashuv", panelX + 145, panelY + headerHeight / 2);
             context.textAlign = "center";
-            context.fillText(label, statStartX + statWidth * index + statWidth / 2, panelY + headerHeight / 2);
-        });
+            context.fillText("Hisob", panelX + 402, panelY + headerHeight / 2);
+            context.fillText("Sana", panelX + 738, panelY + headerHeight / 2);
+        } else {
+            context.textAlign = "center";
+            context.fillText("Pos", panelX + 31, panelY + headerHeight / 2);
+            context.textAlign = "left";
+            context.fillText("Klub", panelX + 100, panelY + headerHeight / 2);
+            const statWidth = 68;
+            const statStartX = panelX + panelWidth - statWidth * 3;
+            ["P", "GF:GA", "Pts"].forEach((label, index) => {
+                context.textAlign = "center";
+                context.fillText(label, statStartX + statWidth * index + statWidth / 2, panelY + headerHeight / 2);
+            });
+        }
 
         rows.forEach((team, index) => {
             const y = panelY + headerHeight + index * rowHeight;
@@ -485,23 +669,55 @@
                 context.stroke();
             }
 
-            context.fillStyle = index < 4 ? "#303933" : "#626a63";
-            context.font = "750 18px Segoe UI, Arial, sans-serif";
-            context.textAlign = "center";
             context.textBaseline = "middle";
-            context.fillText(String(index + 1), panelX + 31, y + rowHeight / 2);
-            drawExportLogo(context, logos[index], team.name, panelX + 50, y + (rowHeight - 40) / 2, 40);
-            context.fillStyle = "#282d29";
-            context.font = `${index < 4 ? "700" : "550"} 20px Segoe UI, Arial, sans-serif`;
-            context.textAlign = "left";
-            context.fillText(team.name, panelX + 102, y + rowHeight / 2, Math.max(30, statStartX - panelX - 114));
-            const values = [team.played, `${team.goalsFor}:${team.goalsAgainst}`, team.points];
-            values.forEach((value, valueIndex) => {
-                context.fillStyle = valueIndex === 2 ? "#222a23" : "#555c56";
-                context.font = `${valueIndex === 2 ? "800" : "550"} 18px Segoe UI, Arial, sans-serif`;
+            if (isCupPoster) {
+                context.fillStyle = "#626a63";
+                context.font = "650 14px Segoe UI, Arial, sans-serif";
+                context.textAlign = "left";
+                context.fillText(team.stageLabel, panelX + 18, y + rowHeight / 2, 112);
+                drawExportLogo(context, logos[index * 2], team.home.name, panelX + 116, y + (rowHeight - 28) / 2, 28);
+                context.fillStyle = "#282d29";
+                context.font = "650 16px Segoe UI, Arial, sans-serif";
+                context.fillText(team.home.name, panelX + 150, y + rowHeight / 2, 142);
+                context.fillStyle = "#222a23";
+                context.font = "800 17px Segoe UI, Arial, sans-serif";
                 context.textAlign = "center";
-                context.fillText(String(value), statStartX + statWidth * valueIndex + statWidth / 2, y + rowHeight / 2);
-            });
+                context.fillText(team.homeScore === null || team.awayScore === null
+                    ? "—"
+                    : `${team.homeScore} – ${team.awayScore}`, panelX + 402, y + rowHeight / 2, 86);
+                drawExportLogo(context, logos[index * 2 + 1], team.away.name, panelX + 453, y + (rowHeight - 28) / 2, 28);
+                context.fillStyle = "#282d29";
+                context.font = "650 16px Segoe UI, Arial, sans-serif";
+                context.textAlign = "left";
+                context.fillText(team.away.name, panelX + 487, y + rowHeight / 2, 176);
+                context.fillStyle = "#555c56";
+                context.font = "550 14px Segoe UI, Arial, sans-serif";
+                context.textAlign = "center";
+                const matchDate = new Date(team.date);
+                context.fillText(Number.isNaN(matchDate.getTime())
+                    ? "—"
+                    : new Intl.DateTimeFormat("uz-UZ", { day: "2-digit", month: "short" }).format(matchDate),
+                panelX + 738, y + rowHeight / 2, 92);
+            } else {
+                context.fillStyle = index < 4 ? "#303933" : "#626a63";
+                context.font = "750 18px Segoe UI, Arial, sans-serif";
+                context.textAlign = "center";
+                context.fillText(String(index + 1), panelX + 31, y + rowHeight / 2);
+                drawExportLogo(context, logos[index], team.name, panelX + 50, y + (rowHeight - 40) / 2, 40);
+                context.fillStyle = "#282d29";
+                context.font = `${index < 4 ? "700" : "550"} 20px Segoe UI, Arial, sans-serif`;
+                context.textAlign = "left";
+                const statWidth = 68;
+                const statStartX = panelX + panelWidth - statWidth * 3;
+                context.fillText(team.name, panelX + 102, y + rowHeight / 2, Math.max(30, statStartX - panelX - 114));
+                const values = [team.played, `${team.goalsFor}:${team.goalsAgainst}`, team.points];
+                values.forEach((value, valueIndex) => {
+                    context.fillStyle = valueIndex === 2 ? "#222a23" : "#555c56";
+                    context.font = `${valueIndex === 2 ? "800" : "550"} 18px Segoe UI, Arial, sans-serif`;
+                    context.textAlign = "center";
+                    context.fillText(String(value), statStartX + statWidth * valueIndex + statWidth / 2, y + rowHeight / 2);
+                });
+            }
         });
         context.restore();
 
@@ -514,12 +730,21 @@
     }
 
     async function downloadStandingsPoster() {
-        if (!currentRows.length) {
+        const cupPoster = isCupLeague(selectedLeague);
+        if (cupPoster ? !currentCupMatches.length : !currentRows.length) {
             setStatus("Avval jadval ma’lumotlari yuklanishini kuting.", true);
             return;
         }
-        const exportTopSix = topSixInput.checked;
-        const exportRows = exportTopSix ? currentRows.slice(0, 6) : currentRows.slice();
+        const exportTopSix = !cupPoster && topSixInput.checked;
+        const latestCupStage = cupPoster
+            ? Math.max(...currentCupMatches.map(match => match.stageOrder))
+            : -1;
+        const exportCupMatches = cupPoster
+            ? currentCupMatches.filter(match => match.stageOrder === latestCupStage)
+            : null;
+        const exportRows = cupPoster
+            ? exportCupMatches
+            : exportTopSix ? currentRows.slice(0, 6) : currentRows.slice();
         const exportLeagueCode = selectedLeague;
         const exportLeague = leagueName.textContent;
         const exportSeason = seasonLabel.textContent;
@@ -533,23 +758,25 @@
             const [brandLogo, leagueBadge, ...logos] = await Promise.all([
                 loadExportLogo(exportBrandLogoSource),
                 loadExportLogo(new URL(leagueAssets[exportLeagueCode], document.baseURI).href),
-                ...exportRows.map(team => loadExportLogo(team.logo))
+                ...(cupPoster
+                    ? exportRows.flatMap(match => [loadExportLogo(match.home.logo), loadExportLogo(match.away.logo)])
+                    : exportRows.map(team => loadExportLogo(team.logo)))
             ]);
-            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode, exportCustomBrandLogo, exportBrandLogoCircle);
+            const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode, exportCustomBrandLogo, exportBrandLogoCircle, exportCupMatches);
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
             });
             const safeLeague = exportLeague.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            const filename = `${safeLeague || "liga"}-${exportSeason}${exportTopSix ? "-top-6" : ""}-jadvali.png`;
+            const filename = `${safeLeague || "liga"}-${exportSeason}${exportTopSix ? "-top-6" : ""}-${cupPoster ? "bosqichlari" : "jadvali"}.png`;
             const result = await window.pitchplanSaveImage(blob, filename);
             setStatus(result.method === "share"
-                ? "Jadval ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
+                ? `${cupPoster ? "Kubok bosqichlari" : "Jadval"} ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang.`
                 : result.method === "cancelled"
                     ? "Jadvalni saqlash bekor qilindi."
                     : result.method === "preview"
                         ? "Jadval rasmi yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
-                        : `Turnir jadvali${exportTopSix ? " Top 6" : ""} PNG formatida yuklab olindi.`);
+                        : `${cupPoster ? "Kubok bosqichlari" : `Turnir jadvali${exportTopSix ? " Top 6" : ""}`} PNG formatida yuklab olindi.`);
         } catch (error) {
             setStatus("Jadval rasmini yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
             console.error("Standings poster export failed:", error);
@@ -575,6 +802,7 @@
         activeController = controller;
         const { signal } = controller;
         const startYear = getCurrentSeasonStartYear();
+        const cupCompetition = isCupLeague(selectedLeague);
         applyLeagueRailTheme(selectedLeague);
         leagueName.textContent = leagueNames[selectedLeague];
         seasonLabel.textContent = formatSeason(startYear);
@@ -584,9 +812,14 @@
         railRound.textContent = "TUR —";
         leagueLogo.src = leagueAssets[selectedLeague];
         leagueLogo.alt = `${leagueNames[selectedLeague]} logosi`;
+        currentRows = [];
+        currentCupMatches = [];
+        topSixInput.closest("label").hidden = cupCompetition;
+        if (cupCompetition) setCupTableHeader();
+        else standingsTable.querySelector("thead").replaceWith(defaultTableHead.cloneNode(true));
         downloadButton.disabled = true;
-        setStatus("Jonli jadval yuklanmoqda…");
-        standingsBody.innerHTML = '<tr><td colspan="10" class="standings-placeholder">Turnir jadvali yuklanmoqda…</td></tr>';
+        setStatus(cupCompetition ? "Kubok uchrashuvlari yuklanmoqda…" : "Jonli jadval yuklanmoqda…");
+        standingsBody.innerHTML = `<tr><td colspan="${cupCompetition ? 5 : 10}" class="standings-placeholder">${cupCompetition ? "Kubok bosqichlari yuklanmoqda…" : "Turnir jadvali yuklanmoqda…"}</td></tr>`;
 
         const timeout = window.setTimeout(() => controller.abort(), 18000);
         try {
@@ -597,6 +830,19 @@
             if (generation !== requestGeneration) return;
             const eventsById = new Map(eventGroups.flat().map(event => [event.id, event]));
             const events = [...eventsById.values()];
+            if (cupCompetition) {
+                const cupMatches = getCupMatches(events, startYear, selectedLeague);
+                currentRound = cupMatches.length
+                    ? cupMatches.reduce((latest, match) => match.stageOrder > latest.stageOrder ? match : latest).stageLabel
+                    : null;
+                railRound.textContent = currentRound || "BOSQICH —";
+                renderCupMatches(cupMatches, selectedLeague);
+                lastSuccessfulUpdate = new Date();
+                const updatedAt = new Intl.DateTimeFormat("uz-UZ", { hour: "2-digit", minute: "2-digit" }).format(lastSuccessfulUpdate);
+                const liveMatches = cupMatches.filter(match => match.state === "in").length;
+                setStatus(`${cupMatches.length} ta uchrashuv · ${liveMatches ? `${liveMatches} ta jonli · ` : ""}${updatedAt} da yangilandi`);
+                return;
+            }
             const { rows, liveMatches, liveTeamIds } = getLiveStandings(events, startYear, selectedLeague);
             currentRound = getCurrentRound(rows, events, startYear, liveMatches, selectedLeague);
             railRound.textContent = currentRound ? `${currentRound}-TUR` : "TUR —";
@@ -609,8 +855,8 @@
             if (lastSuccessfulUpdate) {
                 setStatus("Yangilashda xatolik. Oxirgi olingan jadval ko‘rsatilmoqda.", true);
             } else {
-                standingsBody.innerHTML = '<tr><td colspan="10" class="standings-placeholder">Jadvalni hozircha yuklab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring.</td></tr>';
-                setStatus("Jadvalni yuklab bo‘lmadi.", true);
+                standingsBody.innerHTML = `<tr><td colspan="${cupCompetition ? 5 : 10}" class="standings-placeholder">${cupCompetition ? "Kubok uchrashuvlarini hozircha yuklab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring." : "Jadvalni hozircha yuklab bo‘lmadi. Internet aloqasini tekshirib, qayta urinib ko‘ring."}</td></tr>`;
+                setStatus(cupCompetition ? "Kubok uchrashuvlarini yuklab bo‘lmadi." : "Jadvalni yuklab bo‘lmadi.", true);
             }
             console.error("League standings refresh failed:", error);
         } finally {

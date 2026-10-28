@@ -1,6 +1,8 @@
 (() => {
     const leagueNames = {
         "eng.1": "Premier League",
+        "eng.fa": "FA Cup",
+        "eng.league_cup": "EFL Cup",
         "esp.1": "LaLiga",
         "ita.1": "Serie A",
         "ger.1": "Bundesliga",
@@ -12,6 +14,8 @@
     const topFiveLeagues = ["eng.1", "esp.1", "ita.1", "ger.1", "fra.1"];
     const leagueAssets = {
         "eng.1": "./images/ligalar/english-premier-league.ee1e9b08.png",
+        "eng.fa": "./images/ligalar/fa-cup-badge.svg",
+        "eng.league_cup": "./images/ligalar/efl-cup-badge.svg",
         "esp.1": "./images/ligalar/LaLiga_logo_2023.svg.webp",
         "ita.1": "./images/ligalar/serie_a-brandlogo.net_-512x512.png",
         "ger.1": "./images/ligalar/Bundesliga_logo_(2017).svg.webp",
