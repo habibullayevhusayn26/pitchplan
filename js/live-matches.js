@@ -291,7 +291,7 @@
         };
     }
 
-    async function fetchMonthlyPosterFixtures(club, year, month, signal) {
+    async function fetchMonthlyPosterFixtures(club, year, period, signal) {
         const competitions = [
             ...topFiveLeagues.map(id => ({ id, name: leagueNames[id], logo: leagueAssets[id] })),
             ...monthlyCupCompetitions
@@ -318,11 +318,17 @@
             throw new AggregateError(results.map(result => result.reason), "Oylik uchrashuvlar jadvallarini yuklab bo‘lmadi.");
         }
 
+        const now = new Date();
+        const periodStart = period === "year" ? new Date(year, 0, 1) :
+            period === "next-month" ? new Date(year, now.getMonth() + 1, 1) :
+                new Date(year, now.getMonth(), 1);
+        const periodEnd = period === "year" ? new Date(year + 1, 0, 1) :
+            new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 1);
         const selectedName = normalizeClubSearch(club.name);
         const uniqueFixtures = new Map();
         events.forEach(({ event, competition }) => {
             const date = new Date(event.date);
-            if (Number.isNaN(date.getTime()) || date.getFullYear() !== year || date.getMonth() !== month) return;
+            if (Number.isNaN(date.getTime()) || date < periodStart || date >= periodEnd) return;
             const competitors = event.competitions?.[0]?.competitors || [];
             const clubEntry = competitors.find(competitor =>
                 String(competitor.team?.id) === String(club.id) ||
@@ -355,7 +361,7 @@
 
     window.pitchPlanClubFixtures = Object.freeze({
         searchClubs: searchMonthlyPosterClubs,
-        getMonthlyFixtures: fetchMonthlyPosterFixtures
+        getFixtures: fetchMonthlyPosterFixtures
     });
 
     function renderClubSearch() {

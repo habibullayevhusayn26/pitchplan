@@ -148,7 +148,7 @@
             position: relative;
             display: block; width: 100%; min-width: 0; padding: 12px; overflow: hidden;
             border: 1px solid var(--line); border-radius: 16px; background: rgba(17,27,43,.94);
-            color: var(--text); text-align: left; cursor: pointer; box-shadow: 0 14px 40px rgba(0,0,0,.2);
+            color: var(--text); text-align: left; text-decoration: none; cursor: pointer; box-shadow: 0 14px 40px rgba(0,0,0,.2);
             transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
         }
         .template-card:hover, .template-card:focus-visible {
@@ -947,18 +947,6 @@
                 background-color: rgba(255,255,255,.96);
             }
         }
-        *, *::before, *::after {
-            transition-property: color, background-color, background-image, border-color, box-shadow, opacity, transform, filter, backdrop-filter;
-            transition-duration: .18s;
-            transition-timing-function: ease;
-        }
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                transition-duration: .01ms !important;
-                animation-duration: .01ms !important;
-            }
-        }
-
         :root[data-theme="dark"] {
                 color-scheme: dark;
                 --page: #0b1220;
@@ -2777,4 +2765,447 @@
             filter: none !important;
             -webkit-backdrop-filter: none !important;
             backdrop-filter: none !important;
+        }
+        button:not(:disabled) {
+            position: relative;
+            isolation: isolate;
+        }
+        button:not(:disabled)::before {
+            position: absolute;
+            z-index: -1;
+            inset: 2px;
+            border-radius: inherit;
+            background:
+                radial-gradient(ellipse at 18% 28%, rgba(255,255,255,.4), transparent 43%),
+                radial-gradient(ellipse at 78% 72%, rgba(255,255,255,.2), transparent 48%),
+                linear-gradient(115deg, transparent 30%, rgba(255,255,255,.13) 48%, transparent 66%);
+            background-size: 180% 160%, 170% 160%, 200% 100%;
+            background-position: 0% 50%, 100% 50%, 0% 50%;
+            content: "";
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease;
+        }
+        button:not(:disabled):hover::before,
+        button:not(:disabled):focus-visible::before {
+            opacity: .48;
+            animation: button-liquid-flow 3.6s ease-in-out infinite alternate;
+        }
+        @keyframes button-liquid-flow {
+            0% { background-position: 0% 28%, 100% 72%, 0% 50%; }
+            50% { background-position: 58% 72%, 35% 20%, 100% 50%; }
+            100% { background-position: 100% 35%, 0% 58%, 0% 50%; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            button:not(:disabled):hover::before,
+            button:not(:disabled):focus-visible::before {
+                animation: none;
+                opacity: .24;
+            }
+        }
+
+        :root {
+            color-scheme: light;
+            --page: #f4f6fa;
+            --panel: #ffffff;
+            --panel-2: #f8f9fc;
+            --line: #e3e7ef;
+            --text: #252a38;
+            --muted: #70798b;
+            --blue: #6258d5;
+            --cyan: #31aeb8;
+            --ui-radius: 14px;
+            --ui-shadow: 0 8px 24px rgba(31, 39, 61, .065);
+            --ui-highlight: rgba(255,255,255,.76);
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --page: #10141d;
+            --panel: #191f2c;
+            --panel-2: #202837;
+            --line: #303949;
+            --text: #edf1f8;
+            --muted: #a4adbc;
+            --blue: #a79af5;
+            --cyan: #64cbd3;
+            --ui-shadow: 0 12px 30px rgba(0,0,0,.2);
+            --ui-highlight: rgba(255,255,255,.075);
+        }
+        body {
+            background:
+                radial-gradient(ellipse at 50% -18%, rgba(105, 93, 196, .07), transparent 46%),
+                var(--page);
+            color: var(--text);
+        }
+        :root[data-theme="dark"] body {
+            background:
+                radial-gradient(ellipse at 12% 0%, rgba(91, 82, 158, .17), transparent 38%),
+                radial-gradient(ellipse at 92% 18%, rgba(42, 115, 126, .08), transparent 34%),
+                var(--page);
+        }
+        .topbar {
+            border-bottom-color: var(--line);
+            background: color-mix(in srgb, var(--panel) 90%, transparent);
+            box-shadow: 0 4px 18px rgba(31,39,61,.035);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        .app-sidebar {
+            border-color: var(--line);
+            border-radius: 18px;
+            background: var(--panel);
+            box-shadow: var(--ui-shadow);
+        }
+        .app-nav-item {
+            border-radius: 12px;
+            color: var(--muted);
+            transition: color .18s ease, background-color .18s ease, border-color .18s ease, transform .18s ease;
+        }
+        .app-nav-item:hover {
+            border-color: var(--line);
+            background: var(--panel-2);
+            color: var(--blue);
+            box-shadow: none;
+        }
+        .app-nav-item.is-active {
+            border-color: transparent;
+            background: color-mix(in srgb, var(--blue) 12%, var(--panel));
+            color: var(--blue);
+            box-shadow: inset 3px 0 0 var(--blue);
+        }
+        .home-eyebrow { color: var(--blue); }
+        .home-view .intro h1, .live-heading h1 {
+            color: var(--text);
+            letter-spacing: -.045em;
+        }
+        .home-view .intro p, .live-heading p, .top-note { color: var(--muted); }
+        .home-shortcuts {
+            max-width: 1080px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .home-shortcut {
+            min-height: 92px;
+            gap: 12px;
+            border-color: var(--line);
+            border-radius: var(--ui-radius);
+            background: var(--panel);
+            color: var(--text);
+            box-shadow: var(--ui-shadow);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        .home-shortcut:hover {
+            transform: translateY(-2px);
+            border-color: color-mix(in srgb, var(--blue) 38%, var(--line));
+            box-shadow: 0 12px 28px rgba(31,39,61,.1);
+        }
+        .home-shortcut-icon {
+            border-radius: 12px;
+            background: color-mix(in srgb, var(--blue) 11%, var(--panel));
+            color: var(--blue);
+        }
+        .home-shortcut strong { color: var(--text); font-size: 14px; }
+        .home-shortcut small { color: var(--muted); }
+        .home-shortcut-arrow { color: var(--blue); }
+        .template-gallery { gap: 16px; }
+        .template-card {
+            padding: 10px;
+            border-color: var(--line);
+            border-radius: var(--ui-radius);
+            background: var(--panel);
+            color: var(--text);
+            box-shadow: var(--ui-shadow);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        .template-card:hover, .template-card:focus-visible {
+            transform: translateY(-2px);
+            border-color: color-mix(in srgb, var(--blue) 42%, var(--line));
+            background: var(--panel);
+            box-shadow: 0 14px 32px rgba(31,39,61,.11);
+        }
+        .template-card-image { border-radius: 10px; }
+        .template-card-title { color: var(--text); }
+        .template-card-description { color: var(--muted); }
+        .template-card-action { color: var(--blue); }
+        .editor, .preview-panel, .club-search-panel, .club-profile-panel,
+        .live-match-card, .live-match-detail-content {
+            border-color: var(--line);
+            border-radius: var(--ui-radius);
+            background: var(--panel);
+            color: var(--text);
+            box-shadow: var(--ui-shadow);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        .editor, .preview-panel { padding: clamp(16px, 2vw, 22px); }
+        .field label, .field-label, .section-label strong,
+        .panel-heading h2, .preview-top h2 { color: var(--text); }
+        .field input:not([type="color"]):not([type="range"]):not([type="file"]),
+        .field textarea, .match-row input[type="text"], .club-search,
+        .canvas-inline-editor, .field input[type="file"].file-input,
+        .club-search-field input {
+            border-color: var(--line);
+            border-radius: 10px;
+            background: var(--panel-2);
+            color: var(--text);
+            box-shadow: inset 0 1px 2px rgba(31,39,61,.035);
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+        }
+        .field input:not([type="color"]):not([type="range"]):not([type="file"]):focus,
+        .field textarea:focus, .match-row input[type="text"]:focus,
+        .club-search:focus-within, .canvas-inline-editor:focus,
+        .club-search-field input:focus {
+            border-color: var(--blue);
+            background: var(--panel);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 16%, transparent);
+        }
+        .field input::placeholder, .field textarea::placeholder,
+        .club-search input::placeholder { color: var(--muted); }
+        .match-row {
+            border-color: var(--line);
+            border-radius: 11px;
+            background: var(--panel-2);
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        .match-row:hover {
+            border-color: color-mix(in srgb, var(--blue) 32%, var(--line));
+            background: var(--panel);
+            box-shadow: 0 4px 12px rgba(31,39,61,.055);
+        }
+        .btn, .theme-picker-trigger, .home-shortcut, .monthly-club-result,
+        .device-logo-button, .preview-expand, .live-match-refresh, .club-search-toggle,
+        .live-match-filter, .live-league-tab, .league-tab, .football-news-ratio-option,
+        .matchlist-layout-option, .today-results-theme-option, .match-detail-tab,
+        .live-match-details-toggle, .standings-top-six-control, .standings-logo-shape-control,
+        .template, .club-logo-choice, .theme-picker-option, .logo-upload {
+            border-color: var(--line);
+            border-radius: 11px;
+            transition: color .16s ease, background-color .16s ease, border-color .16s ease,
+                box-shadow .16s ease, transform .16s ease;
+        }
+        .btn, .monthly-club-result, .device-logo-button, .preview-expand,
+        .live-match-refresh, .club-search-toggle, .live-match-filter,
+        .live-league-tab, .league-tab, .football-news-ratio-option,
+        .matchlist-layout-option, .today-results-theme-option, .match-detail-tab,
+        .live-match-details-toggle, .standings-top-six-control, .standings-logo-shape-control,
+        .template, .club-logo-choice, .theme-picker-trigger {
+            background: var(--panel);
+            color: var(--text);
+        }
+        .btn:hover, .monthly-club-result:hover, .device-logo-button:hover,
+        .preview-expand:hover, .live-match-refresh:hover, .club-search-toggle:hover,
+        .live-match-filter:hover, .live-league-tab:hover, .league-tab:hover,
+        .football-news-ratio-option:hover, .matchlist-layout-option:hover,
+        .today-results-theme-option:hover, .match-detail-tab:hover,
+        .template:hover, .club-logo-choice:hover, .theme-picker-trigger:hover {
+            border-color: color-mix(in srgb, var(--blue) 40%, var(--line));
+            background-color: var(--panel-2);
+            color: var(--blue);
+            box-shadow: 0 4px 12px rgba(31,39,61,.07);
+        }
+        .btn:focus-visible, .theme-picker-trigger:focus-visible,
+        .home-shortcut:focus-visible, .monthly-club-result:focus-visible,
+        .live-match-filter:focus-visible, .live-league-tab:focus-visible,
+        .league-tab:focus-visible, .football-news-ratio-option:focus-visible,
+        .matchlist-layout-option:focus-visible, .today-results-theme-option:focus-visible,
+        .match-detail-tab:focus-visible, .template:focus-visible,
+        .club-logo-choice:focus-visible {
+            outline: 2px solid var(--blue);
+            outline-offset: 2px;
+        }
+        .btn-export, .btn-export:hover, .standings-download, .live-match-refresh.is-primary {
+            border-color: transparent;
+            background: linear-gradient(120deg, #6558d5, #527fd0);
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(85,89,190,.2);
+        }
+        .btn-export:hover, .standings-download:hover, .live-match-refresh.is-primary:hover {
+            background: linear-gradient(120deg, #5749c4, #416fbe);
+            color: #fff;
+        }
+        .btn-add {
+            border-color: var(--line);
+            border-style: dashed;
+            background: var(--panel-2);
+            color: var(--muted);
+        }
+        .btn-add:hover { color: var(--blue); }
+        .live-league-tab, .league-tab { border-radius: 999px; }
+        .live-league-tab.is-active, .league-tab.is-active,
+        .football-news-ratio-option[aria-pressed="true"],
+        .matchlist-layout-option[aria-pressed="true"],
+        .today-results-theme-option[aria-pressed="true"],
+        .match-detail-tab[aria-pressed="true"] {
+            border-color: color-mix(in srgb, var(--blue) 42%, var(--line));
+            background: color-mix(in srgb, var(--blue) 12%, var(--panel));
+            color: var(--blue);
+            box-shadow: inset 0 1px 0 var(--ui-highlight);
+        }
+        .live-status {
+            border-color: var(--line);
+            border-radius: 999px;
+            background: var(--panel);
+            color: var(--muted);
+        }
+        .section-banner {
+            border-radius: 18px;
+            box-shadow: var(--ui-shadow);
+        }
+        .canvas-wrap { border-radius: 12px; }
+        .preview-expand { border-radius: 10px; }
+        .club-picker-dialog, .red-star-password-dialog {
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(18,25,42,.22);
+        }
+        .red-star-password-dialog {
+            backdrop-filter: blur(24px) saturate(135%);
+            -webkit-backdrop-filter: blur(24px) saturate(135%);
+        }
+        .red-star-password-dialog .club-search,
+        .red-star-password-dialog .club-search:focus-within {
+            border-radius: 11px;
+        }
+        .red-star-password-dialog .btn-export {
+            min-height: 46px;
+            border-radius: 11px;
+        }
+        .toast { border-radius: 10px; }
+        button:not(:disabled) {
+            isolation: isolate;
+            transition: color .16s ease, background-color .16s ease, border-color .16s ease,
+                box-shadow .16s ease, transform .16s ease;
+        }
+        button:not(:disabled)::before {
+            background:
+                radial-gradient(ellipse at 15% 28%, rgba(255,255,255,.48), transparent 45%),
+                linear-gradient(115deg, transparent 30%, rgba(255,255,255,.16) 50%, transparent 70%);
+            background-size: 180% 170%, 220% 100%;
+            transition: opacity .18s ease;
+        }
+        button:not(:disabled):hover::before,
+        button:not(:disabled):focus-visible::before {
+            opacity: .34;
+            animation: button-liquid-flow 4s ease-in-out infinite alternate;
+        }
+        :root[data-theme="dark"] .topbar {
+            border-bottom-color: var(--line);
+            background: rgba(16,20,29,.86);
+            box-shadow: 0 4px 18px rgba(0,0,0,.16);
+        }
+        :root[data-theme="dark"] .app-sidebar,
+        :root[data-theme="dark"] .editor,
+        :root[data-theme="dark"] .preview-panel,
+        :root[data-theme="dark"] .club-search-panel,
+        :root[data-theme="dark"] .club-profile-panel,
+        :root[data-theme="dark"] .live-match-card,
+        :root[data-theme="dark"] .live-match-detail-content {
+            border-color: var(--line);
+            background: var(--panel);
+            color: var(--text);
+            box-shadow: var(--ui-shadow);
+        }
+        :root[data-theme="dark"] .home-shortcut,
+        :root[data-theme="dark"] .template-card,
+        :root[data-theme="dark"] .btn,
+        :root[data-theme="dark"] .monthly-club-result,
+        :root[data-theme="dark"] .device-logo-button,
+        :root[data-theme="dark"] .live-match-filter,
+        :root[data-theme="dark"] .live-league-tab,
+        :root[data-theme="dark"] .league-tab,
+        :root[data-theme="dark"] .football-news-ratio-option,
+        :root[data-theme="dark"] .matchlist-layout-option,
+        :root[data-theme="dark"] .today-results-theme-option,
+        :root[data-theme="dark"] .match-detail-tab,
+        :root[data-theme="dark"] .club-logo-choice,
+        :root[data-theme="dark"] .theme-picker-trigger,
+        :root[data-theme="dark"] .template {
+            border-color: var(--line);
+            background: var(--panel-2);
+            color: var(--text);
+            box-shadow: inset 0 1px 0 var(--ui-highlight);
+        }
+        :root[data-theme="dark"] .home-shortcut:hover,
+        :root[data-theme="dark"] .template-card:hover,
+        :root[data-theme="dark"] .btn:hover,
+        :root[data-theme="dark"] .live-match-filter:hover,
+        :root[data-theme="dark"] .live-league-tab:hover,
+        :root[data-theme="dark"] .league-tab:hover,
+        :root[data-theme="dark"] .template:hover {
+            border-color: color-mix(in srgb, var(--blue) 48%, var(--line));
+            background: #273044;
+            color: var(--blue);
+            box-shadow: 0 8px 20px rgba(0,0,0,.2), inset 0 1px 0 var(--ui-highlight);
+        }
+        :root[data-theme="dark"] .field input:not([type="color"]):not([type="range"]):not([type="file"]),
+        :root[data-theme="dark"] .field textarea,
+        :root[data-theme="dark"] .match-row input[type="text"],
+        :root[data-theme="dark"] .club-search,
+        :root[data-theme="dark"] .canvas-inline-editor,
+        :root[data-theme="dark"] .field input[type="file"].file-input,
+        :root[data-theme="dark"] .club-search-field input,
+        :root[data-theme="dark"] .match-row {
+            border-color: var(--line);
+            background: #131925;
+            color: var(--text);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,.14);
+        }
+        :root[data-theme="dark"] .home-shortcut small,
+        :root[data-theme="dark"] .template-card-description,
+        :root[data-theme="dark"] .top-note,
+        :root[data-theme="dark"] .intro p,
+        :root[data-theme="dark"] .live-heading p,
+        :root[data-theme="dark"] .field label,
+        :root[data-theme="dark"] .field-label,
+        :root[data-theme="dark"] .preview-size,
+        :root[data-theme="dark"] .hint { color: var(--muted); }
+        :root[data-theme="dark"] .home-shortcut strong,
+        :root[data-theme="dark"] .template-card-title,
+        :root[data-theme="dark"] .panel-heading h2,
+        :root[data-theme="dark"] .preview-top h2,
+        :root[data-theme="dark"] .home-view .intro h1,
+        :root[data-theme="dark"] .live-heading h1 { color: var(--text); }
+        :root[data-theme="dark"] .home-shortcut-icon { background: rgba(167,154,245,.13); color: var(--blue); }
+        :root[data-theme="dark"] .live-status { border-color: var(--line); background: var(--panel-2); color: var(--muted); }
+        :root[data-theme="dark"] .btn-export,
+        :root[data-theme="dark"] .btn-export:hover,
+        :root[data-theme="dark"] .standings-download,
+        :root[data-theme="dark"] .live-match-refresh.is-primary {
+            border-color: transparent;
+            background: linear-gradient(120deg, #7468e3, #567ec8);
+            color: #fff;
+        }
+        @media (max-width: 900px) {
+            .home-shortcuts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .template-gallery { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+            .workspace { gap: 16px; }
+        }
+        @media (max-width: 760px) {
+            main { padding: 22px 16px 40px; }
+            .home-view .intro { margin-top: 30px; margin-bottom: 24px; }
+            .section-banner { padding: 20px; }
+            .home-shortcuts { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+            .home-shortcut { min-height: 78px; padding: 12px; }
+            .template-gallery { gap: 12px; }
+            .editor, .preview-panel { padding: 14px; }
+            .workspace { gap: 14px; }
+        }
+        @media (prefers-reduced-transparency: reduce) {
+            .topbar, .editor, .preview-panel, .template-card, .club-search-panel,
+            .club-profile-panel, .live-match-card, .live-match-detail-content {
+                background: var(--panel);
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            button:not(:disabled):hover::before,
+            button:not(:disabled):focus-visible::before { animation: none; }
+            .app-nav-item, .btn, .home-shortcut, .template-card, .match-row,
+            .live-match-filter, .live-league-tab, .league-tab { transition-duration: .01ms; }
         }
