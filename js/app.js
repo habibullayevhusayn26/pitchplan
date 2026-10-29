@@ -396,6 +396,8 @@ function getClubDisplayName(name) {
         let backgroundVideoFilesByTemplate = new Map();
         const backgroundVideoAudioPipelines = new Map();
         let backgroundVideoRenderFrame = 0;
+        let backgroundVideoRenderUsesFrameCallback = false;
+        let backgroundVideoRenderSource = null;
         let lastBackgroundVideoFrameTime = 0;
         let videoPosterExporting = false;
         const defaultPosterBackground = new Image();
@@ -482,6 +484,7 @@ function getClubDisplayName(name) {
         const isBrandLogoRemoved = (template = currentTemplate) => removedBrandLogosByTemplate.has(template);
         let posterHitRegions = [];
         let posterGlassBackdrop = null;
+        const posterGlassCanvases = new Map();
         let activeInlineTarget = null;
         let workspaceInitialized = false;
         let workspaceSaveTimer = 0;
@@ -1647,23 +1650,50 @@ function getClubDisplayName(name) {
             return video;
         }
 
+        function cancelBackgroundVideoFrame() {
+            if (!backgroundVideoRenderFrame) return;
+            if (backgroundVideoRenderUsesFrameCallback && backgroundVideoRenderSource?.cancelVideoFrameCallback) {
+                backgroundVideoRenderSource.cancelVideoFrameCallback(backgroundVideoRenderFrame);
+            } else {
+                window.cancelAnimationFrame(backgroundVideoRenderFrame);
+            }
+            backgroundVideoRenderFrame = 0;
+            backgroundVideoRenderUsesFrameCallback = false;
+            backgroundVideoRenderSource = null;
+        }
+
+        function requestBackgroundVideoFrame(callback) {
+            if (typeof backgroundVideo?.requestVideoFrameCallback === "function") {
+                backgroundVideoRenderUsesFrameCallback = true;
+                backgroundVideoRenderSource = backgroundVideo;
+                backgroundVideoRenderFrame = backgroundVideo.requestVideoFrameCallback(callback);
+            } else {
+                backgroundVideoRenderUsesFrameCallback = false;
+                backgroundVideoRenderSource = null;
+                backgroundVideoRenderFrame = window.requestAnimationFrame(callback);
+            }
+        }
+
         function renderVideoFrame(frameTime) {
             backgroundVideoRenderFrame = 0;
+            backgroundVideoRenderUsesFrameCallback = false;
+            backgroundVideoRenderSource = null;
             if (!backgroundVideo || !canUseVideoBackground() || editorView.hidden ||
                 backgroundVideo.paused || backgroundVideo.readyState < 2 || videoPosterExporting) return;
             const now = Number.isFinite(frameTime) ? frameTime : performance.now();
-            if (now - lastBackgroundVideoFrameTime < 1000 / 15) {
-                backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
-                return;
+            if (typeof backgroundVideo.requestVideoFrameCallback !== "function") {
+                if (now - lastBackgroundVideoFrameTime < 1000 / 30) {
+                    requestBackgroundVideoFrame(renderVideoFrame);
+                    return;
+                }
             }
             lastBackgroundVideoFrameTime = now;
             drawPoster({ saveWorkspace: false, updateThumbnail: false });
-            backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
+            requestBackgroundVideoFrame(renderVideoFrame);
         }
 
         function syncVideoRendering() {
-            if (backgroundVideoRenderFrame) window.cancelAnimationFrame(backgroundVideoRenderFrame);
-            backgroundVideoRenderFrame = 0;
+            cancelBackgroundVideoFrame();
             backgroundVideosByTemplate.forEach((video, template) => {
                 if (video !== backgroundVideo || !canUseVideoBackground(template) ||
                     (editorView.hidden && !videoPosterExporting)) {
@@ -1683,7 +1713,7 @@ function getClubDisplayName(name) {
                 return;
             }
             if (backgroundVideo.readyState >= 2 && !backgroundVideoRenderFrame) {
-                backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
+                requestBackgroundVideoFrame(renderVideoFrame);
             }
             updateVideoExportControls();
         }
@@ -1800,8 +1830,7 @@ function getClubDisplayName(name) {
             let recordingStarted = false;
             try {
                 videoPosterExporting = true;
-                if (backgroundVideoRenderFrame) window.cancelAnimationFrame(backgroundVideoRenderFrame);
-                backgroundVideoRenderFrame = 0;
+                cancelBackgroundVideoFrame();
                 outputContext.scale(exportScale, exportScale);
                 video.loop = false;
                 video.muted = false;
@@ -2247,12 +2276,23 @@ function getClubDisplayName(name) {
             const glassBackdrop = backdrop || posterGlassBackdrop || ctx.canvas;
             const backdropScaleX = glassBackdrop.width / logicalCanvasWidth;
             const backdropScaleY = glassBackdrop.height / logicalCanvasHeight;
-            const glassCanvas = document.createElement("canvas");
-            glassCanvas.width = Math.ceil(logicalGlassWidth * backdropScaleX);
-            glassCanvas.height = Math.ceil(logicalGlassHeight * backdropScaleY);
+            const glassCanvasWidth = Math.ceil(logicalGlassWidth * backdropScaleX);
+            const glassCanvasHeight = Math.ceil(logicalGlassHeight * backdropScaleY);
+            const glassCanvasKey = `${glassCanvasWidth}x${glassCanvasHeight}`;
+            let glassCanvas = posterGlassCanvases.get(glassCanvasKey);
+            if (!glassCanvas) {
+                if (posterGlassCanvases.size >= 12) {
+                    posterGlassCanvases.delete(posterGlassCanvases.keys().next().value);
+                }
+                glassCanvas = document.createElement("canvas");
+                glassCanvas.width = glassCanvasWidth;
+                glassCanvas.height = glassCanvasHeight;
+                posterGlassCanvases.set(glassCanvasKey, glassCanvas);
+            }
             const glassContext = glassCanvas.getContext("2d");
             if (!glassContext) throw new Error("Shisha fon panelini chizib bo‘lmadi.");
 
+            glassContext.clearRect(0, 0, glassCanvasWidth, glassCanvasHeight);
             const photoQuoteBlur = currentTemplate === "photo-quote" ? ` blur(${0.792 * scale}px)` : "";
             const glassFilter = `url(#photo-quote-glass-filter)${photoQuoteBlur} saturate(1.35)`;
             glassContext.filter = glassFilter;
@@ -2264,8 +2304,8 @@ function getClubDisplayName(name) {
                 glassBackdrop,
                 (x - padding) * backdropScaleX,
                 (y - padding) * backdropScaleY,
-                glassCanvas.width,
-                glassCanvas.height,
+                glassCanvasWidth,
+                glassCanvasHeight,
                 0,
                 0,
                 glassCanvas.width,
@@ -4920,7 +4960,7 @@ function getClubDisplayName(name) {
             };
             Object.keys(examples).forEach(name => {
                 setTemplate(name);
-                drawPoster();
+                drawPoster({ saveWorkspace: false });
             });
             setTemplate(state.template);
             currentTemplate = state.template;
