@@ -2721,3 +2721,11 @@
                 -webkit-backdrop-filter: none !important;
             }
         }
+        @media (max-width: 1024px) {
+            body {
+                background:
+                    linear-gradient(rgba(242,246,255,.18), rgba(242,246,255,.18)),
+                    url("../images/tahoe-for-mobile.webp") center center / cover no-repeat !important;
+                background-attachment: scroll !important;
+            }
+        }

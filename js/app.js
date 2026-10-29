@@ -391,6 +391,13 @@ function getClubDisplayName(name) {
         let monthlyClubSearchTimer = 0;
         let backgroundImage = null;
         let backgroundImagesByTemplate = new Map();
+        let backgroundVideo = null;
+        let backgroundVideosByTemplate = new Map();
+        let backgroundVideoFilesByTemplate = new Map();
+        const backgroundVideoAudioPipelines = new Map();
+        let backgroundVideoRenderFrame = 0;
+        let lastBackgroundVideoFrameTime = 0;
+        let videoPosterExporting = false;
         const defaultPosterBackground = new Image();
         const playerStatsDefaultBackground = new Image();
         const todayResultsBackground = new Image();
@@ -474,6 +481,7 @@ function getClubDisplayName(name) {
         const customTextColors = new Set();
         const isBrandLogoRemoved = (template = currentTemplate) => removedBrandLogosByTemplate.has(template);
         let posterHitRegions = [];
+        let posterGlassBackdrop = null;
         let activeInlineTarget = null;
         let workspaceInitialized = false;
         let workspaceSaveTimer = 0;
@@ -495,7 +503,8 @@ function getClubDisplayName(name) {
         }, { passive: true });
         defaultPosterBackground.onload = () => {
             if (photoPosterTemplates.has(currentTemplate) && !backgroundImage &&
-                !backgroundImagesByTemplate.has(currentTemplate)) {
+                !backgroundImagesByTemplate.has(currentTemplate) &&
+                !backgroundVideosByTemplate.has(currentTemplate)) {
                 backgroundImage = getDefaultPosterBackground(currentTemplate);
                 if (backgroundImage && workspaceInitialized) drawPoster();
             }
@@ -635,6 +644,7 @@ function getClubDisplayName(name) {
             const photoQuoteTemplate = name === "photo-quote";
             const luxTemplate = name === "football-lux";
             const telegramTemplate = name === "telegram-promo";
+            const videoBackgroundTemplate = photoQuoteTemplate || telegramTemplate;
             const matchdayTemplate = name === "matchday-poster";
             const monthlyTemplate = name === "monthly-club-fixtures";
             const photoTemplate = photoPosterTemplates.has(name) && !matchdayTemplate;
@@ -666,7 +676,12 @@ function getClubDisplayName(name) {
             }
             backgroundImage = backgroundImagesByTemplate.get(name) ||
                 (photoPosterTemplates.has(name) ? getDefaultPosterBackground(name) : null);
+            backgroundVideo = videoBackgroundTemplate ? backgroundVideosByTemplate.get(name) || null : null;
+            if (backgroundVideo) backgroundImage = null;
             backgroundImageInput.value = "";
+            backgroundImageInput.accept = videoBackgroundTemplate ? "image/*,video/*" : "image/*";
+            document.getElementById("background-video-hint").hidden = !videoBackgroundTemplate;
+            updateVideoExportControls();
             brandLogo = isBrandLogoRemoved(name) ? null : brandLogosByTemplate.get(name) ||
                 (name !== "football-lux" && !matchdayTemplate && !monthlyTemplate && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
             customBrandLogo = !isBrandLogoRemoved(name) && brandLogosByTemplate.has(name);
@@ -735,7 +750,8 @@ function getClubDisplayName(name) {
                 "Standart logoni tiklash";
             document.getElementById("clear-brand-logo").hidden = monthlyTemplate;
             document.getElementById("background-image-field").querySelector("label").textContent =
-                luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : monthlyTemplate ? "Poster foni" : "Fon rasmi";
+                videoBackgroundTemplate ? "Fon rasmi yoki video" :
+                    luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : monthlyTemplate ? "Poster foni" : "Fon rasmi";
             document.getElementById("matches-hint").textContent = resultTemplate
                 ? "Klub nomini yozing; logoni bosib katalogdan yoki qurilmadan tanlang."
                 : name === "today-results" ? "Klub nomi, hisob va logo — o‘zingiz ham tahrirlang" : "Jamoa nomi, vaqt va logo";
@@ -801,6 +817,7 @@ function getClubDisplayName(name) {
             if (name === "sf") applyRedStarTheme();
             renderInputs();
             drawPoster();
+            syncVideoRendering();
         }
 
         function resetCurrentTemplate() {
@@ -818,8 +835,13 @@ function getClubDisplayName(name) {
                 monthlyClubResults.replaceChildren();
                 monthlyFixturesRefresh.disabled = true;
             }
+            disposeBackgroundVideo(backgroundVideosByTemplate.get(template));
+            backgroundVideosByTemplate.delete(template);
+            backgroundVideoFilesByTemplate.delete(template);
+            if (backgroundVideo && currentTemplate === template) backgroundVideo = null;
             backgroundImage = photoPosterTemplates.has(template) ? getDefaultPosterBackground(template) : null;
             backgroundImagesByTemplate.delete(template);
+            backgroundImageInput.value = "";
             brandLogo = null;
             customBrandLogo = false;
             brandLogosByTemplate.delete(template);
@@ -863,6 +885,7 @@ function getClubDisplayName(name) {
                 opacityValue.textContent = "35%";
             }
             setTemplate(template);
+            syncVideoRendering();
             statusEl.textContent = "Poster standart holatga qaytarildi.";
         }
 
@@ -886,8 +909,12 @@ function getClubDisplayName(name) {
                 const [ratioWidth, ratioHeight] = selectedRatio.split(":").map(Number);
                 dimensions = { width: dimensions.width, height: Math.round(dimensions.width * ratioHeight / ratioWidth) };
                 aspectRatio = selectedRatio;
-            } else if (selectedRatio === "original" && backgroundImage?.naturalWidth && backgroundImage?.naturalHeight) {
-                const ratio = backgroundImage.naturalWidth / backgroundImage.naturalHeight;
+            } else if (selectedRatio === "original" &&
+                (backgroundVideo?.videoWidth || backgroundImage?.naturalWidth) &&
+                (backgroundVideo?.videoHeight || backgroundImage?.naturalHeight)) {
+                const sourceWidth = backgroundVideo?.videoWidth || backgroundImage.naturalWidth;
+                const sourceHeight = backgroundVideo?.videoHeight || backgroundImage.naturalHeight;
+                const ratio = sourceWidth / sourceHeight;
                 dimensions = { width: dimensions.width, height: Math.round(dimensions.width / ratio) };
                 aspectRatio = `${dimensions.width}:${dimensions.height}`;
                 const maxDimension = 2400;
@@ -921,6 +948,7 @@ function getClubDisplayName(name) {
                 templatePreview.height = Math.round(500 * dimensions.height / dimensions.width);
                 templatePreview.style.aspectRatio = aspectStyle;
             }
+            updateVideoExportControls();
         }
 
         function updateMatchlistLayoutOptions() {
@@ -1545,6 +1573,291 @@ function getClubDisplayName(name) {
             reader.readAsDataURL(file);
         }
 
+        function canUseVideoBackground(template = currentTemplate) {
+            return template === "photo-quote" || template === "telegram-promo";
+        }
+
+        function updateVideoExportControls() {
+            const hasVideo = Boolean(backgroundVideo && canUseVideoBackground());
+            const audioButton = document.getElementById("background-video-audio");
+            audioButton.hidden = !hasVideo;
+            audioButton.textContent = hasVideo && !backgroundVideo.muted ? "Ovozni o‘chirish" : "Ovoz bilan ijro etish";
+            audioButton.setAttribute("aria-pressed", String(hasVideo && !backgroundVideo.muted));
+            document.getElementById("download").textContent = hasVideo ? "↓ MP4 yuklab olish" : "↓ JPG yuklab olish";
+            const dimensionsLabel = document.getElementById("preview-dimensions");
+            dimensionsLabel.textContent = dimensionsLabel.textContent.replace(/^(?:JPG|MP4) ·/, hasVideo ? "MP4 ·" : "JPG ·");
+            document.getElementById("export-hint").textContent = hasVideo
+                ? "Preview «Ovoz bilan ijro etish» tugmasida boshlanadi. MP4 720p, 30 FPS va ovoz bilan saqlanadi."
+                : "Tahrirlar avtomatik saqlanadi. Tayyor rasmni JPG formatida yuklab oling (maksimal 2,9 MB).";
+        }
+
+        function disposeBackgroundVideo(video) {
+            if (!video) return;
+            video.pause();
+            const objectUrl = video.src;
+            video.removeAttribute("src");
+            video.load();
+            if (objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+            const audioPipeline = backgroundVideoAudioPipelines.get(video);
+            if (audioPipeline) {
+                audioPipeline.gain.disconnect();
+                audioPipeline.context.close().catch(error => {
+                    console.warn("Poster video audio context could not be closed:", error);
+                });
+                backgroundVideoAudioPipelines.delete(video);
+            }
+        }
+
+        function getBackgroundVideoAudioPipeline(video) {
+            const existingPipeline = backgroundVideoAudioPipelines.get(video);
+            if (existingPipeline) return existingPipeline;
+            const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextConstructor) throw new Error("Bu brauzer video audiosini yozib olishni qo‘llab-quvvatlamaydi.");
+            const context = new AudioContextConstructor();
+            const source = context.createMediaElementSource(video);
+            const gain = context.createGain();
+            gain.gain.value = video.muted ? 0 : 1;
+            source.connect(gain);
+            gain.connect(context.destination);
+            const pipeline = { context, gain };
+            backgroundVideoAudioPipelines.set(video, pipeline);
+            return pipeline;
+        }
+
+        function createBackgroundVideo(file) {
+            const video = document.createElement("video");
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.preload = "auto";
+            video.src = URL.createObjectURL(file);
+            video.addEventListener("loadeddata", () => {
+                if (backgroundVideo !== video || !canUseVideoBackground()) return;
+                applyTemplateDimensions(currentTemplate);
+                drawPoster();
+                updateVideoExportControls();
+                syncVideoRendering();
+            }, { once: true });
+            video.addEventListener("error", () => {
+                if (backgroundVideo !== video) return;
+                statusEl.textContent = "Videoni ochib bo‘lmadi. Boshqa video formatini sinab ko‘ring.";
+                console.error("Poster video background could not be decoded:", file.name);
+            }, { once: true });
+            video.load();
+            return video;
+        }
+
+        function renderVideoFrame(frameTime) {
+            backgroundVideoRenderFrame = 0;
+            if (!backgroundVideo || !canUseVideoBackground() || editorView.hidden ||
+                backgroundVideo.paused || backgroundVideo.readyState < 2 || videoPosterExporting) return;
+            const now = Number.isFinite(frameTime) ? frameTime : performance.now();
+            if (now - lastBackgroundVideoFrameTime < 1000 / 15) {
+                backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
+                return;
+            }
+            lastBackgroundVideoFrameTime = now;
+            drawPoster({ saveWorkspace: false, updateThumbnail: false });
+            backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
+        }
+
+        function syncVideoRendering() {
+            if (backgroundVideoRenderFrame) window.cancelAnimationFrame(backgroundVideoRenderFrame);
+            backgroundVideoRenderFrame = 0;
+            backgroundVideosByTemplate.forEach((video, template) => {
+                if (video !== backgroundVideo || !canUseVideoBackground(template) ||
+                    (editorView.hidden && !videoPosterExporting)) {
+                    video.pause();
+                    video.muted = true;
+                    const audioPipeline = backgroundVideoAudioPipelines.get(video);
+                    if (audioPipeline) audioPipeline.gain.gain.value = 0;
+                }
+            });
+            if (!backgroundVideo || !canUseVideoBackground() || editorView.hidden || videoPosterExporting) {
+                updateVideoExportControls();
+                return;
+            }
+            if (backgroundVideo.paused) {
+                if (backgroundVideo.readyState >= 2) drawPoster({ saveWorkspace: false, updateThumbnail: false });
+                updateVideoExportControls();
+                return;
+            }
+            if (backgroundVideo.readyState >= 2 && !backgroundVideoRenderFrame) {
+                backgroundVideoRenderFrame = window.requestAnimationFrame(renderVideoFrame);
+            }
+            updateVideoExportControls();
+        }
+
+        async function exportVideoPoster() {
+            const video = backgroundVideo;
+            if (!video || !canUseVideoBackground()) throw new Error("Eksport qilish uchun video fon tanlang.");
+            if (!Number.isFinite(video.duration) || video.duration <= 0) {
+                throw new Error("Video davomiyligini aniqlab bo‘lmadi.");
+            }
+            if (typeof MediaRecorder !== "function" || typeof canvas.captureStream !== "function" ||
+                !(window.AudioContext || window.webkitAudioContext)) {
+                throw new Error("Bu brauzer video va audio bilan MP4 eksportini qo‘llab-quvvatlamaydi.");
+            }
+
+            const mimeType = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4"]
+                .find(type => MediaRecorder.isTypeSupported(type));
+            if (!mimeType) throw new Error("Bu brauzer MP4 video yozishni qo‘llab-quvvatlamaydi.");
+
+            const outputCanvas = document.createElement("canvas");
+            const exportScale = 720 / canvas.height;
+            outputCanvas.width = Math.round(canvas.width * exportScale);
+            outputCanvas.height = Math.round(canvas.height * exportScale);
+            const outputContext = outputCanvas.getContext("2d");
+            if (!outputContext) throw new Error("MP4 eksport canvas’ini yaratib bo‘lmadi.");
+
+            const wasMuted = video.muted;
+            const wasLooping = video.loop;
+            video.muted = false;
+            const outputStream = outputCanvas.captureStream(30);
+            let audioPipeline;
+            let audioDestination;
+            try {
+                audioPipeline = getBackgroundVideoAudioPipeline(video);
+                audioDestination = audioPipeline.context.createMediaStreamDestination();
+                audioPipeline.gain.connect(audioDestination);
+            } catch (error) {
+                outputStream.getTracks().forEach(track => track.stop());
+                video.muted = wasMuted;
+                throw error;
+            }
+            audioDestination.stream.getAudioTracks().forEach(track => outputStream.addTrack(track));
+            if (!audioDestination.stream.getAudioTracks().length) {
+                outputStream.getTracks().forEach(track => track.stop());
+                audioPipeline.gain.disconnect(audioDestination);
+                audioDestination.stream.getTracks().forEach(track => track.stop());
+                video.muted = wasMuted;
+                throw new Error("Video audio trekini MP4 eksportiga ulab bo‘lmadi.");
+            }
+            let recorder;
+            try {
+                recorder = new MediaRecorder(outputStream, {
+                    mimeType,
+                    videoBitsPerSecond: 5_000_000,
+                    audioBitsPerSecond: 96_000
+                });
+            } catch (error) {
+                outputStream.getTracks().forEach(track => track.stop());
+                audioDestination.stream.getTracks().forEach(track => track.stop());
+                audioPipeline.gain.disconnect(audioDestination);
+                video.muted = wasMuted;
+                throw error;
+            }
+            const chunks = [];
+            const previewContext = ctx;
+            let frameRequest = 0;
+            let lastExportFrameTime = 0;
+            let lastProgressUpdate = 0;
+            let rejectRecording;
+            const recording = new Promise((resolve, reject) => {
+                rejectRecording = reject;
+                recorder.addEventListener("dataavailable", event => {
+                    if (event.data.size) chunks.push(event.data);
+                });
+                recorder.addEventListener("error", event => {
+                    reject(event.error || new Error("MP4 videosini yozib bo‘lmadi."));
+                }, { once: true });
+                recorder.addEventListener("stop", () => {
+                    resolve(new Blob(chunks, { type: recorder.mimeType || mimeType }));
+                }, { once: true });
+            });
+            recording.catch(() => {});
+            const onVideoEnded = () => {
+                if (recorder.state === "recording") recorder.stop();
+            };
+            const drawExportFrame = frameTime => {
+                frameRequest = 0;
+                if (recorder.state !== "recording" || video.readyState < 2) return;
+                const now = Number.isFinite(frameTime) ? frameTime : performance.now();
+                if (now - lastExportFrameTime < 1000 / 30) {
+                    frameRequest = window.requestAnimationFrame(drawExportFrame);
+                    return;
+                }
+                lastExportFrameTime = now;
+                const progressTime = performance.now();
+                if (progressTime - lastProgressUpdate >= 500) {
+                    const progress = Math.min(99, Math.floor(video.currentTime / video.duration * 100));
+                    statusEl.textContent = `MP4 eksport qilinmoqda: ${progress}%…`;
+                    lastProgressUpdate = progressTime;
+                }
+                try {
+                    ctx = outputContext;
+                    drawPoster({ saveWorkspace: false, updateThumbnail: false });
+                } catch (error) {
+                    rejectRecording(error);
+                    if (recorder.state === "recording") recorder.stop();
+                    return;
+                } finally {
+                    ctx = previewContext;
+                }
+                frameRequest = window.requestAnimationFrame(drawExportFrame);
+            };
+
+            let recordingStarted = false;
+            try {
+                videoPosterExporting = true;
+                if (backgroundVideoRenderFrame) window.cancelAnimationFrame(backgroundVideoRenderFrame);
+                backgroundVideoRenderFrame = 0;
+                outputContext.scale(exportScale, exportScale);
+                video.loop = false;
+                video.muted = false;
+                audioPipeline.gain.gain.value = 1;
+                await audioPipeline.context.resume();
+                if (video.currentTime !== 0) {
+                    await new Promise((resolve, reject) => {
+                        video.addEventListener("seeked", resolve, { once: true });
+                        video.addEventListener("error", () => reject(new Error("Videoni boshidan boshlay olmadik.")), { once: true });
+                        video.currentTime = 0;
+                    });
+                }
+                video.addEventListener("ended", onVideoEnded, { once: true });
+                ctx = outputContext;
+                try {
+                    drawPoster({ saveWorkspace: false, updateThumbnail: false });
+                } finally {
+                    ctx = previewContext;
+                }
+                recorder.start(1000);
+                recordingStarted = true;
+                frameRequest = window.requestAnimationFrame(drawExportFrame);
+                await video.play();
+                const blob = await recording;
+                if (!blob.size) throw new Error("MP4 fayli bo‘sh chiqdi.");
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "sportposter.mp4";
+                link.style.display = "none";
+                document.body.append(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+                return blob;
+            } catch (error) {
+                if (recorder.state === "recording") recorder.stop();
+                if (recordingStarted) await recording.catch(() => {});
+                throw error;
+            } finally {
+                if (frameRequest) window.cancelAnimationFrame(frameRequest);
+                video.removeEventListener("ended", onVideoEnded);
+                outputStream.getTracks().forEach(track => track.stop());
+                audioDestination.stream.getTracks().forEach(track => track.stop());
+                audioPipeline.gain.disconnect(audioDestination);
+                video.loop = wasLooping;
+                videoPosterExporting = false;
+                video.pause();
+                video.currentTime = 0;
+                video.muted = true;
+                audioPipeline.gain.gain.value = 0;
+                syncVideoRendering();
+                updateVideoExportControls();
+            }
+        }
+
         function fitText(text, maxWidth, startSize, weight = 700, minSize = 11, fontFamily = "Segoe UI") {
             let size = startSize;
             ctx.font = `${weight} ${size}px "${fontFamily}", Arial, sans-serif`;
@@ -1592,24 +1905,36 @@ function getClubDisplayName(name) {
         }
 
         function drawImageCover(image, x, y, width, height) {
-            const scale = Math.max(width / image.width, height / image.height);
-            const drawWidth = image.width * scale;
-            const drawHeight = image.height * scale;
+            const imageWidth = image.naturalWidth || image.videoWidth || image.width;
+            const imageHeight = image.naturalHeight || image.videoHeight || image.height;
+            const scale = Math.max(width / imageWidth, height / imageHeight);
+            const drawWidth = imageWidth * scale;
+            const drawHeight = imageHeight * scale;
             ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
         }
 
         function drawImageWithLogoShape(image, x, y, width, height, shape = brandLogoShape) {
-            if (shape === "circle") {
-                const radius = Math.min(width, height) / 2;
+            const isUserWatermark = customBrandLogo && image === brandLogo;
+            if (isUserWatermark) {
                 ctx.save();
-                ctx.beginPath();
-                ctx.arc(x + width / 2, y + height / 2, radius, 0, Math.PI * 2);
-                ctx.clip();
-                drawImageContain(image, x, y, width, height);
-                ctx.restore();
-                return;
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
             }
-            drawImageContain(image, x, y, width, height);
+            try {
+                if (shape === "circle") {
+                    const radius = Math.min(width, height) / 2;
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x + width / 2, y + height / 2, radius, 0, Math.PI * 2);
+                    ctx.clip();
+                    drawImageContain(image, x, y, width, height);
+                    ctx.restore();
+                    return;
+                }
+                drawImageContain(image, x, y, width, height);
+            } finally {
+                if (isUserWatermark) ctx.restore();
+            }
         }
 
         function updateBrandLogoShapeOptions() {
@@ -1852,7 +2177,7 @@ function getClubDisplayName(name) {
         });
         inlineEditor.addEventListener("blur", () => closeInlineEditor());
 
-        function drawPoster() {
+        function drawPoster({ saveWorkspace = true, updateThumbnail = true } = {}) {
             const theme = themes[currentTemplate];
             const width = canvas.width;
             const height = canvas.height;
@@ -1861,12 +2186,23 @@ function getClubDisplayName(name) {
             ctx.fillStyle = backgroundColorInput.value || theme.bg;
             ctx.fillRect(0, 0, width, height);
 
-            if (backgroundImage && currentTemplate !== "matchlist") {
+            if ((backgroundImage || (backgroundVideo && canUseVideoBackground() && backgroundVideo.readyState >= 2)) &&
+                currentTemplate !== "matchlist") {
                 ctx.save();
                 ctx.globalAlpha = Number(backgroundOpacityInput.value) / 100;
-                drawImageCover(backgroundImage, 0, 0, width, height);
+                drawImageCover(backgroundVideo && canUseVideoBackground() && backgroundVideo.readyState >= 2 ?
+                    backgroundVideo : backgroundImage, 0, 0, width, height);
                 ctx.restore();
             }
+            if (!posterGlassBackdrop) posterGlassBackdrop = document.createElement("canvas");
+            if (posterGlassBackdrop.width !== ctx.canvas.width || posterGlassBackdrop.height !== ctx.canvas.height) {
+                posterGlassBackdrop.width = ctx.canvas.width;
+                posterGlassBackdrop.height = ctx.canvas.height;
+            }
+            const glassBackdropContext = posterGlassBackdrop.getContext("2d");
+            if (!glassBackdropContext) throw new Error("Shisha fon nusxasini yaratib bo‘lmadi.");
+            glassBackdropContext.drawImage(ctx.canvas, 0, 0);
+
             if (currentTemplate === "sf") drawSfPoster(theme, width, height);
             else if (currentTemplate === "pro") drawProPoster(theme, width, height);
             else if (currentTemplate === "result") drawResultPoster(theme, width, height);
@@ -1880,13 +2216,14 @@ function getClubDisplayName(name) {
             else if (currentTemplate === "today-results") drawTodayResultsPoster(width, height);
             else if (currentTemplate === "matchlist") drawMatchListPoster(theme, width, height);
             else drawJfPoster(theme, width, height);
-            const thumbnail = document.querySelector(`[data-template="${currentTemplate}"] .template-preview`);
+            const thumbnail = updateThumbnail ?
+                document.querySelector(`[data-template="${currentTemplate}"] .template-preview`) : null;
             if (thumbnail) {
                 const thumbnailContext = thumbnail.getContext("2d");
                 thumbnailContext.clearRect(0, 0, thumbnail.width, thumbnail.height);
                 thumbnailContext.drawImage(canvas, 0, 0, thumbnail.width, thumbnail.height);
             }
-            scheduleWorkspaceSave();
+            if (saveWorkspace) scheduleWorkspaceSave();
         }
 
         function drawPhotoQuoteGlassPanel(
@@ -1907,7 +2244,7 @@ function getClubDisplayName(name) {
             const renderScale = Math.hypot(transform.a, transform.b) || 1;
             const logicalCanvasWidth = ctx.canvas.width / renderScale;
             const logicalCanvasHeight = ctx.canvas.height / renderScale;
-            const glassBackdrop = backdrop || ctx.canvas;
+            const glassBackdrop = backdrop || posterGlassBackdrop || ctx.canvas;
             const backdropScaleX = glassBackdrop.width / logicalCanvasWidth;
             const backdropScaleY = glassBackdrop.height / logicalCanvasHeight;
             const glassCanvas = document.createElement("canvas");
@@ -1916,10 +2253,12 @@ function getClubDisplayName(name) {
             const glassContext = glassCanvas.getContext("2d");
             if (!glassContext) throw new Error("Shisha fon panelini chizib bo‘lmadi.");
 
-            const glassFilter = "url(#photo-quote-glass-filter) saturate(1.35)";
+            const photoQuoteBlur = currentTemplate === "photo-quote" ? ` blur(${0.792 * scale}px)` : "";
+            const glassFilter = `url(#photo-quote-glass-filter)${photoQuoteBlur} saturate(1.35)`;
             glassContext.filter = glassFilter;
             if (glassContext.filter !== glassFilter) {
-                glassContext.filter = `blur(${2 * scale}px) saturate(1.2)`;
+                const fallbackBlur = (currentTemplate === "photo-quote" ? 2.88 : 2.4) * scale;
+                glassContext.filter = `blur(${fallbackBlur}px) saturate(1.2)`;
             }
             glassContext.drawImage(
                 glassBackdrop,
@@ -2032,6 +2371,10 @@ function getClubDisplayName(name) {
             dark.addColorStop(1, "rgba(6, 10, 18, 0.82)");
             ctx.fillStyle = dark;
             ctx.fillRect(0, 0, width, height);
+
+            const glassBackdropContext = posterGlassBackdrop.getContext("2d");
+            if (!glassBackdropContext) throw new Error("Player stats shisha fonini yaratib bo‘lmadi.");
+            glassBackdropContext.drawImage(ctx.canvas, 0, 0);
 
             const captionText = formatBrandCaption(brandCaptionInput.value || examples["football-stats"].caption || "pitchplan.uz") || "pitchplan.uz";
             ctx.fillStyle = "#ffffff";
@@ -2925,6 +3268,7 @@ function getClubDisplayName(name) {
                     ...[...backgroundImagesByTemplate].filter(([, image]) => !isDefaultPosterBackground(image)),
                     ...(backgroundImage && !isDefaultPosterBackground(backgroundImage) ? [[currentTemplate, backgroundImage]] : [])
                 ].map(([template, image]) => [template, imageSource(image)])),
+                backgroundVideos: Object.fromEntries(backgroundVideoFilesByTemplate),
                 backgroundOpacity: backgroundOpacityInput.value,
                 nonResultBackgroundOpacity,
                 row: rowColorInput.value,
@@ -3043,6 +3387,11 @@ function getClubDisplayName(name) {
             const savedTemplateBackgrounds = await Promise.all(savedBackgroundEntries.map(async ([template, source]) =>
                 [template, await loadImageSource(source)]
             ));
+            const savedVideoFiles = Object.entries(snapshot.backgroundVideos || {})
+                .filter(([template, file]) => canUseVideoBackground(template) && file instanceof Blob);
+            const savedTemplateVideos = savedVideoFiles.map(([template, file]) =>
+                [template, createBackgroundVideo(file)]
+            );
             const savedTemplateLogos = await Promise.all(Object.entries(snapshot.brandLogos || {}).map(async ([template, source]) =>
                 [template, await loadImageSource(source)]
             ));
@@ -3051,7 +3400,11 @@ function getClubDisplayName(name) {
                 opponentLogoImage: await loadExportSafeImageSource(fixture.opponentLogo),
                 leagueLogoImage: await loadExportSafeImageSource(fixture.leagueLogo)
             })));
+            backgroundVideosByTemplate.forEach(disposeBackgroundVideo);
             backgroundImagesByTemplate = new Map(savedTemplateBackgrounds.filter(([, image]) => image));
+            backgroundVideosByTemplate = new Map(savedTemplateVideos);
+            backgroundVideoFilesByTemplate = new Map(savedVideoFiles);
+            savedTemplateVideos.forEach(([template]) => backgroundImagesByTemplate.delete(template));
             brandLogosByTemplate = new Map(savedTemplateLogos.filter(([, image]) => image));
             currentTemplate = snapshot.template;
             titleInput.value = snapshot.title;
@@ -3089,8 +3442,10 @@ function getClubDisplayName(name) {
                 homeLogoEdited: true,
                 awayLogoEdited: true
             }));
-            backgroundImage = savedBackground ||
+            backgroundVideo = backgroundVideosByTemplate.get(currentTemplate) || null;
+            backgroundImage = backgroundVideo ? null : savedBackground ||
                 (photoPosterTemplates.has(currentTemplate) ? getDefaultPosterBackground(currentTemplate) : null);
+            updateVideoExportControls();
             if (backgroundImage && !isDefaultPosterBackground(backgroundImage)) backgroundImagesByTemplate.set(currentTemplate, backgroundImage);
             else backgroundImagesByTemplate.delete(currentTemplate);
             applyTemplateDimensions(currentTemplate);
@@ -3145,6 +3500,7 @@ function getClubDisplayName(name) {
             showAppSection("home", { navigate: false });
             renderInputs();
             drawPoster();
+            syncVideoRendering();
         }
 
         function drawMonthlyClubFixturesPoster(width, height) {
@@ -4676,6 +5032,7 @@ function getClubDisplayName(name) {
             liveMatchDetailView.hidden = !isMatchDetail;
             clubProfileView.hidden = !isClubProfile;
             editorView.hidden = !isEditor;
+            syncVideoRendering();
             const activeSection = isEditor ? "templates" : isMatchDetail || isClubProfile ? "matches" : section;
             document.querySelectorAll("[data-app-section]").forEach(button => {
                 const active = button.dataset.appSection === activeSection;
@@ -5346,16 +5703,77 @@ function getClubDisplayName(name) {
         backgroundImageInput.addEventListener("change", event => {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
+            if (file.type.startsWith("video/")) {
+                if (!canUseVideoBackground() || file.size > 50 * 1024 * 1024) {
+                    statusEl.textContent = !canUseVideoBackground()
+                        ? "Video fon faqat Photo quote va Telegram posterlarida ishlaydi."
+                        : "Video hajmi 50 MB dan oshmasligi kerak.";
+                    event.target.value = "";
+                    return;
+                }
+                disposeBackgroundVideo(backgroundVideosByTemplate.get(currentTemplate));
+                const video = createBackgroundVideo(file);
+                backgroundVideosByTemplate.set(currentTemplate, video);
+                backgroundVideoFilesByTemplate.set(currentTemplate, file);
+                backgroundImagesByTemplate.delete(currentTemplate);
+                backgroundImage = null;
+                backgroundVideo = video;
+                applyTemplateDimensions(currentTemplate);
+                updateVideoExportControls();
+                drawPoster();
+                syncVideoRendering();
+                statusEl.textContent = "Video fon posterga qo‘shildi.";
+                return;
+            }
+            if (!file.type.startsWith("image/")) {
+                statusEl.textContent = "Fon uchun rasm yoki qo‘llab-quvvatlanadigan video tanlang.";
+                event.target.value = "";
+                return;
+            }
             readImageFile(file, image => {
+                disposeBackgroundVideo(backgroundVideosByTemplate.get(currentTemplate));
+                backgroundVideosByTemplate.delete(currentTemplate);
+                backgroundVideoFilesByTemplate.delete(currentTemplate);
+                backgroundVideo = null;
+                updateVideoExportControls();
                 backgroundImage = image;
+                backgroundImagesByTemplate.set(currentTemplate, image);
                 applyTemplateDimensions(currentTemplate);
                 drawPoster();
+                syncVideoRendering();
                 statusEl.textContent = "Fon rasmi posterga qo‘shildi.";
             }, event.target);
         });
         backgroundOpacityInput.addEventListener("input", () => {
             opacityValue.textContent = `${backgroundOpacityInput.value}%`;
             drawPoster();
+        });
+        document.getElementById("background-video-audio").addEventListener("click", async () => {
+            if (!backgroundVideo) return;
+            if (!backgroundVideo.muted) {
+                backgroundVideo.muted = true;
+                const audioPipeline = backgroundVideoAudioPipelines.get(backgroundVideo);
+                if (audioPipeline) audioPipeline.gain.gain.value = 0;
+                statusEl.textContent = "Video preview ovozi o‘chirildi.";
+                updateVideoExportControls();
+                return;
+            }
+            backgroundVideo.muted = false;
+            try {
+                const audioPipeline = getBackgroundVideoAudioPipeline(backgroundVideo);
+                audioPipeline.gain.gain.value = 1;
+                await audioPipeline.context.resume();
+                await backgroundVideo.play();
+                statusEl.textContent = "Video preview ovozi yoqildi.";
+            } catch (error) {
+                backgroundVideo.muted = true;
+                const audioPipeline = backgroundVideoAudioPipelines.get(backgroundVideo);
+                if (audioPipeline) audioPipeline.gain.gain.value = 0;
+                statusEl.textContent = "Video ovozini ijro etib bo‘lmadi. Boshqa video formatini sinab ko‘ring.";
+                console.warn("Poster video preview audio playback failed:", error);
+            }
+            updateVideoExportControls();
+            syncVideoRendering();
         });
         brandLogoShapeOptions.forEach(button => {
             button.addEventListener("click", () => {
@@ -5443,7 +5861,22 @@ function getClubDisplayName(name) {
             renderInputs();
             drawPoster();
         });
-        document.getElementById("download").addEventListener("click", async () => {
+        document.getElementById("download").addEventListener("click", async event => {
+            const downloadButton = event.currentTarget;
+            if (backgroundVideo && canUseVideoBackground()) {
+                downloadButton.disabled = true;
+                statusEl.textContent = "Video poster ovozi bilan MP4 formatida tayyorlanmoqda…";
+                try {
+                    await exportVideoPoster();
+                    statusEl.textContent = "Video poster MP4 formatida yuklab olindi.";
+                } catch (error) {
+                    statusEl.textContent = error.message || "Video posterini MP4 formatida saqlab bo‘lmadi.";
+                    console.error("Poster MP4 export failed:", error);
+                } finally {
+                    downloadButton.disabled = false;
+                }
+                return;
+            }
             try {
                 const exportScale = 2.16;
                 const exportCanvas = document.createElement("canvas");
