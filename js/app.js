@@ -465,12 +465,14 @@ function getClubDisplayName(name) {
         };
         let brandLogo = null;
         let brandLogosByTemplate = new Map();
+        let removedBrandLogosByTemplate = new Set();
         let leagueLogo = null;
         let brandLogoShape = "square";
         let customBrandLogo = false;
         let customBackgroundColor = false;
         let nonResultBackgroundOpacity = backgroundOpacityInput.value;
         const customTextColors = new Set();
+        const isBrandLogoRemoved = (template = currentTemplate) => removedBrandLogosByTemplate.has(template);
         let posterHitRegions = [];
         let activeInlineTarget = null;
         let workspaceInitialized = false;
@@ -563,19 +565,20 @@ function getClubDisplayName(name) {
         matchdayHomeLogo.src = "./images/epl/Liverpool-FC-logo-PNG-transparent-1024x1871.png";
         matchdayAwayLogo.src = "./images/epl/Manchester_City_FC_badge.svg.webp";
         matchdayPremierLeagueLogo.onload = () => {
-            if (currentTemplate === "matchday-poster" && !customBrandLogo) {
+            if (currentTemplate === "matchday-poster" && !customBrandLogo && !isBrandLogoRemoved()) {
                 updateLogoPreview(brandLogoPreview, matchdayPremierLeagueLogo, "APL");
                 drawPoster();
             }
         };
         matchdayPremierLeagueLogo.src = "./images/ligalar/english-premier-league.ee1e9b08.png";
         defaultBrandLogo.onload = () => {
-            if (!customBrandLogo && !["football-lux", "matchday-poster"].includes(currentTemplate)) brandLogo = defaultBrandLogo;
+            if (!customBrandLogo && !isBrandLogoRemoved() &&
+                !["football-lux", "matchday-poster"].includes(currentTemplate)) brandLogo = defaultBrandLogo;
             rows.forEach(row => {
                 if (!row.homeLogo) row.homeLogo = defaultBrandLogo;
                 if (!row.awayLogo) row.awayLogo = defaultBrandLogo;
             });
-            updateLogoPreview(brandLogoPreview,
+            updateLogoPreview(brandLogoPreview, isBrandLogoRemoved() ? null :
                 currentTemplate === "matchday-poster" && !customBrandLogo &&
                     matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ? matchdayPremierLeagueLogo : brandLogo,
                 currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" :
@@ -664,11 +667,11 @@ function getClubDisplayName(name) {
             backgroundImage = backgroundImagesByTemplate.get(name) ||
                 (photoPosterTemplates.has(name) ? getDefaultPosterBackground(name) : null);
             backgroundImageInput.value = "";
-            brandLogo = brandLogosByTemplate.get(name) ||
+            brandLogo = isBrandLogoRemoved(name) ? null : brandLogosByTemplate.get(name) ||
                 (name !== "football-lux" && !matchdayTemplate && !monthlyTemplate && defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null);
-            customBrandLogo = brandLogosByTemplate.has(name);
+            customBrandLogo = !isBrandLogoRemoved(name) && brandLogosByTemplate.has(name);
             brandLogoInput.value = "";
-            updateLogoPreview(brandLogoPreview,
+            updateLogoPreview(brandLogoPreview, isBrandLogoRemoved(name) ? null :
                 matchdayTemplate && !customBrandLogo && matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ?
                     matchdayPremierLeagueLogo : brandLogo,
                 matchdayTemplate ? "APL" : luxTemplate ? "KL" : monthlyTemplate ? "TV" : "PP");
@@ -729,7 +732,8 @@ function getClubDisplayName(name) {
                     luxTemplate || matchdayTemplate || monthlyTemplate ? "Kanal logosi" : newsTemplate ? "Pastki logo" :
                     telegramTemplate ? "Yuqori o‘ng burchakdagi logo" : "Poster logosi (shablonda alohida joylashadi)";
             document.getElementById("clear-brand-logo").textContent =
-                "Asl logoni tiklash";
+                "Standart logoni tiklash";
+            document.getElementById("clear-brand-logo").hidden = monthlyTemplate;
             document.getElementById("background-image-field").querySelector("label").textContent =
                 luxTemplate ? "Asosiy rasm" : matchdayTemplate ? "Stadion foni" : monthlyTemplate ? "Poster foni" : "Fon rasmi";
             document.getElementById("matches-hint").textContent = resultTemplate
@@ -750,7 +754,6 @@ function getClubDisplayName(name) {
                 monthlyTemplate ? "Kanal nomi" : statsEditorTemplate ? "Poster brend yozuvi" : "Logo yonidagi yozuv";
             brandCaptionInput.placeholder = monthlyTemplate ? "Kanal nomini kiriting…" : "";
             if (monthlyTemplate) {
-                document.getElementById("clear-brand-logo").textContent = "Kanal logosini olib tashlash";
                 document.getElementById("brand-logo-hint").textContent = "Kanal logosi posterning pastida ko‘rinadi.";
             }
             document.getElementById("brand-logo-size-field").hidden = telegramTemplate || matchdayTemplate || monthlyTemplate;
@@ -820,6 +823,7 @@ function getClubDisplayName(name) {
             brandLogo = null;
             customBrandLogo = false;
             brandLogosByTemplate.delete(template);
+            removedBrandLogosByTemplate.delete(template);
             if (template === "football-news") {
                 footballNewsEffectColor = "#000000";
                 footballNewsRatio = "5:6";
@@ -904,7 +908,7 @@ function getClubDisplayName(name) {
             canvas.style.aspectRatio = aspectStyle;
             const exportScale = 2.16;
             document.getElementById("preview-dimensions").textContent =
-                `PNG · ${Math.round(dimensions.width * exportScale)} × ${Math.round(dimensions.height * exportScale)} px · ${aspectRatio}`;
+                `JPG · ${Math.round(dimensions.width * exportScale)} × ${Math.round(dimensions.height * exportScale)} px · ${aspectRatio}`;
             posterRatioOptions.forEach(button => {
                 const effectiveRatio = selectedRatio || (isNews ? footballNewsRatio :
                     isLux || name === "result" ? "1:1" : isStats || isMatchday ? "3:4" : "5:6");
@@ -1644,6 +1648,7 @@ function getClubDisplayName(name) {
         }
 
         function addPosterHitRegion(type, x, y, width, height, rowIndex = -1) {
+            if (type === "brandLogo" && isBrandLogoRemoved()) return;
             if (type === "brandLogo") {
                 const offset = getBrandLogoOffset();
                 x += offset.x;
@@ -1884,6 +1889,121 @@ function getClubDisplayName(name) {
             scheduleWorkspaceSave();
         }
 
+        function drawPhotoQuoteGlassPanel(
+            x,
+            y,
+            boxWidth,
+            boxHeight,
+            radius,
+            scale,
+            backdrop = null,
+            drawPanelPath = null,
+            drawInnerPath = null
+        ) {
+            const padding = 16 * scale;
+            const logicalGlassWidth = boxWidth + padding * 2;
+            const logicalGlassHeight = boxHeight + padding * 2;
+            const transform = ctx.getTransform();
+            const renderScale = Math.hypot(transform.a, transform.b) || 1;
+            const logicalCanvasWidth = ctx.canvas.width / renderScale;
+            const logicalCanvasHeight = ctx.canvas.height / renderScale;
+            const glassBackdrop = backdrop || ctx.canvas;
+            const backdropScaleX = glassBackdrop.width / logicalCanvasWidth;
+            const backdropScaleY = glassBackdrop.height / logicalCanvasHeight;
+            const glassCanvas = document.createElement("canvas");
+            glassCanvas.width = Math.ceil(logicalGlassWidth * backdropScaleX);
+            glassCanvas.height = Math.ceil(logicalGlassHeight * backdropScaleY);
+            const glassContext = glassCanvas.getContext("2d");
+            if (!glassContext) throw new Error("Shisha fon panelini chizib bo‘lmadi.");
+
+            const glassFilter = "url(#photo-quote-glass-filter) saturate(1.35)";
+            glassContext.filter = glassFilter;
+            if (glassContext.filter !== glassFilter) {
+                glassContext.filter = `blur(${2 * scale}px) saturate(1.2)`;
+            }
+            glassContext.drawImage(
+                glassBackdrop,
+                (x - padding) * backdropScaleX,
+                (y - padding) * backdropScaleY,
+                glassCanvas.width,
+                glassCanvas.height,
+                0,
+                0,
+                glassCanvas.width,
+                glassCanvas.height
+            );
+
+            const drawPath = () => {
+                if (drawPanelPath) {
+                    drawPanelPath();
+                } else {
+                    ctx.roundRect(x, y, boxWidth, boxHeight, radius);
+                }
+            };
+            ctx.save();
+            ctx.beginPath();
+            drawPath();
+            ctx.clip();
+            ctx.drawImage(
+                glassCanvas,
+                x - padding,
+                y - padding,
+                logicalGlassWidth,
+                logicalGlassHeight
+            );
+            ctx.fillStyle = "rgba(0,0,0,0.02)";
+            ctx.fillRect(x, y, boxWidth, boxHeight);
+            const inset = ctx.createLinearGradient(0, y, 0, y + boxHeight);
+            inset.addColorStop(0, "rgba(255,255,255,0.22)");
+            inset.addColorStop(.28, "rgba(255,255,255,0.05)");
+            inset.addColorStop(.72, "rgba(12,16,24,0.025)");
+            inset.addColorStop(1, "rgba(12,16,24,0.10)");
+            ctx.fillStyle = inset;
+            ctx.fillRect(x, y, boxWidth, boxHeight);
+            ctx.restore();
+
+            ctx.save();
+            ctx.beginPath();
+            drawPath();
+            ctx.shadowColor = "rgba(0,0,0,0.20)";
+            ctx.shadowBlur = 8 * scale;
+            ctx.shadowOffsetY = 4 * scale;
+            ctx.strokeStyle = "rgba(0,0,0,0.12)";
+            ctx.lineWidth = 1 * scale;
+            ctx.stroke();
+            ctx.shadowColor = "transparent";
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            const edgeShine = ctx.createLinearGradient(x, y, x + boxWidth, y + boxHeight);
+            edgeShine.addColorStop(0, "rgba(255,255,255,0.9)");
+            edgeShine.addColorStop(.15, "rgba(255,255,255,0.25)");
+            edgeShine.addColorStop(.5, "rgba(255,255,255,0.12)");
+            edgeShine.addColorStop(.85, "rgba(255,255,255,0.32)");
+            edgeShine.addColorStop(1, "rgba(255,255,255,0.82)");
+            ctx.beginPath();
+            drawPath();
+            ctx.strokeStyle = edgeShine;
+            ctx.lineWidth = 1.6 * scale;
+            ctx.stroke();
+
+            ctx.beginPath();
+            if (drawInnerPath) {
+                drawInnerPath();
+            } else {
+                ctx.roundRect(
+                    x + 3 * scale,
+                    y + 3 * scale,
+                    boxWidth - 6 * scale,
+                    boxHeight - 6 * scale,
+                    Math.max(0, radius - 3 * scale)
+                );
+            }
+            ctx.strokeStyle = "rgba(255,255,255,0.28)";
+            ctx.lineWidth = 1 * scale;
+            ctx.stroke();
+            ctx.restore();
+        }
+
         function drawPlayerStatsPoster(width, height) {
             const scale = width / 1000;
             const imageFade = ctx.createLinearGradient(0, height * 0.38, 0, height);
@@ -1931,98 +2051,7 @@ function getClubDisplayName(name) {
             const infoX = (width - infoW) / 2;
             const infoH = 128 * scale;
             const infoRadius = infoH / 2;
-            const drawLiquidGlassBox = (x, y, boxWidth, boxHeight, radius, glassOptions = {}) => {
-                const {
-                    blur = 3,
-                    tintTop = 0.27,
-                    tintMiddle = 0.30,
-                    tintBottom = 0.44,
-                    shine = 0.22,
-                    glow = 0.20,
-                    tintColor = "225, 245, 255",
-                    shineColor = "255, 255, 255",
-                    glowColor = "255, 255, 255",
-                    border = 0.52
-                } = glassOptions;
-                const blurPadding = 16 * scale;
-                const glassCanvas = document.createElement("canvas");
-                glassCanvas.width = Math.ceil(boxWidth + blurPadding * 2);
-                glassCanvas.height = Math.ceil(boxHeight + blurPadding * 2);
-                const glassContext = glassCanvas.getContext("2d");
-                if (!glassContext) throw new Error("Liquid glass box fonini chizib bo‘lmadi.");
-                glassContext.filter = `blur(${blur * scale}px)`;
-                glassContext.drawImage(
-                    canvas,
-                    x - blurPadding,
-                    y - blurPadding,
-                    glassCanvas.width,
-                    glassCanvas.height,
-                    0,
-                    0,
-                    glassCanvas.width,
-                    glassCanvas.height
-                );
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
-                ctx.clip();
-                ctx.drawImage(glassCanvas, x - blurPadding, y - blurPadding);
-                const glassTint = ctx.createLinearGradient(0, y, 0, y + boxHeight);
-                glassTint.addColorStop(0, `rgba(${tintColor}, ${tintTop})`);
-                glassTint.addColorStop(0.42, `rgba(28, 34, 38, ${tintMiddle})`);
-                glassTint.addColorStop(1, `rgba(5, 8, 10, ${tintBottom})`);
-                ctx.fillStyle = glassTint;
-                ctx.fillRect(x, y, boxWidth, boxHeight);
-                const glassShine = ctx.createLinearGradient(0, y, 0, y + boxHeight * 0.58);
-                glassShine.addColorStop(0, `rgba(${shineColor},${shine})`);
-                glassShine.addColorStop(0.55, `rgba(${shineColor},${shine * 0.18})`);
-                glassShine.addColorStop(1, "rgba(255,255,255,0)");
-                ctx.fillStyle = glassShine;
-                ctx.fillRect(x, y, boxWidth, boxHeight * 0.58);
-                const liquidGlow = ctx.createRadialGradient(
-                    x + boxWidth * 0.22,
-                    y + boxHeight * 0.05,
-                    0,
-                    x + boxWidth * 0.22,
-                    y + boxHeight * 0.05,
-                    boxWidth * 0.72
-                );
-                liquidGlow.addColorStop(0, `rgba(${glowColor},${glow})`);
-                liquidGlow.addColorStop(1, `rgba(${glowColor},0)`);
-                ctx.fillStyle = liquidGlow;
-                ctx.fillRect(x, y, boxWidth, boxHeight);
-                ctx.restore();
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
-                ctx.strokeStyle = `rgba(255,255,255,${border})`;
-                ctx.lineWidth = 1.8 * scale;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.roundRect(x + 3 * scale, y + 3 * scale, boxWidth - 6 * scale, boxHeight - 6 * scale, radius - 3 * scale);
-                ctx.strokeStyle = "rgba(255,255,255,0.12)";
-                ctx.lineWidth = 1 * scale;
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.roundRect(x + 1.5 * scale, y + 1.5 * scale, boxWidth - 3 * scale, boxHeight - 3 * scale, radius - 1.5 * scale);
-                ctx.strokeStyle = "rgba(190,225,255,0.18)";
-                ctx.lineWidth = 1 * scale;
-                ctx.stroke();
-                ctx.restore();
-            };
-            drawLiquidGlassBox(infoX, infoY, infoW, infoH, infoRadius, {
-                blur: 1.2,
-                tintTop: 0.18,
-                tintMiddle: 0.12,
-                tintBottom: 0.18,
-                tintColor: "232, 238, 238",
-                shine: 0.40,
-                shineColor: "245, 250, 250",
-                glow: 0.44,
-                glowColor: "224, 240, 240",
-                border: 0.68
-            });
+            drawPhotoQuoteGlassPanel(infoX, infoY, infoW, infoH, infoRadius, scale);
 
             ctx.save();
             ctx.textAlign = "center";
@@ -2054,18 +2083,7 @@ function getClubDisplayName(name) {
                 const rowIndex = Math.floor(index / 3);
                 const x = startX + col * (statWidth + statGap);
                 const y = listY + rowIndex * (boxHeight + 22 * scale);
-                drawLiquidGlassBox(x, y, statWidth, boxHeight, 30 * scale, {
-                    blur: 1.2,
-                    tintTop: 0.18,
-                    tintMiddle: 0.12,
-                    tintBottom: 0.18,
-                    tintColor: "232, 238, 238",
-                    shine: 0.40,
-                    shineColor: "245, 250, 250",
-                    glow: 0.44,
-                    glowColor: "224, 240, 240",
-                    border: 0.68
-                });
+                drawPhotoQuoteGlassPanel(x, y, statWidth, boxHeight, 30 * scale, scale);
 
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
@@ -2114,7 +2132,7 @@ function getClubDisplayName(name) {
                     const watermarkHeight = 66 * scale;
                     const watermarkX = width - watermarkWidth - 18 * scale;
                     const watermarkY = (height - watermarkHeight) / 2;
-                    drawLiquidGlassBox(watermarkX, watermarkY, watermarkWidth, watermarkHeight, 18 * scale);
+                    drawPhotoQuoteGlassPanel(watermarkX, watermarkY, watermarkWidth, watermarkHeight, 18 * scale, scale);
                     ctx.save();
                     ctx.globalAlpha = 1;
                     const logoInsetX = watermarkWidth * 0.08;
@@ -2190,61 +2208,8 @@ function getClubDisplayName(name) {
             );
             const panelY = height - panelHeight - 52 * scale;
             const radius = Math.min(panelHeight * .48, panelWidth / 2);
-            const blurPadding = 16 * scale;
-            const glassCanvas = document.createElement("canvas");
-            glassCanvas.width = Math.ceil(panelWidth + blurPadding * 2);
-            glassCanvas.height = Math.ceil(panelHeight + blurPadding * 2);
-            const glassContext = glassCanvas.getContext("2d");
-            if (!glassContext) throw new Error("Pastki yozuv uchun shisha fonini chizib bo‘lmadi.");
-            glassContext.filter = `blur(${3 * scale}px)`;
-            glassContext.drawImage(
-                canvas,
-                panelX - blurPadding,
-                panelY - blurPadding,
-                glassCanvas.width,
-                glassCanvas.height,
-                0,
-                0,
-                glassCanvas.width,
-                glassCanvas.height
-            );
+            drawPhotoQuoteGlassPanel(panelX, panelY, panelWidth, panelHeight, radius, scale);
             ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(panelX, panelY, panelWidth, panelHeight, radius);
-            ctx.clip();
-            ctx.drawImage(glassCanvas, panelX - blurPadding, panelY - blurPadding);
-            const tint = ctx.createLinearGradient(0, panelY, 0, panelY + panelHeight);
-            tint.addColorStop(0, "rgba(225, 245, 255, 0.27)");
-            tint.addColorStop(.42, "rgba(20, 48, 76, 0.30)");
-            tint.addColorStop(1, "rgba(5, 18, 36, 0.44)");
-            ctx.fillStyle = tint;
-            ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-            const shine = ctx.createLinearGradient(0, panelY, 0, panelY + panelHeight * .58);
-            shine.addColorStop(0, "rgba(255,255,255,0.22)");
-            shine.addColorStop(.55, "rgba(255,255,255,0.04)");
-            shine.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.fillStyle = shine;
-            ctx.fillRect(panelX, panelY, panelWidth, panelHeight * .58);
-            const glow = ctx.createRadialGradient(
-                panelX + panelWidth * .22,
-                panelY + panelHeight * .05,
-                0,
-                panelX + panelWidth * .22,
-                panelY + panelHeight * .05,
-                panelWidth * .72
-            );
-            glow.addColorStop(0, "rgba(255,255,255,0.20)");
-            glow.addColorStop(1, "rgba(255,255,255,0)");
-            ctx.fillStyle = glow;
-            ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-            ctx.restore();
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.roundRect(panelX, panelY, panelWidth, panelHeight, radius);
-            ctx.strokeStyle = "rgba(255,255,255,0.52)";
-            ctx.lineWidth = 1.8 * scale;
-            ctx.stroke();
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = photoQuoteColor;
@@ -2364,19 +2329,21 @@ function getClubDisplayName(name) {
             ctx.letterSpacing = "0px";
             addPosterHitRegion("title", width * .14, headlineY, headlineWidth, headlineLineHeight * Math.max(1, headlineLines.length));
 
-            if (!customBrandLogo) {
-                ctx.fillStyle = "#b50d1b";
-                ctx.fillRect(logoX + logoOffset.x, logoY + logoOffset.y, logoBoxWidth, logoBoxHeight);
-            }
-            if (brandLogo) {
-                const logoInset = 13 * scale * logoScale;
-                drawPositionedBrandImage(brandLogo, logoX + logoInset, logoY + logoInset, logoBoxWidth - logoInset * 2, logoBoxHeight - logoInset * 2);
-            } else {
-                ctx.fillStyle = "#ffffff";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.font = `900 ${44 * scale * logoScale}px "Segoe UI", Arial, sans-serif`;
-                ctx.fillText("PP", width / 2 + logoOffset.x, logoY + logoBoxHeight / 2 + logoOffset.y);
+            if (!isBrandLogoRemoved()) {
+                if (!customBrandLogo) {
+                    ctx.fillStyle = "#b50d1b";
+                    ctx.fillRect(logoX + logoOffset.x, logoY + logoOffset.y, logoBoxWidth, logoBoxHeight);
+                }
+                if (brandLogo) {
+                    const logoInset = 13 * scale * logoScale;
+                    drawPositionedBrandImage(brandLogo, logoX + logoInset, logoY + logoInset, logoBoxWidth - logoInset * 2, logoBoxHeight - logoInset * 2);
+                } else {
+                    ctx.fillStyle = "#ffffff";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.font = `900 ${44 * scale * logoScale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.fillText("PP", width / 2 + logoOffset.x, logoY + logoBoxHeight / 2 + logoOffset.y);
+                }
             }
             addPosterHitRegion("brandLogo", logoX, logoY, logoBoxWidth, logoBoxHeight);
         }
@@ -2399,41 +2366,43 @@ function getClubDisplayName(name) {
             const logoScale = Number(brandLogoSizeInput.value) / 100;
             const logoWidth = width * .34 * logoScale;
             const logoHeight = height * .1 * logoScale;
-            if (customBrandLogo && brandLogo) {
-                const imageScale = Math.min(logoWidth / brandLogo.width, logoHeight / brandLogo.height);
-                const imageWidth = brandLogo.width * imageScale;
-                const imageHeight = brandLogo.height * imageScale;
-                if (brandLogoShape === "circle") {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(drawLogoX + imageWidth / 2, drawLogoY + imageHeight / 2, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
-                    ctx.clip();
-                    ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
-                    ctx.restore();
+            if (!isBrandLogoRemoved()) {
+                if (customBrandLogo && brandLogo) {
+                    const imageScale = Math.min(logoWidth / brandLogo.width, logoHeight / brandLogo.height);
+                    const imageWidth = brandLogo.width * imageScale;
+                    const imageHeight = brandLogo.height * imageScale;
+                    if (brandLogoShape === "circle") {
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(drawLogoX + imageWidth / 2, drawLogoY + imageHeight / 2, Math.min(imageWidth, imageHeight) / 2, 0, Math.PI * 2);
+                        ctx.clip();
+                        ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
+                        ctx.restore();
+                    } else {
+                        ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
+                    }
                 } else {
-                    ctx.drawImage(brandLogo, drawLogoX, drawLogoY, imageWidth, imageHeight);
-                }
-            } else {
-                let logoFontSize = Math.min(54 * scale * logoScale, logoHeight * .64);
-                ctx.save();
-                ctx.textAlign = "left";
-                ctx.textBaseline = "alphabetic";
-                ctx.letterSpacing = `${-1.2 * scale}px`;
-                ctx.font = `italic 900 ${logoFontSize}px Impact, "Arial Narrow", sans-serif`;
-                while (ctx.measureText("FOOTBALL NEWS").width > logoWidth && logoFontSize > 16 * scale) {
-                    logoFontSize -= scale;
+                    let logoFontSize = Math.min(54 * scale * logoScale, logoHeight * .64);
+                    ctx.save();
+                    ctx.textAlign = "left";
+                    ctx.textBaseline = "alphabetic";
+                    ctx.letterSpacing = `${-1.2 * scale}px`;
                     ctx.font = `italic 900 ${logoFontSize}px Impact, "Arial Narrow", sans-serif`;
+                    while (ctx.measureText("FOOTBALL NEWS").width > logoWidth && logoFontSize > 16 * scale) {
+                        logoFontSize -= scale;
+                        ctx.font = `italic 900 ${logoFontSize}px Impact, "Arial Narrow", sans-serif`;
+                    }
+                    const footballWidth = ctx.measureText("FOOTBALL").width;
+                    ctx.fillStyle = "#f4f4f4";
+                    ctx.fillText("FOOTBALL", drawLogoX, drawLogoY + logoFontSize, footballWidth);
+                    ctx.fillStyle = "#e8df00";
+                    ctx.fillText("NEWS", drawLogoX + footballWidth, drawLogoY + logoFontSize,
+                        Math.max(0, logoWidth - footballWidth));
+                    ctx.letterSpacing = "0px";
+                    ctx.fillStyle = "#e8df00";
+                    ctx.fillRect(drawLogoX, drawLogoY + logoHeight * .86, logoWidth, Math.max(2 * scale, 2));
+                    ctx.restore();
                 }
-                const footballWidth = ctx.measureText("FOOTBALL").width;
-                ctx.fillStyle = "#f4f4f4";
-                ctx.fillText("FOOTBALL", drawLogoX, drawLogoY + logoFontSize, footballWidth);
-                ctx.fillStyle = "#e8df00";
-                ctx.fillText("NEWS", drawLogoX + footballWidth, drawLogoY + logoFontSize,
-                    Math.max(0, logoWidth - footballWidth));
-                ctx.letterSpacing = "0px";
-                ctx.fillStyle = "#e8df00";
-                ctx.fillRect(drawLogoX, drawLogoY + logoHeight * .86, logoWidth, Math.max(2 * scale, 2));
-                ctx.restore();
             }
             addPosterHitRegion("brandLogo", logoX, logoY, logoWidth, logoHeight);
 
@@ -2611,34 +2580,38 @@ function getClubDisplayName(name) {
 
             const markX = center - 56 * scale;
             const markY = 22 * scale;
-            if (customBrandLogo && brandLogo) {
-                const offset = getBrandLogoOffset();
-                drawImageContain(brandLogo, markX + offset.x, markY + offset.y, 112 * scale, 96 * scale);
-            } else if (matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth) {
-                ctx.save();
-                ctx.filter = "brightness(0) invert(1)";
-                drawImageContain(matchdayPremierLeagueLogo, markX, markY, 112 * scale, 96 * scale);
-                ctx.restore();
-            } else {
-                ctx.fillStyle = "#ffffff";
-                ctx.font = `900 ${32 * scale}px "Segoe UI", Arial, sans-serif`;
-                ctx.textAlign = "center";
-                ctx.fillText(league, center, 64 * scale);
+            if (!isBrandLogoRemoved()) {
+                if (customBrandLogo && brandLogo) {
+                    const offset = getBrandLogoOffset();
+                    drawImageContain(brandLogo, markX + offset.x, markY + offset.y, 112 * scale, 96 * scale);
+                } else if (matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth) {
+                    ctx.save();
+                    ctx.filter = "brightness(0) invert(1)";
+                    drawImageContain(matchdayPremierLeagueLogo, markX, markY, 112 * scale, 96 * scale);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = `900 ${32 * scale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.fillText(league, center, 64 * scale);
+                }
             }
             addPosterHitRegion("brandLogo", markX, markY, 112 * scale, 96 * scale);
-            if (customBrandLogo && brandLogo) {
-                ctx.fillStyle = "rgba(255,255,255,.91)";
-                ctx.font = `750 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "top";
-                ctx.fillText(league, center, 119 * scale, width * .5);
-            } else {
-                ctx.fillStyle = "#ffffff";
-                ctx.font = `800 ${20 * scale}px "Segoe UI", Arial, sans-serif`;
-                ctx.textAlign = "center";
-                ctx.textBaseline = "top";
-                ctx.fillText("Premier", center, 116 * scale);
-                ctx.fillText("League", center, 138 * scale);
+            if (!isBrandLogoRemoved()) {
+                if (customBrandLogo && brandLogo) {
+                    ctx.fillStyle = "rgba(255,255,255,.91)";
+                    ctx.font = `750 ${17 * scale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "top";
+                    ctx.fillText(league, center, 119 * scale, width * .5);
+                } else {
+                    ctx.fillStyle = "#ffffff";
+                    ctx.font = `800 ${20 * scale}px "Segoe UI", Arial, sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "top";
+                    ctx.fillText("Premier", center, 116 * scale);
+                    ctx.fillText("League", center, 138 * scale);
+                }
             }
 
             ctx.save();
@@ -2962,6 +2935,7 @@ function getClubDisplayName(name) {
                 brandLogoSize: brandLogoSizeInput.value,
                 brandLogoShape,
                 brandLogoPositions: { ...brandLogoPositions },
+                removedBrandLogos: [...removedBrandLogosByTemplate],
                 customBrandLogo,
                 brandLogo: customBrandLogo ? imageSource(brandLogo) : null,
                 nonLuxBrandLogoSize,
@@ -3047,6 +3021,10 @@ function getClubDisplayName(name) {
             updateTodayResultsThemeOptions();
             redStarTheme = Object.hasOwn(redStarThemes, snapshot.redStarTheme) ? snapshot.redStarTheme : "current";
             applyRedStarTheme();
+            removedBrandLogosByTemplate = new Set(
+                (Array.isArray(snapshot.removedBrandLogos) ? snapshot.removedBrandLogos : [])
+                    .filter(template => Boolean(examples[template]))
+            );
             setTemplate(snapshot.template);
             const savedBackgroundSource = currentTemplate === "football-stats" &&
                 isLegacyStatsDefaultBackgroundSource(snapshot.backgroundImage) ? null : snapshot.backgroundImage;
@@ -3117,11 +3095,11 @@ function getClubDisplayName(name) {
             else backgroundImagesByTemplate.delete(currentTemplate);
             applyTemplateDimensions(currentTemplate);
             backgroundImageInput.value = "";
-            brandLogo = snapshot.customBrandLogo ? savedBrand :
+            brandLogo = isBrandLogoRemoved(currentTemplate) ? null : snapshot.customBrandLogo ? savedBrand :
                 snapshot.template !== "football-lux" && snapshot.template !== "matchday-poster" &&
                 snapshot.template !== "monthly-club-fixtures" &&
                 defaultBrandLogo.complete && defaultBrandLogo.naturalWidth ? defaultBrandLogo : null;
-            customBrandLogo = Boolean(snapshot.customBrandLogo);
+            customBrandLogo = !isBrandLogoRemoved(currentTemplate) && Boolean(snapshot.customBrandLogo);
             brandLogoShape = snapshot.brandLogoShape === "circle" ? "circle" : "square";
             brandLogoPositions = Object.fromEntries(
                 Object.entries(snapshot.brandLogoPositions || {})
@@ -3158,7 +3136,7 @@ function getClubDisplayName(name) {
             customBackgroundColor = Boolean(snapshot.customBackground);
             customTextColors.clear();
             snapshot.customText.forEach(key => customTextColors.add(key));
-            updateLogoPreview(brandLogoPreview,
+            updateLogoPreview(brandLogoPreview, isBrandLogoRemoved() ? null :
                 currentTemplate === "matchday-poster" && !customBrandLogo && matchdayPremierLeagueLogo.complete && matchdayPremierLeagueLogo.naturalWidth ?
                     matchdayPremierLeagueLogo : brandLogo,
                 currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" :
@@ -3283,13 +3261,14 @@ function getClubDisplayName(name) {
 
             if (!monthlyFixtures.length) {
                 ctx.save();
-                ctx.fillStyle = "rgba(11,27,42,.78)";
-                ctx.strokeStyle = "rgba(164,201,230,.2)";
-                ctx.lineWidth = 1.5 * scale;
-                ctx.beginPath();
-                ctx.roundRect(margin, listTop, width - margin * 2, Math.min(140 * scale, availableHeight), 18 * scale);
-                ctx.fill();
-                ctx.stroke();
+                drawPhotoQuoteGlassPanel(
+                    margin,
+                    listTop,
+                    width - margin * 2,
+                    Math.min(140 * scale, availableHeight),
+                    18 * scale,
+                    scale
+                );
                 ctx.fillStyle = "#d5e4f1";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
@@ -3303,9 +3282,6 @@ function getClubDisplayName(name) {
             backdropCanvas.height = height;
             const backdropContext = backdropCanvas.getContext("2d");
             if (backdropContext) backdropContext.drawImage(ctx.canvas, 0, 0, width, height);
-            const blurPadding = 18 * scale;
-            const glassCanvas = document.createElement("canvas");
-            const glassContext = glassCanvas.getContext("2d");
 
             monthlyFixtures.forEach((fixture, index) => {
                 const column = index % columns;
@@ -3316,53 +3292,7 @@ function getClubDisplayName(name) {
                 const y = listTop + row * (cardSize + gap);
                 const padding = Math.max(10 * scale, cardSize * .06);
 
-                ctx.save();
-                ctx.shadowColor = `rgba(${toRgb(palette.deeper)},.72)`;
-                ctx.shadowBlur = 26 * scale;
-                ctx.shadowOffsetY = 10 * scale;
-                ctx.fillStyle = "rgba(233,242,250,.09)";
-                ctx.beginPath();
-                ctx.roundRect(x, y, cardSize, cardSize, 22 * scale);
-                ctx.fill();
-                ctx.restore();
-                if (backdropContext && glassContext) {
-                    const glassSize = Math.ceil(cardSize + blurPadding * 2);
-                    if (glassCanvas.width !== glassSize || glassCanvas.height !== glassSize) {
-                        glassCanvas.width = glassSize;
-                        glassCanvas.height = glassSize;
-                    }
-                    glassContext.clearRect(0, 0, glassSize, glassSize);
-                    glassContext.filter = `blur(${10 * scale}px)`;
-                    glassContext.drawImage(
-                        backdropCanvas,
-                        x - blurPadding,
-                        y - blurPadding,
-                        glassSize,
-                        glassSize,
-                        0,
-                        0,
-                        glassSize,
-                        glassSize
-                    );
-                    glassContext.filter = "none";
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.roundRect(x, y, cardSize, cardSize, 22 * scale);
-                    ctx.clip();
-                    ctx.drawImage(glassCanvas, x - blurPadding, y - blurPadding);
-                    ctx.fillStyle = "rgba(233,242,250,.09)";
-                    ctx.fillRect(x, y, cardSize, cardSize);
-                    ctx.restore();
-                }
-                ctx.save();
-                ctx.shadowColor = "rgba(225,238,250,.16)";
-                ctx.shadowBlur = 18 * scale;
-                ctx.strokeStyle = "rgba(236,245,255,.34)";
-                ctx.lineWidth = 1.5 * scale;
-                ctx.beginPath();
-                ctx.roundRect(x, y, cardSize, cardSize, 22 * scale);
-                ctx.stroke();
-                ctx.restore();
+                drawPhotoQuoteGlassPanel(x, y, cardSize, cardSize, 22 * scale, scale, backdropCanvas);
 
                 const matchDate = new Date(fixture.date);
                 ctx.fillStyle = accent;
@@ -3391,18 +3321,7 @@ function getClubDisplayName(name) {
                 const badgeX = x + padding;
                 const badgeY = y + cardSize * (annualFixtures ? .84 : .8);
                 const badgeRadius = 12 * scale;
-                ctx.save();
-                const badgeGradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeHeight);
-                badgeGradient.addColorStop(0, `rgba(${toRgb(palette.dark)},.94)`);
-                badgeGradient.addColorStop(1, `rgba(${toRgb(palette.deeper)},.88)`);
-                ctx.fillStyle = badgeGradient;
-                ctx.strokeStyle = `rgba(${toRgb(palette.secondary)},.82)`;
-                ctx.lineWidth = 1.5 * scale;
-                ctx.beginPath();
-                ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, badgeRadius);
-                ctx.fill();
-                ctx.stroke();
-                ctx.restore();
+                drawPhotoQuoteGlassPanel(badgeX, badgeY, badgeWidth, badgeHeight, badgeRadius, scale);
 
                 const leagueLogoSize = Math.min(badgeHeight * .74, 44 * scale);
                 const leagueLogoX = badgeX + (badgeHeight - leagueLogoSize) / 2;
@@ -3589,6 +3508,7 @@ function getClubDisplayName(name) {
         }
 
         function drawWatermark(width, height) {
+            if (isBrandLogoRemoved()) return;
             ctx.save();
             ctx.globalAlpha = .055;
             if (brandLogo) {
@@ -3604,6 +3524,7 @@ function getClubDisplayName(name) {
         }
 
         function drawBrandLogo(centerX, y, size) {
+            if (isBrandLogoRemoved()) return;
             if (brandLogo) {
                 drawPositionedBrandImage(brandLogo, centerX - size / 2, y, size, size);
                 return;
@@ -4264,29 +4185,39 @@ function getClubDisplayName(name) {
             ctx.fillStyle = shade;
             ctx.fillRect(0, 0, width, height);
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(panelX + panelRadius, panelY);
-            ctx.lineTo(width - panelX - panelRadius, panelY);
-            ctx.quadraticCurveTo(width - panelX, panelY, width - panelX, panelY + panelRadius);
-            ctx.lineTo(width - panelX, height);
-            ctx.lineTo(panelX, height);
-            ctx.lineTo(panelX, panelY + panelRadius);
-            ctx.quadraticCurveTo(panelX, panelY, panelX + panelRadius, panelY);
-            ctx.closePath();
-            const panelFill = ctx.createLinearGradient(0, panelY, 0, height);
-            panelFill.addColorStop(0, "rgba(8,10,16,.48)");
-            panelFill.addColorStop(1, "rgba(8,10,16,.72)");
-            ctx.fillStyle = panelFill;
-            ctx.fill();
-            const edge = ctx.createLinearGradient(panelX, 0, width - panelX, 0);
-            edge.addColorStop(0, "#8c272e");
-            edge.addColorStop(.5, "rgba(217,217,210,.5)");
-            edge.addColorStop(1, "#384d65");
-            ctx.strokeStyle = edge;
-            ctx.lineWidth = 3 * scale;
-            ctx.stroke();
-            ctx.restore();
+            const drawPanelPath = () => {
+                ctx.moveTo(panelX + panelRadius, panelY);
+                ctx.lineTo(width - panelX - panelRadius, panelY);
+                ctx.quadraticCurveTo(width - panelX, panelY, width - panelX, panelY + panelRadius);
+                ctx.lineTo(width - panelX, height);
+                ctx.lineTo(panelX, height);
+                ctx.lineTo(panelX, panelY + panelRadius);
+                ctx.quadraticCurveTo(panelX, panelY, panelX + panelRadius, panelY);
+                ctx.closePath();
+            };
+            const drawInnerPanelPath = () => {
+                const inset = 3 * scale;
+                const innerRadius = Math.max(0, panelRadius - inset);
+                ctx.moveTo(panelX + inset + innerRadius, panelY + inset);
+                ctx.lineTo(width - panelX - inset - innerRadius, panelY + inset);
+                ctx.quadraticCurveTo(width - panelX - inset, panelY + inset, width - panelX - inset, panelY + inset + innerRadius);
+                ctx.lineTo(width - panelX - inset, height);
+                ctx.lineTo(panelX + inset, height);
+                ctx.lineTo(panelX + inset, panelY + inset + innerRadius);
+                ctx.quadraticCurveTo(panelX + inset, panelY + inset, panelX + inset + innerRadius, panelY + inset);
+                ctx.closePath();
+            };
+            drawPhotoQuoteGlassPanel(
+                panelX,
+                panelY,
+                panelWidth,
+                panelHeight,
+                panelRadius,
+                scale,
+                canvas,
+                drawPanelPath,
+                drawInnerPanelPath
+            );
 
             const brandBox = {
                 x: 18 * scale,
@@ -5438,6 +5369,7 @@ function getClubDisplayName(name) {
             const file = event.target.files && event.target.files[0];
             if (!file) return;
             readImageFile(file, image => {
+                removedBrandLogosByTemplate.delete(currentTemplate);
                 brandLogo = image;
                 customBrandLogo = true;
                 brandLogosByTemplate.set(currentTemplate, image);
@@ -5467,7 +5399,21 @@ function getClubDisplayName(name) {
             drawPoster();
             statusEl.textContent = "Liga logosi olib tashlandi.";
         });
+        document.getElementById("remove-brand-logo").addEventListener("click", () => {
+            removedBrandLogosByTemplate.add(currentTemplate);
+            customBrandLogo = false;
+            brandLogosByTemplate.delete(currentTemplate);
+            brandLogo = null;
+            brandLogoInput.value = "";
+            updateLogoPreview(brandLogoPreview, null,
+                currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" :
+                    currentTemplate === "monthly-club-fixtures" ? "TV" : "PP");
+            drawPoster();
+            statusEl.textContent = ["photo-quote", "football-lux", "matchday-poster", "monthly-club-fixtures"].includes(currentTemplate) ?
+                "Kanal logosi olib tashlandi." : "Poster logosi olib tashlandi.";
+        });
         document.getElementById("clear-brand-logo").addEventListener("click", () => {
+            removedBrandLogosByTemplate.delete(currentTemplate);
             customBrandLogo = false;
             brandLogosByTemplate.delete(currentTemplate);
             brandLogo = currentTemplate !== "football-lux" && currentTemplate !== "matchday-poster" &&
@@ -5480,10 +5426,8 @@ function getClubDisplayName(name) {
                 currentTemplate === "football-lux" ? "KL" : currentTemplate === "matchday-poster" ? "APL" :
                     currentTemplate === "monthly-club-fixtures" ? "TV" : "PP");
             drawPoster();
-            statusEl.textContent = currentTemplate === "football-lux" ?
-                "Kanal logosi olib tashlandi." : currentTemplate === "monthly-club-fixtures" ?
-                    "Kanal logosi olib tashlandi." : currentTemplate === "matchday-poster" ?
-                    "Premier League belgisi tiklandi." : "PitchPlan standart logosi tiklandi.";
+            statusEl.textContent = currentTemplate === "matchday-poster" ?
+                "Premier League belgisi tiklandi." : "Standart logo tiklandi.";
         });
         brandLogoSizeInput.addEventListener("input", () => {
             const normalizedValue = normalizeBrandLogoSize(brandLogoSizeInput.value, currentTemplate === "football-lux" ? 80 : 200);
@@ -5499,7 +5443,7 @@ function getClubDisplayName(name) {
             renderInputs();
             drawPoster();
         });
-        document.getElementById("download").addEventListener("click", () => {
+        document.getElementById("download").addEventListener("click", async () => {
             try {
                 const exportScale = 2.16;
                 const exportCanvas = document.createElement("canvas");
@@ -5515,25 +5459,15 @@ function getClubDisplayName(name) {
                 } finally {
                     ctx = previewContext;
                 }
-                exportCanvas.toBlob(async blob => {
-                    if (!blob) {
-                        statusEl.textContent = "PNG yaratilmadi. Iltimos, qayta urinib ko‘ring.";
-                        return;
-                    }
-                    try {
-                        const result = await window.pitchplanSaveImage(blob, "sportposter.png");
-                        statusEl.textContent = result.method === "share"
-                            ? "Rasm ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
-                            : result.method === "cancelled"
-                                ? "Rasmni saqlash bekor qilindi."
-                                : result.method === "preview"
-                                    ? "Rasm yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
-                                    : "Poster PNG formatida yuklab olindi.";
-                    } catch (error) {
-                        statusEl.textContent = "Rasmni saqlashda xatolik yuz berdi. Qayta urinib ko‘ring.";
-                        console.error("Poster export failed:", error);
-                    }
-                }, "image/png");
+                const blob = await window.pitchplanEncodeImage(exportCanvas);
+                const result = await window.pitchplanSaveImage(blob, "sportposter.jpg");
+                statusEl.textContent = result.method === "share"
+                    ? "Rasm ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang."
+                    : result.method === "cancelled"
+                        ? "Rasmni saqlash bekor qilindi."
+                        : result.method === "preview"
+                            ? "Rasm yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
+                            : "Poster JPG formatida yuklab olindi.";
             } catch (error) {
                 statusEl.textContent = "Rasmni saqlashda xatolik yuz berdi. Qayta urinib ko‘ring.";
                 console.error("Poster export failed:", error);

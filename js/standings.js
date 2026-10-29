@@ -753,7 +753,7 @@
         const exportCustomBrandLogo = Boolean(customBrandLogoSource);
         const exportBrandLogoCircle = exportCustomBrandLogo && logoCircleInput.checked;
         downloadButton.disabled = true;
-        setStatus("PNG yuklab olishga tayyorlanmoqda…");
+        setStatus("JPG yuklab olishga tayyorlanmoqda…");
         try {
             const [brandLogo, leagueBadge, ...logos] = await Promise.all([
                 loadExportLogo(exportBrandLogoSource),
@@ -763,12 +763,10 @@
                     : exportRows.map(team => loadExportLogo(team.logo)))
             ]);
             const canvas = createStandingsPoster(exportRows, logos, brandLogo, leagueBadge, exportLeague, exportSeason, exportRound, exportLeagueCode, exportCustomBrandLogo, exportBrandLogoCircle, exportCupMatches);
-            const blob = await new Promise((resolve, reject) => {
-                canvas.toBlob(result => result ? resolve(result) : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
-            });
+            const blob = await window.pitchplanEncodeImage(canvas);
             const safeLeague = exportLeague.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                 .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            const filename = `${safeLeague || "liga"}-${exportSeason}${exportTopSix ? "-top-6" : ""}-${cupPoster ? "bosqichlari" : "jadvali"}.png`;
+            const filename = `${safeLeague || "liga"}-${exportSeason}${exportTopSix ? "-top-6" : ""}-${cupPoster ? "bosqichlari" : "jadvali"}.jpg`;
             const result = await window.pitchplanSaveImage(blob, filename);
             setStatus(result.method === "share"
                 ? `${cupPoster ? "Kubok bosqichlari" : "Jadval"} ulashish oynasi ochildi. Galereyaga saqlash amalini tanlang.`
@@ -776,7 +774,7 @@
                     ? "Jadvalni saqlash bekor qilindi."
                     : result.method === "preview"
                         ? "Jadval rasmi yangi oynada ochildi. Uni uzoq bosib, galereyaga saqlang."
-                        : `${cupPoster ? "Kubok bosqichlari" : `Turnir jadvali${exportTopSix ? " Top 6" : ""}`} PNG formatida yuklab olindi.`);
+                        : `${cupPoster ? "Kubok bosqichlari" : `Turnir jadvali${exportTopSix ? " Top 6" : ""}`} JPG formatida yuklab olindi.`);
         } catch (error) {
             setStatus("Jadval rasmini yuklab bo‘lmadi. Qayta urinib ko‘ring.", true);
             console.error("Standings poster export failed:", error);

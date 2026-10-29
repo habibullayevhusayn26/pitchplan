@@ -807,11 +807,7 @@
                 }
             };
             paint(pitch);
-            return await new Promise((resolve, reject) => {
-                canvas.toBlob(blob => blob
-                    ? resolve(blob)
-                    : reject(new Error("PNG faylini yaratib bo‘lmadi.")), "image/png");
-            });
+            return await window.pitchplanEncodeImage(canvas);
         } finally {
             assets.forEach(image => image.close());
         }
@@ -832,7 +828,7 @@
                     throw new Error("Rasmni saqlash xizmati topilmadi.");
                 }
                 const blob = await createLineupExportImage(pitch);
-                const fileName = `${match.home.name}-${match.away.name}-tarkib.png`
+                const fileName = `${match.home.name}-${match.away.name}-tarkib.jpg`
                     .normalize("NFKD")
                     .replace(/[^\w.-]+/g, "-")
                     .replace(/-+/g, "-")
